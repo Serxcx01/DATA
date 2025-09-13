@@ -26,7 +26,7 @@ local function _pjoin(base, name) return (base or "") .. (name or "") end
 _ensure_dir(extraFilePath)
 
 -- ================== KONFIG ==================
-USE_MAGNI     = false
+USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Mode antrian TXT
