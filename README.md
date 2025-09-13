@@ -9,7 +9,7 @@
 
 -- BASE PATH KE DESKTOP (Windows) + PATH HELPERS
 ----------------------------------------------------------------
-extraFilePath = (extraFilePath or "C:/Users/Administrator/Desktop/Extra-File/"):gsub("[/\\]?$", "/")
+extraFilePath = (extraFilePath or "C:/Users/Administrator/Desktop/JOB-ANDRE/"):gsub("[/\\]?$", "/")
 
 -- pastikan folder ada
 local function _ensure_dir(p)
@@ -29,7 +29,7 @@ end
 _ensure_dir(extraFilePath)
 
 -------------------- KONFIG --------------------
-USE_MAGNI     = true
+USE_MAGNI     = false
 DELAY_HARVEST = 170
 
 -- Mode antrian TXT
@@ -51,13 +51,13 @@ local function _touch(path) local f = io.open(path, "a"); if f then f:close() en
 _touch(JOB_FILES.worlds); _touch(JOB_FILES.inprogress); _touch(JOB_FILES.done)
 
 -- Storage CAKE (global)
-STORAGE_CAKE, DOOR_CAKE = "KALAMA2", "ARUPA"
+STORAGE_CAKE, DOOR_CAKE = "GUDANGARIZ1", "AKUKEREN"
 cakeList     = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium  = {1828}
 MAX_CAKE_PREMIUM = 2
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "KALAMA23", "ARUPA" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "HVKKLL", "XX2" -- lokasi kacamata (10158)
 
 -- (MODE RR/CHUNK kalau USE_TXT_QUEUE=false)
 LIST_WORLD = {
