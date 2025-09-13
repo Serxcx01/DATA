@@ -938,15 +938,21 @@ local function SPEC_FOR_WORLD(W)
   return nil
 end
 local function FIND_OWN_INPROGRESS()
-  local rows=_read_lines(JOB_FILES.inprogress); local bestW,bestTS=nil,-1
-  for _,ln in ipairs(rows) do
-    local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts and who==WORKER_NAME then
-      local t=_norm_ts(ts); if t>bestTS then bestTS,tostring(w); bestTS=t; bestW=(w or ""):upper() end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local bestW, bestTS = nil, -1
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and who == WORKER_NAME then
+      local t = _norm_ts(ts)
+      if t > bestTS then
+        bestTS = t
+        bestW  = (w or ""):upper()
+      end
     end
   end
   return bestW
 end
+
 local function UNCLAIM(world)
   world=(world or ""):upper()
   local rows=_read_lines(JOB_FILES.inprogress); local out={}
