@@ -1181,8 +1181,12 @@ function RUN_FROM_TXT_QUEUE()
             end
           end
         else
-          print("[QUEUE] Tidak ada job maupun assist. Selesai.")
-          break
+          local qs = QUEUE_STATS()
+          print(string.format(
+            "[QUEUE] Semua world sedang diproses (%d total, %d inprogress, %d done). Menunggu...",
+            qs.total, qs.inprogress, qs.done
+          ))
+          sleep(2000)        -- <== tunggu 2 detik lalu lanjut loop
         end
       end
     end
