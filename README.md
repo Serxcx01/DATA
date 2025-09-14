@@ -765,12 +765,12 @@ local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
     elseif have>1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
     if (not called) and inv:getItemCount(10158)>0 then b:wear(10158); sleep(200) end
   end
-  _maybe_drop_cake()
   WARP_WORLD(FARM_WORLD, FARM_DOOR)
   ZEE_COLLECT(true); sleep(120); SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
 
   local w=b:getWorld(); local did_any=false
   for _,t in pairs(_get_tiles()) do
+    _maybe_drop_cake()
     local tile=w:getTile(t.x,t.y)
     if tile and tile.fg==ITEM_SEED_ID and tile:canHarvest() then
       local tries=0
