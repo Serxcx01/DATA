@@ -37,6 +37,9 @@ DELAY_HARVEST = 170
 -- Storage CAKE (final/idle drop tanpa ambang)
 STORAGE_CAKE, DOOR_CAKE = "HVKKLL", "XX1"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
+cekepremium = {1828}
+MAX_CAKE_PREMIUM = 2
+
 
 -- Storage MAGNI (opsional)
 STORAGE_MAGNI, DOOR_MAGNI = "HVKKLL", "XX2" -- lokasi kacamata (10158)
@@ -250,6 +253,26 @@ function ZEE_COLLECT(state)
 end
 
 -------------------- CAKE: helper any item exists --------------------
+local function includesNumber(t,n) for _,num in pairs(t or {}) do if num==n then return true end end; return false end
+function checkCake()
+  local bot = getBot and getBot() or nil; if not (bot and bot.getInventory) then return false end
+  local inv = bot:getInventory()
+  for _, id in pairs(cakeList or {}) do
+    local isPremium = includesNumber(cekepremium or {}, id)
+    local need = isPremium and MAX_CAKE_PREMIUM or 120
+    if inv:getItemCount(id) >= need then return true end
+  end
+  return false
+end
+local __next_cake_drop_at_ms, __cake_cooldown_ms = 0, 4000
+local function __now_ms() return (os.time() or 0)*1000 end
+local function _maybe_drop_cake()
+  if not (type(checkCake)=="function" and checkCake()) then return end
+  local t=__now_ms(); if t<__next_cake_drop_at_ms then return end
+  DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList)
+  __next_cake_drop_at_ms = t + __cake_cooldown_ms
+end
+
 local function has_any_cake()
   local b=getBot and getBot() or nil; if not (b and b.getInventory) then return false end
   local inv=b:getInventory(); for _,id in pairs(cakeList or {}) do if inv:getItemCount(id)>0 then return true end end
@@ -742,7 +765,7 @@ local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
     elseif have>1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
     if (not called) and inv:getItemCount(10158)>0 then b:wear(10158); sleep(200) end
   end
-
+  _maybe_drop_cake()
   WARP_WORLD(FARM_WORLD, FARM_DOOR)
   ZEE_COLLECT(true); sleep(120); SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
 
@@ -764,9 +787,11 @@ local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
         cnt=cnt+1; if cnt>=100 then print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)",t.x,t.y)); break end
       end
       did_any=true
+      _maybe_drop_cake()
       if checkitemfarm(farmListActive) then break end
     end
   end
+  _maybe_drop_cake()
   return did_any
 end
 
@@ -782,6 +807,7 @@ function HARVEST_UNTIL_EMPTY(FARM_WORLD, FARM_DOOR, STORAGE_WORLD, STORAGE_DOOR,
 
     if checkitemfarm(farmListActive) then
       DROP_ITEMS_SNAKE(STORAGE_WORLD, STORAGE_DOOR, farmListActive, {tile_cap=3000, stack_cap=20})
+      _maybe_drop_cake()
     end
 
     if (not did) and (not checkitemfarm(farmListActive)) then
