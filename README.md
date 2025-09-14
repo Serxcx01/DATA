@@ -384,10 +384,24 @@ function DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS, opts)
   reset_caches(); ZEE_COLLECT(false)
   WARP_WORLD(WORLD, DOOR); sleep(150); SMART_RECONNECT(WORLD, DOOR)
 
-  local sx,sy=_my_xy()
-  local start_col=math.min(sx+1, WORLD_MAX_X); if start_col<0 then start_col=0 end
-  local start_row=math.max(0, math min(sy, WORLD_MAX_Y))
-  local cursor={x=start_col, y=start_row}
+  -- local sx,sy=_my_xy()
+  -- local start_col=math.min(sx+1, WORLD_MAX_X); if start_col<0 then start_col=0 end
+  -- local start_row=math.max(0, math min(sy, WORLD_MAX_Y))
+  -- local cursor={x=start_col, y=start_row}
+
+  -- batas world (fallback 99x23 kalau API width/height gak ada)
+  local w = b:getWorld()
+  local WORLD_MAX_X = (w and w.width  and (w.width  - 1)) or 99
+  local WORLD_MAX_Y = (w and w.height and (w.height - 1)) or 23
+
+  local sx, sy = _my_xy()
+
+  local start_col = math.min(sx + 1, WORLD_MAX_X)
+  if start_col < 0 then start_col = 0 end
+
+  local start_row = math.max(0, math.min(sy, WORLD_MAX_Y))  -- ← perbaikan di sini (pakai math.min)
+  local cursor    = { x = start_col, y = start_row }
+
 
   for _, ITEM in pairs(ITEMS) do
     local have=b:getInventory():getItemCount(ITEM)
