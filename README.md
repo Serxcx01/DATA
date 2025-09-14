@@ -7,6 +7,7 @@
 -- + RECONCILE saat start: sinkron worlds.txt dengan done.txt
 -- + WARP tahan banting + anti-stuck white door
 -- + USE_MAGNI: pastikan hanya 1 di BP, sisanya drop ke storage
+-- (perbaikan ini menerapkan warp_ok_and_public juga di USE_TXT_QUEUE)
 ----------------------------------------------------------------
 
 -- ================== BASE PATH KE DESKTOP (Windows) ==================
@@ -408,7 +409,7 @@ function checkNukeds(variant,_)
 end
 
 local function _world_public_safe()
-  local b=getBot and getBot() or nil; if not (b and b.getWorld) then return nil end
+  local b = getBot and getBot() or nil; if not (b and b.getWorld) then return nil end
   local okW,w=pcall(function() return b:getWorld() end); if not okW or not w then return nil end
   local okP,pub=pcall(function() return w.public end); if not okP then return nil end
   return pub and true or false
@@ -983,22 +984,35 @@ local function RECONCILE_QUEUE()
   end
 end
 
+-- ====== helper: mulai job hanya jika warp OK; kalau gagal -> mark done ======
+local function BEGIN_JOB_IF_WARP_OK(W, D)
+  local ok, reason = warp_ok_and_public(W, D)
+  if not ok then
+    print(string.format("[SKIP] %s dilewati karena %s", tostring(W), tostring(reason)))
+    MARK_DONE(W)  -- buang dari worlds/inprogress supaya tidak maksa loop
+    return false
+  end
+  return true
+end
+
 function RUN_FROM_TXT_QUEUE()
   -- Sinkronkan worlds vs done pada startup
   RECONCILE_QUEUE()
 
-  -- AUTO-RESUME: lanjutkan job milik sendiri bila ada
+  -- AUTO-RESUME: lanjutkan job milik sendiri bila ada (dengan warp check)
   local resumeW=FIND_OWN_INPROGRESS()
   if resumeW then
     local W,D,BID,SW,SD=SPEC_FOR_WORLD(resumeW)
     if W and BID then
       ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
       print(string.format("[RESUME] %s melanjutkan %s|%s (BID=%d)", WORKER_NAME, W, (D or ""), BID))
-      local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
-      _update_heartbeat(W,WORKER_NAME)
-      HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
-      MARK_DONE(W)
-      print(string.format("[RESUME] %s selesai %s", WORKER_NAME, W))
+      if BEGIN_JOB_IF_WARP_OK(W, D) then
+        local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
+        _update_heartbeat(W,WORKER_NAME)
+        HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
+        MARK_DONE(W)
+        print(string.format("[RESUME] %s selesai %s", WORKER_NAME, W))
+      end
     else
       print(string.format("[RESUME] Spec %s tidak ditemukan di worlds.txt; unclaim.", tostring(resumeW)))
       UNCLAIM(resumeW)
@@ -1012,11 +1026,13 @@ function RUN_FROM_TXT_QUEUE()
       if W and BID then
         ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
         print(string.format("[JOB] %s klaim %s|%s (BID=%d)", WORKER_NAME, W, (D or ""), BID))
-        local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
-        _update_heartbeat(W,WORKER_NAME)
-        HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
-        MARK_DONE(W)
-        print(string.format("[JOB] %s selesai %s", WORKER_NAME, W))
+        if BEGIN_JOB_IF_WARP_OK(W, D) then
+          local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
+          _update_heartbeat(W,WORKER_NAME)
+          HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
+          MARK_DONE(W)
+          print(string.format("[JOB] %s selesai %s", WORKER_NAME, W))
+        end
       end
 
     else
@@ -1033,7 +1049,7 @@ function RUN_FROM_TXT_QUEUE()
         sleep(1200)
 
       elseif qs.inprogress>0 then
-        -- ===== EAGER ASSIST =====
+        -- ===== EAGER ASSIST (setelah tidak ada unclaimed) =====
         local assistW=PICK_ASSIST_WORLD(ASSIST_MODE)
         if assistW then
           print(string.format("[HELP] %s bantu %s (mode=%s)", WORKER_NAME, assistW, ASSIST_MODE))
@@ -1041,13 +1057,16 @@ function RUN_FROM_TXT_QUEUE()
           for _,ln in ipairs(worlds) do
             local W,D,BID,SW,SD=_parse_world_line(ln)
             if W==assistW then
-              ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
-              local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
-              _update_heartbeat(W,WORKER_NAME)
-              HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
-              -- selalu coba tutup setelah selesai (idempotent)
-              MARK_DONE(W)
-              print(string.format("[HELP] %s menutup %s", WORKER_NAME, W))
+              -- cek warp dulu, kalau gagal: mark done supaya tidak dipaksa terus
+              if BEGIN_JOB_IF_WARP_OK(W, D) then
+                ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
+                local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
+                _update_heartbeat(W,WORKER_NAME)
+                HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
+                -- idempotent, aman dipanggil
+                MARK_DONE(W)
+                print(string.format("[HELP] %s menutup %s", WORKER_NAME, W))
+              end
               break
             end
           end
