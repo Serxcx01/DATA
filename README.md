@@ -7,6 +7,7 @@
 -- + USE_MAGNI (keep=1, sisanya drop ke storage, wear sekali)
 -- + DROP canggih: cek FG kosong, stance walkable, reachability aware, clamp kanan<=99, atas<=23, fallback kiri
 -- + Idle housekeeping anti-spam + deteksi EXIT
+-- + JOB OWNER = SLOT-<NN> (bukan nama bot)
 ----------------------------------------------------------------
 
 -- ===================== PATH DESKTOP + HELPERS =====================
@@ -38,7 +39,7 @@ IDLE_ACTION_COOLDOWN = IDLE_ACTION_COOLDOWN or 60
 local __last_idle_action = 0
 
 -- MAGNI / HARVEST
-USE_MAGNI     = false
+USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Storage CAKE (global)
@@ -484,7 +485,6 @@ function DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS, opts)
       if not foundX then return have end
 
       local stanceX, stanceY = foundX + 1, foundY
-      local Wmax = _world_size()
       if (not _in_bounds(stanceX, stanceY)) or (not _is_walkable(stanceX, stanceY)) then
         mark_bad(foundX, foundY); goto seek_slot_left
       end
@@ -988,6 +988,12 @@ local function _detect_my_slot(default_slot)
   return default_slot or 1
 end
 MY_SLOT = MY_SLOT or _detect_my_slot(1)
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- JOB OWNER DISET KE SLOT-<NN>
+local WORKER_NAME = string.format("SLOT-%02d", tonumber(MY_SLOT or 1) or 1)
+-- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 local function _rotate_list(base, seed)
   if (not ROTATE_LIST) or (#base == 0) then return base end
   local off = (seed or 0) % #base
@@ -1040,8 +1046,6 @@ local function _write_lines(path, lines)
 end
 local function _append_line(path, line) local f = io.open(path, "a"); if not f then return false end; f:write(line.."\n"); f:close(); return true end
 local function _now() return os.time() end
-
-local WORKER_NAME = (getBot() and (getBot().name or "BOT")) or ("BOT"..tostring(os.time()))
 
 local function _parse_world_line(s)
   local farmW, farmD, bid, storeW, storeD = s:match("^([^|]+)|([^|]*)|(%d+)|([^|]*)|([^|]*)$")
@@ -1367,7 +1371,8 @@ end
 do
   ASSIGN_MODE = (ASSIGN_MODE or "rr"):lower():gsub("%s+", "")
   if ASSIGN_MODE ~= "rr" and ASSIGN_MODE ~= "chunk" then ASSIGN_MODE = "rr" end
-  print(string.format("[CONFIG] ASSIGN_MODE=%s | USE_TXT_QUEUE=%s | LOOP_MODE=%s", ASSIGN_MODE, tostring(USE_TXT_QUEUE), tostring(LOOP_MODE)))
+  print(string.format("[CONFIG] ASSIGN_MODE=%s | USE_TXT_QUEUE=%s | LOOP_MODE=%s | WORKER=%s",
+    ASSIGN_MODE, tostring(USE_TXT_QUEUE), tostring(LOOP_MODE), WORKER_NAME))
 
   if USE_TXT_QUEUE then
     RUN_FROM_TXT_QUEUE()
