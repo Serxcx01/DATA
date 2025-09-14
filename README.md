@@ -732,7 +732,7 @@ function TAKE_MAGNI(WORLD, DOOR)
         end
         if best then
           local tx,ty=math.floor(best.x/32),math.floor(best.y/32)
-          SMART_RECONNECT(w,d,tx,ty); ZEE_COLLECT(true); b:findPath(tx,ty); sleep(WAIT_MS)
+          SMART_RECONNECT(w,d,tx,ty); b:findPath(tx,ty); ZEE_COLLECT(true); sleep(WAIT_MS)
         else
           ZEE_COLLECT(true); SMART_RECONNECT(w,d); sleep(WAIT_MS)
         end
