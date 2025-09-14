@@ -2,9 +2,9 @@
 -- MULTI WORLD HARVEST + DROP SNAKE (ANTI-SKIP 2 TILE)
 -- + TXT QUEUE (worlds.txt / inprogress.txt / done.txt) + WORK-STEALING
 -- + AUTO-RESUME (lanjutkan job milik bot saat re-exec)
--- + ASSIST setelah semua world diklaim (dan hanya pada job stale)
--- + FIX: world yang DONE dihapus dari worlds.txt (bukan cuma inprogress)
--- + RECONCILE saat start: singkron worlds.txt dengan done.txt
+-- + ASSIST: "always" = bantu job lain segera; "stale" = bantu kalau macet
+-- + FIX: world DONE dihapus dari worlds.txt (bukan cuma inprogress)
+-- + RECONCILE saat start: sinkron worlds.txt dengan done.txt
 -- + WARP tahan banting + anti-stuck white door
 -- + USE_MAGNI: pastikan hanya 1 di BP, sisanya drop ke storage
 ----------------------------------------------------------------
@@ -21,7 +21,6 @@ local function _ensure_dir(p)
     os.execute(('mkdir -p "%s"'):format(p))
   end
 end
-
 local function _pjoin(base, name) return (base or "") .. (name or "") end
 _ensure_dir(extraFilePath)
 
@@ -30,9 +29,10 @@ USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Mode antrian TXT
-USE_TXT_QUEUE = true          -- true: pakai worlds.txt + work-stealing
-STEAL_HELP    = true          -- idle bot boleh bantu job lain (stale)
-STALE_SEC     = 30 * 60       -- job dianggap macet jika heartbeat > 30 menit
+USE_TXT_QUEUE = true           -- true: pakai worlds.txt + work-stealing
+ASSIST_MODE   = "always"       -- "always" = bantu segera, "stale" = bantu jika macet
+STEAL_HELP    = true           -- aktifkan fitur assist
+STALE_SEC     = 30 * 60        -- job dianggap macet jika heartbeat > 30 menit
 
 -- File queue & log
 JOB_FILES = {
@@ -818,7 +818,7 @@ local function _set_of_worlds(lines)
   local S = {}; for _, ln in ipairs(lines) do local w = ln:match("^([^|]+)"); if w then S[w:upper()] = true end end; return S
 end
 
--- ====== NEW: hapus dari worlds.txt ======
+-- hapus world dari worlds.txt
 local function REMOVE_FROM_WORLDS(world)
   world = (world or ""):upper(); if world == "" then return end
   local rows = _read_lines(JOB_FILES.worlds)
@@ -869,7 +869,7 @@ local function MARK_DONE(world)
   _write_lines(JOB_FILES.inprogress,out)
   -- catat ke done
   _append_line(JOB_FILES.done, string.format("%s|%s|%d", world, WORKER_NAME, _now()))
-  -- ====== HAPUS dari worlds.txt agar tidak muncul lagi ======
+  -- hapus dari worlds.txt
   REMOVE_FROM_WORLDS(world)
 end
 
@@ -894,18 +894,26 @@ local function QUEUE_STATS()
   return {total=total, unclaimed=unclaimed, inprogress=inprog, done=ndone}
 end
 
-local function PICK_ASSIST_WORLD()
+-- pilih world untuk assist
+local function PICK_ASSIST_WORLD(mode)
   if not STEAL_HELP then return nil end
   local prog=_read_lines(JOB_FILES.inprogress); if #prog==0 then return nil end
   local best,best_age,now=nil,-1,_now()
   for _,ln in ipairs(prog) do
     local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts then
+    if w and who and ts and who~=WORKER_NAME then
       local age=now - tonumber(ts)
-      if who~=WORKER_NAME and age>best_age then best,best_age=w:upper(),age end
+      if mode=="stale" then
+        if age>=STALE_SEC and age>best_age then best,best_age=w:upper(),age end
+      else -- "always": langsung pilih yang tertua heartbeat-nya
+        if age>best_age then best,best_age=w:upper(),age end
+      end
     end
   end
-  if best and best_age>=STALE_SEC then
+  if not best then return nil end
+
+  if mode=="stale" then
+    -- curi ownership bila stale
     local rows=_read_lines(JOB_FILES.inprogress)
     local out,stolen={},false
     for _,ln in ipairs(rows) do
@@ -915,9 +923,9 @@ local function PICK_ASSIST_WORLD()
       else table.insert(out, ln) end
     end
     if stolen then _write_lines(JOB_FILES.inprogress,out) end
-    return best
   end
-  return nil
+
+  return best
 end
 
 -- drop cake tanpa ambang
@@ -952,7 +960,6 @@ local function FIND_OWN_INPROGRESS()
   end
   return bestW
 end
-
 local function UNCLAIM(world)
   world=(world or ""):upper()
   local rows=_read_lines(JOB_FILES.inprogress); local out={}
@@ -1008,11 +1015,11 @@ function RUN_FROM_TXT_QUEUE()
         local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
         _update_heartbeat(W,WORKER_NAME)
         HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
-        MARK_DONE(W)      -- <-- ini juga HAPUS dari worlds.txt
+        MARK_DONE(W)
         print(string.format("[JOB] %s selesai %s", WORKER_NAME, W))
       end
+
     else
-      -- tidak ada job baru
       local qs=QUEUE_STATS()
 
       -- kalau semua benar2 selesai (worlds tinggal sisa done semua), exit
@@ -1023,12 +1030,13 @@ function RUN_FROM_TXT_QUEUE()
 
       if qs.unclaimed>0 then
         print(string.format("[QUEUE] Masih ada %d world belum diklaim. Menunggu...", qs.unclaimed))
-        sleep(1500)
+        sleep(1200)
 
       elseif qs.inprogress>0 then
-        local assistW=PICK_ASSIST_WORLD()
+        -- ===== EAGER ASSIST =====
+        local assistW=PICK_ASSIST_WORLD(ASSIST_MODE)
         if assistW then
-          print(string.format("[HELP] %s bantu %s (steal stale)", WORKER_NAME, assistW))
+          print(string.format("[HELP] %s bantu %s (mode=%s)", WORKER_NAME, assistW, ASSIST_MODE))
           local worlds=_read_lines(JOB_FILES.worlds)
           for _,ln in ipairs(worlds) do
             local W,D,BID,SW,SD=_parse_world_line(ln)
@@ -1037,21 +1045,16 @@ function RUN_FROM_TXT_QUEUE()
               local hb=function(world) _update_heartbeat(world,WORKER_NAME) end
               _update_heartbeat(W,WORKER_NAME)
               HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID},hb)
-              -- cek owner; jika sudah jadi kita (karena steal), tutup & hapus dari worlds
-              local rows=_read_lines(JOB_FILES.inprogress)
-              local owner_now=nil
-              for _,lnn in ipairs(rows) do
-                local ww,who=lnn:match("^([^|]+)|([^|]+)|")
-                if ww and ww:upper()==W then owner_now=who; break end
-              end
-              if owner_now==WORKER_NAME then MARK_DONE(W); print(string.format("[HELP] %s menutup %s", WORKER_NAME, W)) end
+              -- selalu coba tutup setelah selesai (idempotent)
+              MARK_DONE(W)
+              print(string.format("[HELP] %s menutup %s", WORKER_NAME, W))
               break
             end
           end
         else
           print(string.format("[QUEUE] Semua world sudah diklaim (%d total, %d inprogress, %d done). Menunggu...",
             qs.total, qs.inprogress, qs.done))
-          sleep(2000)
+          sleep(1500)
         end
 
       else
@@ -1059,10 +1062,11 @@ function RUN_FROM_TXT_QUEUE()
         RECONCILE_QUEUE()
         print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprogress=%d, done=%d). Menunggu...",
           qs.total, qs.inprogress, qs.done))
-        sleep(1500)
+        sleep(1200)
       end
     end
-    sleep(400)
+
+    sleep(300)
   end
 
   -- cleanup akhir
@@ -1074,7 +1078,7 @@ end
 do
   ASSIGN_MODE=(ASSIGN_MODE or "rr"):lower():gsub("%s+","")
   if ASSIGN_MODE~="rr" and ASSIGN_MODE~="chunk" then ASSIGN_MODE="rr" end
-  print(string.format("[CONFIG] ASSIGN_MODE=%s | USE_TXT_QUEUE=%s", ASSIGN_MODE, tostring(USE_TXT_QUEUE)))
+  print(string.format("[CONFIG] ASSIGN_MODE=%s | USE_TXT_QUEUE=%s | ASSIST_MODE=%s", ASSIGN_MODE, tostring(USE_TXT_QUEUE), ASSIST_MODE))
 
   if USE_TXT_QUEUE then
     RUN_FROM_TXT_QUEUE()
