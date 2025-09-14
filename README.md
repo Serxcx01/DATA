@@ -68,6 +68,7 @@ FARM_PER_BOT = FARM_PER_BOT or 0
 ASSIGN_MODE  = ASSIGN_MODE or "rr"
 ROTATE_LIST  = (ROTATE_LIST ~= nil) and ROTATE_LIST or false
 ROTATE_SEED  = ROTATE_SEED or 12345
+LOOP_MODE = LOOP_MODE or false
 
 -- ================== STATE GLOBAL ==================
 NUKED_STATUS    = NUKED_STATUS    or false
@@ -254,6 +255,51 @@ function ZEE_COLLECT(state)
   if state then b.auto_collect=true; b.ignore_gems=true; b.collect_range=3; b.object_collect_delay=200
   else b.auto_collect=false end
 end
+
+
+function IS_IN_EXIT()
+  local b = getBot and getBot() or nil
+  if not b or not b.getWorld then return false end
+
+  local okW, w = pcall(function() return b:getWorld() end)
+  if not okW or not w then
+    -- beberapa lib balikin nil sebentar sesudah leaveWorld -> anggap EXIT
+    return true
+  end
+
+  -- nama world “EXIT” / kosong = EXIT
+  local name = ((w.name or b.world or "") .. ""):upper()
+  if name == "EXIT" or name == "" then return true end
+
+  -- fallback: dimensi world tidak valid -> anggap EXIT
+  local okWidth, width = pcall(function() return w.width end)
+  if not okWidth or not width or width <= 0 then return true end
+
+  return false
+end
+
+
+local function _idle_housekeeping()
+  local now = os.time()
+  if (now - __last_idle_action) < (IDLE_ACTION_COOLDOWN or 60) then return end
+  __last_idle_action = now
+
+  -- drop cake kalau ada (tanpa ambang)
+  if (STORAGE_CAKE or "") ~= "" and has_any_cake and has_any_cake() then
+    pcall(function()
+      DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList, {tile_cap=3000, stack_cap=20})
+    end)
+  end
+
+  -- keluar world hanya kalau BELUM di EXIT
+  local b = getBot and getBot() or nil
+  if b and b.leaveWorld and (not IS_IN_EXIT()) then
+    b:leaveWorld()
+    sleep(800)
+    b.auto_reconnect = true
+  end
+end
+
 
 -------------------- CAKE --------------------
 local function includesNumber(t,n) for _,num in pairs(t or {}) do if num==n then return true end end; return false end
@@ -1078,10 +1124,20 @@ function RUN_FROM_TXT_QUEUE()
 
       else
         -- tidak unclaimed, tidak inprogress, done < total -> data mungkin belum sinkron, reconcile lagi
-        RECONCILE_QUEUE()
-        print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprogress=%d, done=%d). Menunggu...",
-          qs.total, qs.inprogress, qs.done))
-        sleep(1200)
+        if LOOP_MODE then
+          RECONCILE_QUEUE()
+          print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprogress=%d, done=%d). Menunggu...",
+            qs.total, qs.inprogress, qs.done))
+          sleep(1200)
+
+          -- lakukan housekeeping dengan cooldown (anti-spam)
+          _idle_housekeeping()
+        else
+          RECONCILE_QUEUE()
+          print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprogress=%d, done=%d). LOOP_MODE=false -> keluar.",
+            qs.total, qs.inprogress, qs.done))
+          break
+        end
       end
     end
 
