@@ -157,30 +157,41 @@ function UPDATE_DELAY_BY_PING()
 end
 
 function STATUS_BOT_NEW()
-  local b=getBot and getBot() or nil; local s=b and b.status or nil
-  local Status="Unknown"
-  if (s==BotStatus.online) or (s==1) then Status="online"
-  elseif (s==BotStatus.offline)) or (s==0) then Status="offline"
-  elseif s==BotStatus.wrong_password then Status="Wrong Password"
-  elseif s==BotStatus.account_banned then Status="Banned"
-  elseif s==BotStatus.location_banned then Status="Location Banned"
-  elseif s==BotStatus.version_update then Status="Version Update"
-  elseif s==BotStatus.advanced_account_protection then Status="Advanced Account Protection"
-  elseif s==BotStatus.server_overload then Status="Server Overload"
-  elseif s==BotStatus.too_many_login then Status="Too Many Login"
-  elseif s==BotStatus.maintenance then Status="Maintenance"
-  elseif s==BotStatus.http_block then Status="Http Block"
-  elseif s==BotStatus.captcha_requested then Status="Captcha Requested"
-  elseif s==BotStatus.error_connecting then Status="Error Connecting"
-  elseif s==BotStatus.high_ping then Status="High Ping"
-  elseif s==BotStatus.logon_fail then Status="Logon Fail"
-  else Status=tostring(s or "nil") end
+  local b = getBot and getBot() or nil
+  local s = b and b.status or nil
+  local Status = "Unknown"
 
-  local world_name=""
-  if b and b.getWorld then local w=b:getWorld(); if w and w.name then world_name=(w.name or ""):upper() end end
-  local inv=(b and b.getInventory and b:getInventory()) or nil
-  return {world=world_name, name=(b and b.name) or "", level=(b and b.level) or 0, status=Status,
-          gems=(b and b.gem_count) or 0, slots=(inv and inv.slotcount) or 0}
+  if     (s == BotStatus.online)  or (s == 1)  then Status = "online"
+  elseif (s == BotStatus.offline) or (s == 0)  then Status = "offline"
+  elseif s == BotStatus.wrong_password              then Status = "Wrong Password"
+  elseif s == BotStatus.account_banned              then Status = "Banned"
+  elseif s == BotStatus.location_banned             then Status = "Location Banned"
+  elseif s == BotStatus.version_update              then Status = "Version Update"
+  elseif s == BotStatus.advanced_account_protection then Status = "Advanced Account Protection"
+  elseif s == BotStatus.server_overload             then Status = "Server Overload"
+  elseif s == BotStatus.too_many_login              then Status = "Too Many Login"
+  elseif s == BotStatus.maintenance                 then Status = "Maintenance"
+  elseif s == BotStatus.http_block                  then Status = "Http Block"
+  elseif s == BotStatus.captcha_requested           then Status = "Captcha Requested"
+  elseif s == BotStatus.error_connecting            then Status = "Error Connecting"
+  elseif s == BotStatus.high_ping                   then Status = "High Ping"
+  elseif s == BotStatus.logon_fail                  then Status = "Logon Fail"
+  else Status = tostring(s or "nil") end
+
+  local world_name = ""
+  if b and b.getWorld then
+    local w = b:getWorld()
+    if w and w.name then world_name = (w.name or ""):upper() end
+  end
+  local inv = (b and b.getInventory and b:getInventory()) or nil
+  return {
+    world  = world_name,
+    name   = (b and b.name) or "",
+    level  = (b and b.level) or 0,
+    status = Status,
+    gems   = (b and b.gem_count) or 0,
+    slots  = (inv and inv.slotcount) or 0
+  }
 end
 
 function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
