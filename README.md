@@ -1,7 +1,8 @@
 ----------------------------------------------------------------
 -- MULTI WORLD HARVEST + DROP SNAKE (ANTI-SKIP 2 TILE)
--- + TXT JOB QUEUE (worlds.txt / inprogress.txt / done.txt) + WORK-STEALING (stale only)
--- + SMART MULTI-BOT ASSIGNMENT (AUTO SLOT & AUTO TOTAL_BOTS) untuk mode RR/CHUNK (opsional)
+-- + TXT JOB QUEUE (worlds.txt / inprogress.txt / done.txt)
+-- + WORK-STEALING ("stale" only) / ASSIST_MODE ("always" / "stale")
+-- + SMART MULTI-BOT ASSIGNMENT (AUTO SLOT & AUTO TOTAL_BOTS) [opsional RR/CHUNK]
 -- + WARP TAHAN BANTING (NUKED + PUBLIC + BAD_DOOR + SAFE TILE) + LOGGING
 -- + GUARD: ANTI-STUCK respawn WHITE DOOR (fg==6)
 -- + DROP SNAKE SMART (kanan→atas, fallback kiri, stance walkable, tepi kanan aman)
@@ -20,10 +21,14 @@ local function _pjoin(base, name) return (base or "") .. (name or "") end
 _ensure_dir(extraFilePath)
 
 -------------------- CONFIG --------------------
-USE_TXT_QUEUE = true      -- true: pakai worlds.txt queue
-STEAL_HELP    = true      -- hanya akan bantu jika job stale (lihat STALE_SEC)
-STALE_SEC     = 30 * 60   -- detik: job dianggap macet jika heartbeat > 30 menit
-LOOP_MODE     = true      -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
+USE_TXT_QUEUE = true          -- true: pakai worlds.txt queue
+STEAL_HELP    = true          -- dipakai kalau ASSIST_MODE="stale"
+STALE_SEC     = 30 * 60       -- detik: job dianggap macet jika heartbeat > 30 menit
+LOOP_MODE     = true          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
+
+-- >>> NEW: Assist mode <<<
+ASSIST_MODE   = (ASSIST_MODE or "always") -- "stale" atau "always"
+ASSIST_MODE   = tostring(ASSIST_MODE):lower()
 
 -- Delay/harvest
 USE_MAGNI     = true
@@ -155,7 +160,7 @@ function STATUS_BOT_NEW()
   local b=getBot and getBot() or nil; local s=b and b.status or nil
   local Status="Unknown"
   if (s==BotStatus.online) or (s==1) then Status="online"
-  elseif (s==BotStatus.offline) or (s==0) then Status="offline"
+  elseif (s==BotStatus.offline)) or (s==0) then Status="offline"
   elseif s==BotStatus.wrong_password then Status="Wrong Password"
   elseif s==BotStatus.account_banned then Status="Banned"
   elseif s==BotStatus.location_banned then Status="Location Banned"
@@ -370,7 +375,7 @@ function DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS, opts)
 
   local sx,sy=_my_xy()
   local start_col=math.min(sx+1, WORLD_MAX_X); if start_col<0 then start_col=0 end
-  local start_row=math.max(0, math.min(sy, WORLD_MAX_Y))
+  local start_row=math.max(0, math min(sy, WORLD_MAX_Y))
   local cursor={x=start_col, y=start_row}
 
   for _, ITEM in pairs(ITEMS) do
@@ -794,7 +799,7 @@ function RUN_MULTI_HARVEST(list_world)
   print("[MULTI] Done.")
 end
 
--------------------- TXT QUEUE (work-stealing stale only) --------------------
+-------------------- TXT QUEUE (assist: "stale" / "always") --------------------
 local function _read_lines(path)
   local t, f={}, io.open(path,"r"); if not f then return t end
   for line in f:lines() do line=line:gsub("\r",""):gsub("\n",""); if line~="" and not line:match("^%s*;") then table.insert(t,line) end end
@@ -868,18 +873,23 @@ local function QUEUE_STATS()
   return {total=total, unclaimed=unclaimed, inprogress=inprog, done=ndone}
 end
 
-local function PICK_ASSIST_WORLD()
-  if not STEAL_HELP then return nil end
-  local prog=_read_lines(JOB_FILES.inprogress); if #prog==0 then return nil end
-  local best,best_age,now=nil,-1,_now()
+-- PICK_ASSIST_WORLD dengan mode:
+--  - "stale": pilih inprogress milik orang lain yang macet >= STALE_SEC dan STEAL owner -> bisa MARK_DONE
+--  - "always": pilih inprogress milik orang lain (terlama), TANPA steal -> tidak MARK_DONE
+local function PICK_ASSIST_WORLD(mode)
+  local prog=_read_lines(JOB_FILES.inprogress); if #prog==0 then return nil, false end
+  local best,best_age,now=nil,-1,_now(); local best_owner=nil
   for _,ln in ipairs(prog) do
     local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts then
-      local age=now - tonumber(ts)
-      if who~=WORKER_ID and age>best_age then best,best_age=w:upper(),age end
+    if w and who and ts and who~=WORKER_ID then
+      local age = now - tonumber(ts)
+      if age>best_age then best,best_age, best_owner = w:upper(), age, who end
     end
   end
-  if best and best_age>=STALE_SEC then
+  if not best then return nil, false end
+
+  if mode=="stale" then
+    if best_age < STALE_SEC or not STEAL_HELP then return nil, false end
     local rows=_read_lines(JOB_FILES.inprogress)
     local out, stolen={}, false
     for _,ln in ipairs(rows) do
@@ -889,9 +899,11 @@ local function PICK_ASSIST_WORLD()
       else table.insert(out, ln) end
     end
     if stolen then _write_lines(JOB_FILES.inprogress, out) end
-    return best
+    return best, true -- stolen
+  else
+    -- "always": bantu tanpa steal
+    return best, false
   end
-  return nil
 end
 
 local function RECONCILE_QUEUE()
@@ -961,14 +973,15 @@ function RUN_FROM_TXT_QUEUE()
     else
       -- Tidak ada yang bisa diklaim
       local qs=QUEUE_STATS()
-      if qs.unclaimed>0 then
+
+      -- Gating: kalau "stale", TUNGGU sampai unclaimed==0; kalau "always", langsung boleh assist
+      if ASSIST_MODE ~= "always" and qs.unclaimed > 0 then
         print(string.format("[QUEUE] Masih ada %d world belum diklaim. Menunggu...", qs.unclaimed))
         sleep(800)
       else
-        -- semua sudah diklaim atau selesai -> boleh assist stale
-        local assistW=PICK_ASSIST_WORLD()
+        local assistW, stolen = PICK_ASSIST_WORLD(ASSIST_MODE)
         if assistW then
-          print(string.format("[HELP] %s bantu (stale) %s", WORKER_ID, assistW))
+          print(string.format("[HELP] %s bantu %s (mode=%s%s)", WORKER_ID, assistW, ASSIST_MODE, stolen and " +steal" or ""))
           local worlds=_read_lines(JOB_FILES.worlds)
           for _,ln in ipairs(worlds) do
             local W,D,BID,SW,SD=_parse_world_line(ln)
@@ -977,7 +990,8 @@ function RUN_FROM_TXT_QUEUE()
               local hb=function(world) _update_heartbeat(world, WORKER_ID) end
               _update_heartbeat(W, WORKER_ID)
               HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID}, hb)
-              -- owner sekarang mungkin sudah berpindah ke kita (steal). Jika iya, tutup dan reconcile
+
+              -- MARK_DONE hanya jika owner pindah ke kita (steal pada mode "stale")
               local rows=_read_lines(JOB_FILES.inprogress); local owner_now=nil
               for _,ll in ipairs(rows) do local ww,who=ll:match("^([^|]+)|([^|]+)|"); if ww and ww:upper()==W then owner_now=who; break end end
               if owner_now==WORKER_ID then MARK_DONE(W); RECONCILE_QUEUE(); print(string.format("[HELP] %s menutup %s", WORKER_ID, W)) end
@@ -1017,7 +1031,8 @@ end
 -------------------- MAIN --------------------
 do
   ASSIGN_MODE=(ASSIGN_MODE or "rr"):lower():gsub("%s+",""); if ASSIGN_MODE~="rr" and ASSIGN_MODE~="chunk" then ASSIGN_MODE="rr" end
-  print(string.format("[CONFIG] SLOT=%d | WORKER_ID=%s | USE_TXT_QUEUE=%s | ASSIGN_MODE=%s", MY_SLOT, WORKER_ID, tostring(USE_TXT_QUEUE), ASSIGN_MODE))
+  print(string.format("[CONFIG] SLOT=%d | WORKER_ID=%s | USE_TXT_QUEUE=%s | ASSIST_MODE=%s | ASSIGN_MODE=%s",
+    MY_SLOT, WORKER_ID, tostring(USE_TXT_QUEUE), ASSIST_MODE, ASSIGN_MODE))
 
   if USE_TXT_QUEUE then
     RUN_FROM_TXT_QUEUE()
