@@ -35,14 +35,14 @@ USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "DEMAKANCAKE", "RQPRO"
+STORAGE_CAKE, DOOR_CAKE = "HOWFTANK8372", "APQLZ"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
 
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "PAMPANGXS", "RQPRO" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "CLOVERMALADY", "CUREZIN" -- lokasi kacamata (10158)
 
 -- Mode RR/CHUNK (dipakai kalau USE_TXT_QUEUE=false)
 LIST_WORLD  = { -- "FARM_WORLD|FARM_DOOR|ITEM_BLOCK_ID|STORAGE_WORLD|STORAGE_DOOR"
@@ -308,24 +308,50 @@ local function _meTile()
   if not me then return nil end; return math.floor(me.posx/32), math.floor(me.posy/32)
 end
 
-local function _gotoExact(world,door,tx,ty,path_try,step_ms)
-  local b=getBot and getBot() or nil; if not b then return false end
-  path_try=path_try or 10; step_ms=step_ms or 700
-  local last_mx,last_my,stale_ticks=nil,nil,0
-  for _=1,path_try do
-    local mx,my=_meTile(); if mx==tx and my==ty then return true end
-    b:findPath(tx,ty); sleep(step_ms); SMART_RECONNECT(); GUARD_DOOR_STUCK()
-    local cmx,cmy=_meTile()
-    if (cmx==last_mx and cmy==last_my) then
-      stale_ticks=stale_ticks+1
-      if stale_ticks>=3 then return false end
+-- ganti fungsi lamamu dengan ini
+local function _gotoExact(world, door, tx, ty, path_try, step_ms)
+  local b = getBot and getBot() or nil; if not b then return false end
+  path_try = path_try or 10
+  step_ms  = step_ms  or 700
+
+  local last_mx, last_my = nil, nil
+  local stale_ticks = 0
+  local backoff     = 0         -- tambahan jeda kecil saat stuck
+
+  for _ = 1, path_try do
+    local mx, my = _meTile()
+    if mx == tx and my == ty then return true end
+
+    -- coba pathing
+    b:findPath(tx, ty)
+
+    -- jeda + reconnect ringan (tanpa guard door di sini)
+    sleep(step_ms + backoff)
+    SMART_RECONNECT(world, door)
+
+    -- cek apakah bergerak
+    local cmx, cmy = _meTile()
+    if (cmx == (last_mx or mx)) and (cmy == (last_my or my)) then
+      stale_ticks = stale_ticks + 1
+      -- kalau 3x tidak berubah, anggap stuck → tambah backoff (maks 600ms)
+      if stale_ticks >= 3 then
+        if backoff < 600 then backoff = math.min(600, (backoff == 0) and 150 or math.floor(backoff * 2)) end
+        -- beri kesempatan server sync dulu sebelum ulangi findPath
+        sleep(120)
+        -- kalau tetap tidak maju setelah backoff bertambah, gagal total
+        if stale_ticks >= 6 then return false end
+      end
     else
-      stale_ticks=0
+      -- ada progres → reset indikator stuck & backoff
+      stale_ticks = 0
+      backoff = 0
     end
-    last_mx,last_my=cmx,cmy
+    last_mx, last_my = cmx, cmy
   end
+
   return false
 end
+
 
 -------------------- CACHE TILE (full/bad) --------------------
 local FULL_CACHE, BAD_CACHE = {}, {}
