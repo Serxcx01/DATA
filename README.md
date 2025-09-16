@@ -894,7 +894,6 @@ function TAKE_MAGNI(WORLD, DOOR)
   local TARGET_ID=10158; local inv=b:getInventory()
   local now=os.time()
   -- setelah warp di awal ambil magni
-  local ex, ye = b.x, b.y 
 
   -- cek cooldown
   local cd_until = MAGNI_COOLDOWN[WORLD]
@@ -920,7 +919,7 @@ function TAKE_MAGNI(WORLD, DOOR)
   if inv:getItemCount(TARGET_ID)==0 then
     local function _try_take_at(w,d)
       if (w or "")=="" then return false end
-      WARP_WORLD(w,d); sleep(200)
+      WARP_WORLD(w,d); sleep(200); ex, ye = b.x, b.y 
       local MAX_ROUNDS,WAIT_MS=10,1200; local got=false
       for _=1,MAX_ROUNDS do
         if inv:getItemCount(TARGET_ID)>0 then got=true; break end
