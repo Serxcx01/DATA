@@ -33,18 +33,18 @@ STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
 
 -- Delay/harvest
-USE_MAGNI     = true
+USE_MAGNI     = false
 DELAY_HARVEST = 170
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "DEMAKANCAKE", "RQPRO"
+STORAGE_CAKE, DOOR_CAKE = "MCNIHH", "GUGUH"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
 
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "PAMPANGXS", "RQPRO" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Mode RR/CHUNK (dipakai kalau USE_TXT_QUEUE=false)
 LIST_WORLD  = { -- "FARM_WORLD|FARM_DOOR|ITEM_BLOCK_ID|STORAGE_WORLD|STORAGE_DOOR"
@@ -385,16 +385,50 @@ local function _is_walkable(tx,ty)
   return (t~=nil) and ((t.fg or 0)==0)
 end
 
+-- local function _probe_slot(cx,cy,tile_cap,stack_cap)
+--   if not _is_in_bounds(cx,cy) then return false end
+--   local stanceX,stanceY=cx-1,cy
+--   if stanceX<0 then return false end
+--   if (not _is_in_bounds(stanceX,stanceY)) or (not _is_walkable(stanceX,stanceY)) then mark_bad(cx,cy); return false end
+--   if is_full_or_bad(cx,cy) then return false end
+--   local total,stacks=_countOnTile(cx,cy)
+--   if (total>=(tile_cap or 3000)) or (stacks>=(stack_cap or 20)) then mark_full(cx,cy); return false end
+--   return true
+-- end
+
 local function _probe_slot(cx,cy,tile_cap,stack_cap)
   if not _is_in_bounds(cx,cy) then return false end
-  local stanceX,stanceY=cx-1,cy
-  if stanceX<0 then return false end
-  if (not _is_in_bounds(stanceX,stanceY)) or (not _is_walkable(stanceX,stanceY)) then mark_bad(cx,cy); return false end
+
+  -- cek tile world
+  local b = getBot and getBot() or nil
+  local w = b and b:getWorld() or nil
+  local okT, tile = pcall(function() return w:getTile(cx,cy) end)
+  if (not okT) or (not tile) then return false end
+
+  -- NEW: pastikan tile kosong (fg==0)
+  if (tile.fg or 0) ~= 0 then
+    mark_bad(cx,cy)
+    return false
+  end
+
+  -- stance harus walkable
+  local stanceX, stanceY = cx-1, cy
+  if stanceX < 0 then return false end
+  if (not _is_in_bounds(stanceX,stanceY)) or (not _is_walkable(stanceX,stanceY)) then
+    mark_bad(cx,cy); return false
+  end
+
+  -- existing capacity check
   if is_full_or_bad(cx,cy) then return false end
-  local total,stacks=_countOnTile(cx,cy)
-  if (total>=(tile_cap or 3000)) or (stacks>=(stack_cap or 20)) then mark_full(cx,cy); return false end
+  local total,stacks = _countOnTile(cx,cy)
+  if (total >= (tile_cap or 3000)) or (stacks >= (stack_cap or 20)) then
+    mark_full(cx,cy); return false
+  end
   return true
 end
+
+
+
 
 local function _scan_row_right(start_x, cy, tile_cap, stack_cap)
   local cx=math.max(0, math.min(start_x, WORLD_MAX_X))
