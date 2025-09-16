@@ -22,27 +22,29 @@ _ensure_dir(extraFilePath)
 
 -------------------- CONFIG --------------------
 USE_TXT_QUEUE = true          -- true: pakai worlds.txt queue
-STEAL_HELP    = true          -- dipakai kalau ASSIST_MODE="stale"
-STALE_SEC     = 30 * 60       -- detik: job dianggap macet jika heartbeat > 30 menit
-LOOP_MODE     = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
+
 
 -- >>> NEW: Assist mode <<<
-ASSIST_MODE   = (ASSIST_MODE or "always") -- "stale" atau "always"
-ASSIST_MODE   = tostring(ASSIST_MODE):lower()
+ASSIST_MODE          = (ASSIST_MODE or "always") -- "stale" atau "always"
+ASSIST_MODE          = tostring(ASSIST_MODE):lower()
+ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
+STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
+STALE_SEC            = STALE_SEC or 30 * 60
+LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
 
 -- Delay/harvest
-USE_MAGNI     = true
+USE_MAGNI     = false
 DELAY_HARVEST = 170
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "DEMAKANCAKE", "RQPRO"
+STORAGE_CAKE, DOOR_CAKE = "FENCEPO2", "0101"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
 
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "PAMPANGXS", "RQPRO" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Mode RR/CHUNK (dipakai kalau USE_TXT_QUEUE=false)
 LIST_WORLD  = { -- "FARM_WORLD|FARM_DOOR|ITEM_BLOCK_ID|STORAGE_WORLD|STORAGE_DOOR"
@@ -1030,35 +1032,106 @@ end
 -- PICK_ASSIST_WORLD dengan mode:
 --  - "stale": pilih inprogress milik orang lain yang macet >= STALE_SEC dan STEAL owner -> bisa MARK_DONE
 --  - "always": pilih inprogress milik orang lain (terlama), TANPA steal -> tidak MARK_DONE
+
+-- Hitung jumlah WORKER_ID unik yang terdaftar untuk sebuah world di inprogress.txt
+local function _count_unique_workers(world)
+  world = (world or ""):upper()
+  if world == "" then return 0 end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local S = {}
+  for _, ln in ipairs(rows) do
+    local w, who = ln:match("^([^|]+)|([^|]+)|")
+    if w and who and (w:upper() == world) then S[who] = true end
+  end
+  local n = 0
+  for _ in pairs(S) do n = n + 1 end
+  return n
+end
+
+-- Cek apakah world masih punya job (masih ada di worlds.txt)
+local function _world_has_job(world)
+  world = (world or ""):upper()
+  if world == "" then return false end
+  local rows = _read_lines(JOB_FILES.worlds)
+  for _, ln in ipairs(rows) do
+    local W = ln:match("^([^|]+)")
+    if W and W:upper() == world then return true end
+  end
+  return false
+end
+
+-- Bersihkan semua entry inprogress untuk world tertentu (owner/helpers yang nyangkut)
+local function _cleanup_stale_inprogress(world)
+  world = (world or ""):upper()
+  if world == "" then return end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local out = {}
+  for _, ln in ipairs(rows) do
+    local W = ln:match("^([^|]+)")
+    if not (W and W:upper() == world) then
+      table.insert(out, ln)
+    end
+  end
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
+
+-- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
 local function PICK_ASSIST_WORLD(mode)
-  local prog=_read_lines(JOB_FILES.inprogress); if #prog==0 then return nil, false end
-  local best,best_age,now=nil,-1,_now(); local best_owner=nil
-  for _,ln in ipairs(prog) do
-    local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts and who~=WORKER_ID then
+  local prog = _read_lines(JOB_FILES.inprogress)
+  if #prog == 0 then return nil, false end
+
+  -- pilih world kandidat milik orang lain (terlama heartbeat)
+  local best, best_age, best_owner = nil, -1, nil
+  local now = _now()
+  for _, ln in ipairs(prog) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and who ~= WORKER_ID then
       local age = now - tonumber(ts)
-      if age>best_age then best,best_age, best_owner = w:upper(), age, who end
+      if age > best_age then
+        best, best_age, best_owner = w:upper(), age, who
+      end
     end
   end
   if not best then return nil, false end
 
-  if mode=="stale" then
-    if best_age < STALE_SEC or not STEAL_HELP then return nil, false end
-    local rows=_read_lines(JOB_FILES.inprogress)
-    local out, stolen={}, false
-    for _,ln in ipairs(rows) do
-      local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
-      if w and who and ts and w:upper()==best then
-        table.insert(out, string.format("%s|%s|%d", w:upper(), WORKER_ID, _now())); stolen=true
-      else table.insert(out, ln) end
+  -- jika world ini sudah tidak ada di worlds.txt → cleanup & skip
+  if not _world_has_job(best) then
+    _cleanup_stale_inprogress(best)
+    return nil, false
+  end
+
+  if mode == "stale" then
+    -- seperti semula: bantu hanya jika macet >= STALE_SEC dan boleh steal
+    if best_age < (STALE_SEC or 90) or not STEAL_HELP then
+      return nil, false
+    end
+
+    -- steal owner → set owner jadi kita di inprogress
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local out, stolen = {}, false
+    for _, ln in ipairs(rows) do
+      local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+      if w and who and ts and w:upper() == best then
+        table.insert(out, string.format("%s|%s|%d", w:upper(), WORKER_ID, _now()))
+        stolen = true
+      else
+        table.insert(out, ln)
+      end
     end
     if stolen then _write_lines(JOB_FILES.inprogress, out) end
-    return best, true -- stolen
+    return best, true
   else
-    -- "always": bantu tanpa steal
+    -- mode "always": bantu tanpa steal, tapi hormati limit helper
+    local total_workers = _count_unique_workers(best)   -- owner + helpers
+    local helpers_now   = math.max(0, total_workers - 1)
+    if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
+      return nil, false   -- sudah penuh helper untuk world ini
+    end
     return best, false
   end
 end
+
 
 local function RECONCILE_QUEUE()
   local worlds=_read_lines(JOB_FILES.worlds)
@@ -1092,13 +1165,13 @@ end
 
 function RUN_FROM_TXT_QUEUE()
   -- Auto-resume by SLOT
-  local resumeW=FIND_OWN_INPROGRESS()
+  local resumeW = FIND_OWN_INPROGRESS()
   if resumeW then
-    local W,D,BID,SW,SD=SPEC_FOR_WORLD(resumeW)
+    local W,D,BID,SW,SD = SPEC_FOR_WORLD(resumeW)
     if W and BID then
-      ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
+      ITEM_BLOCK_ID = BID; ITEM_SEED_ID = BID+1
       print(string.format("[RESUME] %s lanjut %s|%s (BID=%d)", WORKER_ID, W, (D or ""), BID))
-      local hb=function(world) _update_heartbeat(world, WORKER_ID) end
+      local hb = function(world) _update_heartbeat(world, WORKER_ID) end
       _update_heartbeat(W, WORKER_ID)
       HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID}, hb)
       MARK_DONE(W); RECONCILE_QUEUE()
@@ -1111,13 +1184,13 @@ function RUN_FROM_TXT_QUEUE()
 
   while true do
     -- Klaim baru
-    local job=CLAIM_NEXT_JOB()
+    local job = CLAIM_NEXT_JOB()
     if job then
-      local W,D,BID,SW,SD=_parse_world_line(job)
+      local W,D,BID,SW,SD = _parse_world_line(job)
       if W and BID then
-        ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
+        ITEM_BLOCK_ID = BID; ITEM_SEED_ID = BID+1
         print(string.format("[JOB] %s klaim %s|%s (BID=%d)", WORKER_ID, W, (D or ""), BID))
-        local hb=function(world) _update_heartbeat(world, WORKER_ID) end
+        local hb = function(world) _update_heartbeat(world, WORKER_ID) end
         _update_heartbeat(W, WORKER_ID)
         HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID}, hb)
         MARK_DONE(W); RECONCILE_QUEUE()
@@ -1126,7 +1199,7 @@ function RUN_FROM_TXT_QUEUE()
 
     else
       -- Tidak ada yang bisa diklaim
-      local qs=QUEUE_STATS()
+      local qs = QUEUE_STATS()
 
       -- Gating: kalau "stale", TUNGGU sampai unclaimed==0; kalau "always", langsung boleh assist
       if ASSIST_MODE ~= "always" and qs.unclaimed > 0 then
@@ -1134,36 +1207,69 @@ function RUN_FROM_TXT_QUEUE()
         sleep(800)
       else
         local assistW, stolen = PICK_ASSIST_WORLD(ASSIST_MODE)
+
+        -- >>> NEW GUARD: anti-spam & limit helper
         if assistW then
-          print(string.format("[HELP] %s bantu %s (mode=%s%s)", WORKER_ID, assistW, ASSIST_MODE, stolen and " +steal" or ""))
-          local worlds=_read_lines(JOB_FILES.worlds)
+          -- skip kalau world sudah tidak punya job
+          if not _world_has_job(assistW) then
+            _cleanup_stale_inprogress(assistW)
+            assistW = nil
+          else
+            -- re-check limit helper
+            if ASSIST_MODE == "always" then
+              local total_workers = _count_unique_workers(assistW)
+              local helpers_now   = math.max(0, total_workers - 1)
+              if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
+                assistW = nil
+              end
+            end
+          end
+        end
+        -- <<< END NEW
+
+        if assistW then
+          print(string.format("[HELP] %s bantu %s (mode=%s%s)",
+            WORKER_ID, assistW, ASSIST_MODE, stolen and " +steal" or ""))
+          local worlds = _read_lines(JOB_FILES.worlds)
           for _,ln in ipairs(worlds) do
-            local W,D,BID,SW,SD=_parse_world_line(ln)
-            if W==assistW then
-              ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
-              local hb=function(world) _update_heartbeat(world, WORKER_ID) end
+            local W,D,BID,SW,SD = _parse_world_line(ln)
+            if W == assistW then
+              ITEM_BLOCK_ID = BID; ITEM_SEED_ID = BID+1
+              local hb = function(world) _update_heartbeat(world, WORKER_ID) end
               _update_heartbeat(W, WORKER_ID)
               HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID}, hb)
 
               -- MARK_DONE hanya jika owner pindah ke kita (steal pada mode "stale")
-              local rows=_read_lines(JOB_FILES.inprogress); local owner_now=nil
-              for _,ll in ipairs(rows) do local ww,who=ll:match("^([^|]+)|([^|]+)|"); if ww and ww:upper()==W then owner_now=who; break end end
-              if owner_now==WORKER_ID then MARK_DONE(W); RECONCILE_QUEUE(); print(string.format("[HELP] %s menutup %s", WORKER_ID, W)) end
+              local rows = _read_lines(JOB_FILES.inprogress); local owner_now = nil
+              for _,ll in ipairs(rows) do
+                local ww,who = ll:match("^([^|]+)|([^|]+)|")
+                if ww and ww:upper() == W then owner_now = who; break end
+              end
+              if owner_now == WORKER_ID then
+                MARK_DONE(W); RECONCILE_QUEUE()
+                print(string.format("[HELP] %s menutup %s", WORKER_ID, W))
+              end
               break
             end
           end
         else
           -- Tidak ada aktif sama sekali
-          local qs2=QUEUE_STATS()
+          local qs2 = QUEUE_STATS()
           if LOOP_MODE then
             RECONCILE_QUEUE()
             print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprog=%d, done=%d). Menunggu...",
               qs2.total, qs2.inprogress, qs2.done))
             -- idle actions
-            if (STORAGE_CAKE or "")~="" and has_any_cake() then
-              pcall(function() DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList, {tile_cap=3000, stack_cap=20}) end)
+            if (STORAGE_CAKE or "") ~= "" and has_any_cake() then
+              pcall(function()
+                DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList,
+                  {tile_cap=3000, stack_cap=20})
+              end)
             end
-            local b=getBot and getBot() or nil; if b and b.leaveWorld then b:leaveWorld() end; sleep(1000); if b then b.auto_reconnect=true end
+            local b=getBot and getBot() or nil
+            if b and b.leaveWorld then b:leaveWorld() end
+            sleep(1000)
+            if b then b.auto_reconnect = true end
             sleep(1200)
           else
             RECONCILE_QUEUE()
@@ -1178,9 +1284,18 @@ function RUN_FROM_TXT_QUEUE()
   end
 
   -- Final cleanup
-  if (STORAGE_CAKE or "")~="" and has_any_cake() then pcall(function() DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList, {tile_cap=3000, stack_cap=20}) end) end
-  local b=getBot and getBot() or nil; if b and b.leaveWorld then b:leaveWorld() end; sleep(900); if b then b.auto_reconnect=true end
+  if (STORAGE_CAKE or "") ~= "" and has_any_cake() then
+    pcall(function()
+      DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList,
+        {tile_cap=3000, stack_cap=20})
+    end)
+  end
+  local b=getBot and getBot() or nil
+  if b and b.leaveWorld then b:leaveWorld() end
+  sleep(900)
+  if b then b.auto_reconnect = true end
 end
+
 
 -------------------- MAIN --------------------
 do
