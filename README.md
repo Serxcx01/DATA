@@ -31,7 +31,6 @@ ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
-MAGNI_COOLDOWN_MIN   = MAGNI_COOLDOWN_MIN or 10  -- menit cooldown saat gagal ambil
 
 -- Delay/harvest
 USE_MAGNI     = true
@@ -71,7 +70,6 @@ _touch(JOB_FILES.worlds); _touch(JOB_FILES.inprogress); _touch(JOB_FILES.done)
 -------------------- GLOBAL FLAGS --------------------
 NUKED_STATUS    = NUKED_STATUS    or false
 WORLD_IS_PUBLIC = WORLD_IS_PUBLIC or nil
-MAGNI_COOLDOWN  = MAGNI_COOLDOWN or {}   -- per-world cooldown timestamp
 
 CURRENT_WORLD_TARGET, CURRENT_DOOR_TARGET = nil, nil
 local __door6_ticks, __last_mx, __last_my = 0, nil, nil
@@ -895,6 +893,8 @@ function TAKE_MAGNI(WORLD, DOOR)
   local b=getBot and getBot() or nil; if not b or not USE_MAGNI then return false end
   local TARGET_ID=10158; local inv=b:getInventory()
   local now=os.time()
+  -- setelah warp di awal ambil magni
+  local ex, ye = b.x, b.y 
 
   -- cek cooldown
   local cd_until = MAGNI_COOLDOWN[WORLD]
@@ -970,6 +970,7 @@ function TAKE_MAGNI(WORLD, DOOR)
   do
     local storageW,storageD=STORAGE_MAGNI,DOOR_MAGNI
     if (storageW or "")=="" then storageW,storageD=WORLD,DOOR end
+    b:findPath(ex, ye); sleep(400); faceSide2()
     _ensure_single_item_in_storage(10158,1,storageW,storageD,
       {chunk=200,step_ms=600,path_try=10,tile_cap=4000,stack_cap=20,tile_retries=2})
   end
