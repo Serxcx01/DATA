@@ -33,18 +33,18 @@ STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
 
 -- Delay/harvest
-USE_MAGNI     = true
+USE_MAGNI     = false
 DELAY_HARVEST = 170
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "DEMAKANCAKE", "RQPRO"
+STORAGE_CAKE, DOOR_CAKE = "MCNIHH", "GUGUH"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
 
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "PAMPANGXS", "RQPRO" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Mode RR/CHUNK (dipakai kalau USE_TXT_QUEUE=false)
 LIST_WORLD  = { -- "FARM_WORLD|FARM_DOOR|ITEM_BLOCK_ID|STORAGE_WORLD|STORAGE_DOOR"
