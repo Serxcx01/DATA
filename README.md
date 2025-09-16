@@ -891,117 +891,95 @@ MAGNI_COOLDOWN_MIN = MAGNI_COOLDOWN_MIN or 10  -- menit
 --------------------------------------------------------------------
 -- TAKE_MAGNI (versi akhir)
 --------------------------------------------------------------------
-function TAKE_MAGNI(WORLD, DOOR, ITEMS_TO_DROP, drop_opts)
-  local b = getBot and getBot() or nil
-  if not b then return false end
-  local inv       = b:getInventory()
-  local TARGET_ID = ITEM_MAGNI_ID or 1234   -- ganti 1234 sesuai BID magni
-  local MAX_TRIES = 3
-  local now       = os.time()
+function TAKE_MAGNI(WORLD, DOOR)
+  local b=getBot and getBot() or nil; if not b or not USE_MAGNI then return false end
+  local TARGET_ID=10158; local inv=b:getInventory()
+  local now=os.time()
 
   -- cek cooldown
   local cd_until = MAGNI_COOLDOWN[WORLD]
   if cd_until and now < cd_until then
-    local sisa = cd_until - now
-    print(string.format("[MAGNI] Cooldown aktif %s (%ds). Skip ambil magni.", WORLD, sisa))
+    local sisa=cd_until-now
+    print(string.format("[TAKE_MAGNI] Cooldown aktif %s (%ds)", WORLD, sisa))
     return false
   end
 
-  -- masuk world/door dan simpan posisi door
-  WARP_WORLD(WORLD, DOOR)
-  sleep(300)
-  SMART_RECONNECT(WORLD, DOOR)
-  local ex, ye = b.x, b.y   -- posisi door saat masuk
-
-  -- early: sudah punya?
+  -- Early: jika sudah >1, normalisasi ke 1 lalu wear (sekali) & return
   do
-    local have = inv:getItemCount(TARGET_ID)
-    if have > 1 then
-      local storageW, storageD = STORAGE_MAGNI, DOOR_MAGNI
-      if (storageW or "") == "" then storageW, storageD = WORLD, DOOR end
-      _ensure_single_item_in_storage(
-        TARGET_ID, 1, storageW, storageD,
-        {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2}
-      )
-      if inv:getItemCount(TARGET_ID) > 0 then
-        b:wear(TARGET_ID); sleep(250)
-        b:findPath(ex, ye); sleep(500); faceSide2()
-        if ITEMS_TO_DROP and #ITEMS_TO_DROP > 0 then
-          DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS_TO_DROP, drop_opts or {tile_cap=3000, stack_cap=20})
-        end
-        return true
-      end
-    elseif have == 1 then
-      b:wear(TARGET_ID); sleep(250)
-      b:findPath(ex, ye); sleep(500); faceSide2()
-      if ITEMS_TO_DROP and #ITEMS_TO_DROP > 0 then
-        DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS_TO_DROP, drop_opts or {tile_cap=3000, stack_cap=20})
-      end
+    local have=inv:getItemCount(TARGET_ID)
+    if have>1 then
+      local storageW,storageD=STORAGE_MAGNI,DOOR_MAGNI
+      if (storageW or "")=="" then storageW,storageD=WORLD,DOOR end
+      _ensure_single_item_in_storage(TARGET_ID,1,storageW,storageD,
+        {chunk=200,step_ms=600,path_try=10,tile_cap=4000,stack_cap=20,tile_retries=2})
+      if inv:getItemCount(TARGET_ID)>0 then b:wear(TARGET_ID); sleep(250) end
       return true
     end
   end
 
-  -- helper ambil magni (findPath + ZEE_COLLECT)
-  local function _try_take()
-    local MAX_ROUNDS, WAIT_MS = 10, 1200
-    local got = false
-    ZEE_COLLECT(true)
-    for _=1,MAX_ROUNDS do
-      if inv:getItemCount(TARGET_ID) > 0 then got=true; break end
-      local objs = (getObjects and getObjects()) or {}
-      local me   = b:getWorld() and b:getWorld():getLocal() or nil
-      local best, bestd2 = nil, 1e18
-      for _,o in pairs(objs) do
-        if o.id == TARGET_ID then
-          local tx,ty = math.floor(o.x/32), math.floor(o.y/32)
-          if me then
-            local mx,my = math.floor(me.posx/32), math.floor(me.posy/32)
-            local dx,dy = tx-mx, ty-my
-            local d2=dx*dx+dy*dy
-            if d2<bestd2 then best,bestd2=o,d2 end
-          else
-            best,bestd2=o,0
+  if inv:getItemCount(TARGET_ID)==0 then
+    local function _try_take_at(w,d)
+      if (w or "")=="" then return false end
+      WARP_WORLD(w,d); sleep(200)
+      local MAX_ROUNDS,WAIT_MS=10,1200; local got=false
+      for _=1,MAX_ROUNDS do
+        if inv:getItemCount(TARGET_ID)>0 then got=true; break end
+        local objs=(getObjects and getObjects()) or {}
+        local me=b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+        local best,bestd2=nil,1e18
+        for _,o in pairs(objs) do
+          if o.id==TARGET_ID then
+            local tx,ty=math.floor(o.x/32),math.floor(o.y/32)
+            if me then
+              local mx,my=math.floor(me.posx/32),math.floor(me.posy/32)
+              local dx,dy=tx-mx,ty-my
+              local d2=dx*dx+dy*dy
+              if d2<bestd2 then best,bestd2=o,d2 end
+            else
+              best=o; bestd2=0
+            end
           end
         end
+        if best then
+          local tx,ty=math.floor(best.x/32),math.floor(best.y/32)
+          SMART_RECONNECT(w,d,tx,ty)
+          b:findPath(tx,ty)
+          ZEE_COLLECT(true)
+          sleep(WAIT_MS)
+        else
+          ZEE_COLLECT(true)
+          SMART_RECONNECT(w,d)
+          sleep(WAIT_MS)
+        end
       end
-      if best then
-        local tx,ty = math.floor(best.x/32), math.floor(best.y/32)
-        SMART_RECONNECT(WORLD,DOOR,tx,ty)
-        b:findPath(tx,ty)
-        ZEE_COLLECT(true)
-        sleep(WAIT_MS)
-      else
-        ZEE_COLLECT(true)
-        SMART_RECONNECT(WORLD,DOOR)
-        sleep(WAIT_MS)
-      end
+      ZEE_COLLECT(false)
+      return got or (inv:getItemCount(TARGET_ID)>0)
     end
-    ZEE_COLLECT(false)
-    return got or (inv:getItemCount(TARGET_ID) > 0)
-  end
 
-  -- coba ambil magni (MAX_TRIES)
-  for attempt=1,MAX_TRIES do
-    if _try_take() then
-      print(string.format("[MAGNI] Ditemukan (percobaan #%d)", attempt))
-      b:wear(TARGET_ID); sleep(250)
-      b:findPath(ex, ye); sleep(500); faceSide2()
-      if ITEMS_TO_DROP and #ITEMS_TO_DROP > 0 then
-        DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS_TO_DROP, drop_opts or {tile_cap=3000, stack_cap=20})
-      end
-      return true
-    else
-      print(string.format("[MAGNI] Belum dapat (percobaan #%d)", attempt))
-      sleep(800)
+    if not _try_take_at(WORLD,DOOR) then _try_take_at(STORAGE_MAGNI,DOOR_MAGNI) end
+
+    if inv:getItemCount(TARGET_ID)==0 then
+      print("[TAKE_MAGNI] Gagal ambil 10158.")
+      -- set cooldown kalau gagal
+      MAGNI_COOLDOWN[WORLD]= now + (MAGNI_COOLDOWN_MIN*60)
+      return false
     end
   end
 
-  -- gagal total → pasang cooldown
-  MAGNI_COOLDOWN[WORLD] = now + (MAGNI_COOLDOWN_MIN*60)
-  print(string.format("[MAGNI] Gagal ambil. Set cooldown %d menit untuk %s.",
-    MAGNI_COOLDOWN_MIN, WORLD))
+  -- Normalisasi: pastikan tepat 1
+  do
+    local storageW,storageD=STORAGE_MAGNI,DOOR_MAGNI
+    if (storageW or "")=="" then storageW,storageD=WORLD,DOOR end
+    _ensure_single_item_in_storage(10158,1,storageW,storageD,
+      {chunk=200,step_ms=600,path_try=10,tile_cap=4000,stack_cap=20,tile_retries=2})
+  end
+
+  if inv:getItemCount(10158)>0 then
+    b:wear(10158); sleep(250); return true
+  end
   return false
 end
+
 
 
 -------------------- HARVEST --------------------
