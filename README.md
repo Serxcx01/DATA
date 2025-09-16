@@ -34,7 +34,7 @@ LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile 
 MAGNI_COOLDOWN_MIN   = MAGNI_COOLDOWN_MIN or 10  -- menit cooldown saat gagal ambil
 
 -- Delay/harvest
-USE_MAGNI     = false
+USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Storage MAGNI (opsional)
