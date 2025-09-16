@@ -31,20 +31,22 @@ ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
+MAGNI_COOLDOWN_MIN   = MAGNI_COOLDOWN_MIN or 10  -- menit cooldown saat gagal ambil
 
 -- Delay/harvest
-USE_MAGNI     = false
+USE_MAGNI     = true
 DELAY_HARVEST = 170
 
+-- Storage MAGNI (opsional)
+STORAGE_MAGNI, DOOR_MAGNI = "DEMAKANCAKE", "RQPRO" -- lokasi kacamata (10158)
+
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "MCNIHH", "GUGUH"
+STORAGE_CAKE, DOOR_CAKE = "PAMPANGXS", "RQPRO"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
 
 
--- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Mode RR/CHUNK (dipakai kalau USE_TXT_QUEUE=false)
 LIST_WORLD  = { -- "FARM_WORLD|FARM_DOOR|ITEM_BLOCK_ID|STORAGE_WORLD|STORAGE_DOOR"
@@ -69,9 +71,11 @@ _touch(JOB_FILES.worlds); _touch(JOB_FILES.inprogress); _touch(JOB_FILES.done)
 -------------------- GLOBAL FLAGS --------------------
 NUKED_STATUS    = NUKED_STATUS    or false
 WORLD_IS_PUBLIC = WORLD_IS_PUBLIC or nil
+MAGNI_COOLDOWN  = MAGNI_COOLDOWN or {}   -- per-world cooldown timestamp
 
 CURRENT_WORLD_TARGET, CURRENT_DOOR_TARGET = nil, nil
 local __door6_ticks, __last_mx, __last_my = 0, nil, nil
+
 
 SMART_DELAY      = false
 DELAY_RECONNECT  = 20000
@@ -640,38 +644,79 @@ local function log_success(world,door,secs)
 end
 
 -------------------- WARP (tahan banting + bad door fix) --------------------
+--------------------------------------------------------------------
+-- GUARD_DOOR_STUCK (revisi dengan cooldown)
+--------------------------------------------------------------------
+local __door6_ticks = 0
+local __guard_cooldown_until = 0   -- NEW: penanda cooldown global
 MAX_WARP_RETRY=10; MAX_DOOR_RETRY=5; MAX_RECOLL_CYCLES=2
 
-local function _nudge_and_warp(WORLD,DOOR,tries)
-  local b=getBot and getBot() or nil; if not b then return false end
-  tries=tries or 3
-  for _=1,tries do
-    local okW,w=pcall(function() return b:getWorld() end)
-    if okW and w then local okL,me=pcall(function() return w:getLocal() end)
-      if okL and me and b.findPath then local mx=math.floor((me.posx or 0)/32); local my=math.floor((me.posy or 0)/32); b:findPath(mx+1,my); sleep(300) end
+local function _nudge_and_warp(WORLD, DOOR, tries)
+  local b = getBot and getBot() or nil
+  if not b then return false end
+  tries = tries or 3
+
+  for i=1,tries do
+    local mx,my = _meTile()
+    print(string.format("[GUARD] Nudge attempt %d/%d at (%d,%d)", i, tries, mx or -1, my or -1))
+
+    -- coba nudge kanan
+    b:findPath(mx+1,my)
+    sleep(350)
+
+    -- warp ulang ke door
+    b:warp(WORLD, DOOR)
+    sleep(DELAY_WARP or 7000)
+
+    -- cek apakah berhasil pindah (sudah bukan di door fg==6)
+    local okT, tile = pcall(function() return b:getWorld():getTile(_meTile()) end)
+    if okT and tile and (tile.fg or 0) ~= 6 then
+      print("[GUARD] Nudge+warp berhasil, tidak stuck lagi.")
+      return true
     end
-    if b.warp then b:warp((WORLD or ""):upper().."|"..(DOOR or "")) end
-    sleep(DELAY_WARP); local fg=_current_tile_fg_safe(6,100); if fg~=6 then return true end
   end
+
+  -- kalau sampai sini berarti semua percobaan gagal
+  print("[GUARD] Semua percobaan warp gagal. Stop mencoba sementara.")
   return false
 end
 
-function GUARD_DOOR_STUCK()
-  local b=getBot and getBot() or nil; if not b then return end
-  local fg=_current_tile_fg_safe(2,60)
-  if fg~=6 then __door6_ticks=0; return end
-  local okW,w=pcall(function() return b:getWorld() end); if not okW or not w then return end
-  local okL,me=pcall(function() return w:getLocal() end); if not okL or not me then return end
-  local mx=math.floor((me.posx or 0)/32); local my=math.floor((me.posy or 0)/32)
-  if __last_mx==mx and __last_my==my then __door6_ticks=__door6_ticks+1 else __door6_ticks=0; __last_mx, __last_my=mx,my; return end
-  if __door6_ticks>=6 then
+
+
+function GUARD_DOOR_STUCK(WORLD, DOOR)
+  local b = getBot and getBot() or nil
+  if not b then return end
+
+  -- Cek tile tempat bot berdiri
+  local mx,my = _meTile()
+  local w = b:getWorld()
+  local okT, tile = pcall(function() return w:getTile(mx,my) end)
+  if not okT or not tile then return end
+
+  -- Kalau bukan di white door (fg==6) → reset counter
+  if (tile.fg or 0) ~= 6 then
+    __door6_ticks = 0
+    return
+  end
+
+  -- Kalau masih cooldown → skip guard
+  local now = os.time()
+  if now < (__guard_cooldown_until or 0) then
+    return
+  end
+
+  -- Tambah counter setiap tick stuck di door
+  __door6_ticks = __door6_ticks + 1
+
+  -- Kalau stuck 6 kali berturut-turut → lakukan nudge+warp
+  if __door6_ticks >= 6 then
     print("[GUARD] Stuck di white door. Nudge+warp...")
-    if CURRENT_WORLD_TARGET and CURRENT_DOOR_TARGET then
-      if not _nudge_and_warp(CURRENT_WORLD_TARGET, CURRENT_DOOR_TARGET, 3) then if b.findPath then b:findPath(mx+1,my); sleep(300) end end
-    else
-      if b.findPath then b:findPath(mx+1,my); sleep(300) end
-    end
-    __door6_ticks=0
+
+    -- Set cooldown supaya tidak langsung dipanggil lagi
+    __guard_cooldown_until = now + 3   -- cooldown 3 detik
+    __door6_ticks = 0
+
+    _nudge_and_warp(WORLD, DOOR, 3)  -- panggil fungsi aslinya (max tries 3)
   end
 end
 
@@ -834,58 +879,69 @@ local function _ensure_single_item_in_storage(item_id, keep, storageW, storageD,
   end
 end
 
+--------------------------------------------------------------------
+-- TAKE_MAGNI (cooldown hanya saat magni TIDAK ADA / gagal ambil)
+--------------------------------------------------------------------
 function TAKE_MAGNI(WORLD, DOOR)
-  local b=getBot and getBot() or nil; if not b or not USE_MAGNI then return false end
-  local TARGET_ID=10158; local inv=b:getInventory()
+  local b = getBot and getBot() or nil
+  if not b then return false end
 
-  -- Early: jika sudah >1, normalisasi ke 1 lalu wear (sekali) & return
+  local inv       = b:getInventory()
+  local TARGET_ID = ITEM_MAGNI_ID or 1234   -- ganti 1234 sesuai BID magni
+  local MAX_TRIES = 3
+  local now       = os.time()
+
+  -- 1) Cek cooldown HANYA untuk kasus gagal sebelumnya
+  local cd_until = MAGNI_COOLDOWN[WORLD]
+  if cd_until and now < cd_until then
+    local sisa = cd_until - now
+    print(string.format("[MAGNI] Cooldown aktif %s (%ds). Skip ambil magni.", WORLD, sisa))
+    return false
+  end
+
+  -- 2) Sudah punya? (tidak pernah set cooldown di jalur ini)
   do
-    local have=inv:getItemCount(TARGET_ID)
-    if have>1 then
-      local storageW,storageD=STORAGE_MAGNI,DOOR_MAGNI; if (storageW or "")=="" then storageW,storageD=WORLD,DOOR end
-      _ensure_single_item_in_storage(TARGET_ID,1,storageW,storageD,{chunk=200,step_ms=600,path_try=10,tile_cap=4000,stack_cap=20,tile_retries=2})
-      if inv:getItemCount(TARGET_ID)>0 then b:wear(TARGET_ID); sleep(250) end
+    local have = inv:getItemCount(TARGET_ID)
+    if have > 1 then
+      -- normalisasi ke 1 (tanpa cooldown)
+      local storageW, storageD = STORAGE_MAGNI, DOOR_MAGNI
+      if (storageW or "") == "" then storageW, storageD = WORLD, DOOR end
+      _ensure_single_item_in_storage(
+        TARGET_ID, 1, storageW, storageD,
+        {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2}
+      )
+      if inv:getItemCount(TARGET_ID) > 0 then
+        b:wear(TARGET_ID); sleep(250)
+        return true
+      end
+      -- kalau tiba-tiba jadi 0, lanjut ke bagian ambil di bawah (masih tanpa cooldown)
+    elseif have == 1 then
+      b:wear(TARGET_ID); sleep(250)
       return true
     end
   end
 
-  if inv:getItemCount(TARGET_ID)==0 then
-    local function _try_take_at(w,d)
-      if (w or "")=="" then return false end
-      WARP_WORLD(w,d); sleep(200)
-      local MAX_ROUNDS,WAIT_MS=10,1200; local got=false
-      for _=1,MAX_ROUNDS do
-        if inv:getItemCount(TARGET_ID)>0 then got=true; break end
-        local objs=(getObjects and getObjects()) or {}
-        local me=b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
-        local best,bestd2=nil,1e18
-        for _,o in pairs(objs) do
-          if o.id==TARGET_ID then
-            local tx,ty=math.floor(o.x/32),math.floor(o.y/32)
-            if me then local mx,my=math.floor(me.posx/32),math.floor(me.posy/32); local dx,dy=tx-mx,ty-my; local d2=dx*dx+dy*dy; if d2<bestd2 then best,bestd2=o,d2 end
-            else best=o; bestd2=0 end
-          end
-        end
-        if best then
-          local tx,ty=math.floor(best.x/32),math.floor(best.y/32)
-          SMART_RECONNECT(w,d,tx,ty); b:findPath(tx,ty); ZEE_COLLECT(true); sleep(WAIT_MS)
-        else
-          ZEE_COLLECT(true); SMART_RECONNECT(w,d); sleep(WAIT_MS)
-        end
-      end
-      ZEE_COLLECT(false); return got or (inv:getItemCount(TARGET_ID)>0)
+  -- 3) Belum punya magni: coba ambil (warp) beberapa kali
+  for attempt = 1, MAX_TRIES do
+    WARP_WORLD(WORLD, DOOR)
+    sleep(500)
+    SMART_RECONNECT(WORLD, DOOR)
+
+    local have_magni = inv:getItemCount(TARGET_ID)
+    if have_magni > 0 then
+      print(string.format("[MAGNI] Ditemukan (percobaan #%d)", attempt))
+      b:wear(TARGET_ID); sleep(250)
+      return true
+    else
+      print(string.format("[MAGNI] Belum ada (percobaan #%d). Coba lagi...", attempt))
+      sleep(1000)
     end
-    if not _try_take_at(WORLD,DOOR) then _try_take_at(STORAGE_MAGNI,DOOR_MAGNI) end
-    if inv:getItemCount(TARGET_ID)==0 then print("[TAKE_MAGNI] Gagal ambil 10158."); return false end
   end
 
-  -- Normalisasi: pastikan tepat 1
-  do
-    local storageW,storageD=STORAGE_MAGNI,DOOR_MAGNI; if (storageW or "")=="" then storageW,storageD=WORLD,DOOR end
-    _ensure_single_item_in_storage(10158,1,storageW,storageD,{chunk=200,step_ms=600,path_try=10,tile_cap=4000,stack_cap=20,tile_retries=2})
-  end
-
-  if inv:getItemCount(10158)>0 then b:wear(10158); sleep(250); return true end
+  -- 4) Gagal ambil → set cooldown (INI SAJA yang pasang cooldown)
+  local span = (MAGNI_COOLDOWN_MIN or 10) * 60
+  MAGNI_COOLDOWN[WORLD] = now + span
+  print(string.format("[MAGNI] Gagal ambil. Set cooldown %d menit untuk %s.", MAGNI_COOLDOWN_MIN or 10, WORLD))
   return false
 end
 
