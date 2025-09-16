@@ -34,7 +34,7 @@ LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile 
 MAGNI_COOLDOWN_MIN   = MAGNI_COOLDOWN_MIN or 10  -- menit cooldown saat gagal ambil
 
 -- Delay/harvest
-USE_MAGNI     = true
+USE_MAGNI     = false
 DELAY_HARVEST = 170
 
 -- Storage MAGNI (opsional)
@@ -882,16 +882,24 @@ end
 --------------------------------------------------------------------
 -- TAKE_MAGNI (cooldown hanya saat magni TIDAK ADA / gagal ambil)
 --------------------------------------------------------------------
-function TAKE_MAGNI(WORLD, DOOR)
+--------------------------------------------------------------------
+-- CONFIG GLOBAL (sekali saja di atas)
+--------------------------------------------------------------------
+MAGNI_COOLDOWN     = MAGNI_COOLDOWN or {}   -- per-world cooldown timestamp
+MAGNI_COOLDOWN_MIN = MAGNI_COOLDOWN_MIN or 10  -- menit
+
+--------------------------------------------------------------------
+-- TAKE_MAGNI (versi akhir)
+--------------------------------------------------------------------
+function TAKE_MAGNI(WORLD, DOOR, ITEMS_TO_DROP, drop_opts)
   local b = getBot and getBot() or nil
   if not b then return false end
-
   local inv       = b:getInventory()
   local TARGET_ID = ITEM_MAGNI_ID or 1234   -- ganti 1234 sesuai BID magni
   local MAX_TRIES = 3
   local now       = os.time()
 
-  -- 1) Cek cooldown HANYA untuk kasus gagal sebelumnya
+  -- cek cooldown
   local cd_until = MAGNI_COOLDOWN[WORLD]
   if cd_until and now < cd_until then
     local sisa = cd_until - now
@@ -899,11 +907,16 @@ function TAKE_MAGNI(WORLD, DOOR)
     return false
   end
 
-  -- 2) Sudah punya? (tidak pernah set cooldown di jalur ini)
+  -- masuk world/door dan simpan posisi door
+  WARP_WORLD(WORLD, DOOR)
+  sleep(300)
+  SMART_RECONNECT(WORLD, DOOR)
+  local ex, ye = b.x, b.y   -- posisi door saat masuk
+
+  -- early: sudah punya?
   do
     local have = inv:getItemCount(TARGET_ID)
     if have > 1 then
-      -- normalisasi ke 1 (tanpa cooldown)
       local storageW, storageD = STORAGE_MAGNI, DOOR_MAGNI
       if (storageW or "") == "" then storageW, storageD = WORLD, DOOR end
       _ensure_single_item_in_storage(
@@ -912,38 +925,84 @@ function TAKE_MAGNI(WORLD, DOOR)
       )
       if inv:getItemCount(TARGET_ID) > 0 then
         b:wear(TARGET_ID); sleep(250)
+        b:findPath(ex, ye); sleep(500); faceSide2()
+        if ITEMS_TO_DROP and #ITEMS_TO_DROP > 0 then
+          DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS_TO_DROP, drop_opts or {tile_cap=3000, stack_cap=20})
+        end
         return true
       end
-      -- kalau tiba-tiba jadi 0, lanjut ke bagian ambil di bawah (masih tanpa cooldown)
     elseif have == 1 then
       b:wear(TARGET_ID); sleep(250)
+      b:findPath(ex, ye); sleep(500); faceSide2()
+      if ITEMS_TO_DROP and #ITEMS_TO_DROP > 0 then
+        DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS_TO_DROP, drop_opts or {tile_cap=3000, stack_cap=20})
+      end
       return true
     end
   end
 
-  -- 3) Belum punya magni: coba ambil (warp) beberapa kali
-  for attempt = 1, MAX_TRIES do
-    WARP_WORLD(WORLD, DOOR)
-    sleep(500)
-    SMART_RECONNECT(WORLD, DOOR)
+  -- helper ambil magni (findPath + ZEE_COLLECT)
+  local function _try_take()
+    local MAX_ROUNDS, WAIT_MS = 10, 1200
+    local got = false
+    ZEE_COLLECT(true)
+    for _=1,MAX_ROUNDS do
+      if inv:getItemCount(TARGET_ID) > 0 then got=true; break end
+      local objs = (getObjects and getObjects()) or {}
+      local me   = b:getWorld() and b:getWorld():getLocal() or nil
+      local best, bestd2 = nil, 1e18
+      for _,o in pairs(objs) do
+        if o.id == TARGET_ID then
+          local tx,ty = math.floor(o.x/32), math.floor(o.y/32)
+          if me then
+            local mx,my = math.floor(me.posx/32), math.floor(me.posy/32)
+            local dx,dy = tx-mx, ty-my
+            local d2=dx*dx+dy*dy
+            if d2<bestd2 then best,bestd2=o,d2 end
+          else
+            best,bestd2=o,0
+          end
+        end
+      end
+      if best then
+        local tx,ty = math.floor(best.x/32), math.floor(best.y/32)
+        SMART_RECONNECT(WORLD,DOOR,tx,ty)
+        b:findPath(tx,ty)
+        ZEE_COLLECT(true)
+        sleep(WAIT_MS)
+      else
+        ZEE_COLLECT(true)
+        SMART_RECONNECT(WORLD,DOOR)
+        sleep(WAIT_MS)
+      end
+    end
+    ZEE_COLLECT(false)
+    return got or (inv:getItemCount(TARGET_ID) > 0)
+  end
 
-    local have_magni = inv:getItemCount(TARGET_ID)
-    if have_magni > 0 then
+  -- coba ambil magni (MAX_TRIES)
+  for attempt=1,MAX_TRIES do
+    if _try_take() then
       print(string.format("[MAGNI] Ditemukan (percobaan #%d)", attempt))
       b:wear(TARGET_ID); sleep(250)
+      b:findPath(ex, ye); sleep(500); faceSide2()
+      if ITEMS_TO_DROP and #ITEMS_TO_DROP > 0 then
+        DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS_TO_DROP, drop_opts or {tile_cap=3000, stack_cap=20})
+      end
       return true
     else
-      print(string.format("[MAGNI] Belum ada (percobaan #%d). Coba lagi...", attempt))
-      sleep(1000)
+      print(string.format("[MAGNI] Belum dapat (percobaan #%d)", attempt))
+      sleep(800)
     end
   end
 
-  -- 4) Gagal ambil → set cooldown (INI SAJA yang pasang cooldown)
-  local span = (MAGNI_COOLDOWN_MIN or 10) * 60
-  MAGNI_COOLDOWN[WORLD] = now + span
-  print(string.format("[MAGNI] Gagal ambil. Set cooldown %d menit untuk %s.", MAGNI_COOLDOWN_MIN or 10, WORLD))
+  -- gagal total → pasang cooldown
+  MAGNI_COOLDOWN[WORLD] = now + (MAGNI_COOLDOWN_MIN*60)
+  print(string.format("[MAGNI] Gagal ambil. Set cooldown %d menit untuk %s.",
+    MAGNI_COOLDOWN_MIN, WORLD))
   return false
 end
+
 
 -------------------- HARVEST --------------------
 local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
