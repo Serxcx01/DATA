@@ -1,143 +1,34 @@
---- SC LOGIN ANDRE
-
-local accounts = [[
-astrapcoos@gmail.com|A9:A3:5E:0D:AC:F9:1F079B92BD4D9DAA4109AB146789F622:28BCB68B5D1CE6D9E66F6591F29FFC9D:i+GjoZ4RmaH3d\/p4qT3FUXTIG4bqUKWU3njSdEEhPOsK\/bSPeVZCvnrYME04T+QLB48tF+zhRd4SGV9GW8baxR8u\/jiupkZd+WgLP1u2hFVAJy71op2\/EwV9DPxxRYF0CvDWQhAxZ30un8X+IrFsMUJyUkCR\/me56bsim7rKLkbXVuUzOX4Ytk+0+VVCYyzQcIrbYsORaUghiCWOTTnS6RFnn11umN9qOZmCd8tiAUoZvS8b1T6Fl+CVAh5Rbglhg4x3EuFWOaSANYn+6Jzv6fEvVE\/VIxuWfqpoo82Pl1LIPPyjk4Oc2U6NJnYLrjys9TtIPg\/2P5HSogCv6XJ8fA\/CWqH4n4qfe3ArxXmyfZxi+MnQLRzcUThZBxvs2kKDdfu2tyfInyiGocSEsfkACYRijzY3AigbdMlU9YS0JzSdCLCI3wHeb28MRgpt87tgI80HQjpKrnV3WlOC4JR\/Lg==
+---- SC AP
+local bots = [[
+106792EBDCECD010D4ADF357C3000DE7|d0gW0x40db7wGdcF2Tq3KTfSAsvSsB7nFoNmm3mJc+xMZEQvv3iisbsevZM6ssXN1aM1UePm5Ztmp8s6yT1t85NLPvBA0462ekTAieZ+o9dZIw0mmUta6o7W5Qtmn13n7sbopWaDJ7LxPcdDGbfbQhw2hFjg60N0ITF9eN6oZTiRlY1CGW/iydA/1KzvO8WCit2R5DQiOftbkwAyXGmMO5I9lJSuOGIm4Ylr3saDT0lrJydXZ4+4AExVOSKuKvG6DRZylgQzqWEcrZAvefIyWMtB249WysppliAuvsgFpFusj0HXLDpUsiJK/JvJh7TddB5R6VLDt6RgT9jEsbPOMk4rXvdF1fPIpSQMVu8JOK1ncokF1T4sHb2u1UtGsBUA1NyoyPTPIatmGybjqJ4M7D/5M6Bp9DQNd10f/Is+e3gzocR1Z09DGkXvdf1XTPYguBlfZdh1IV7v4DLU3ZGfQO43ixQP1Ex/40r5+1a0U27fBlN9gue/rTVMJFdaa/9c
+B2EBD68C83E4F5F94A8225C8049BFF55|d0gW0x40db7wGdcF2Tq3KVUzUdNhxsoMCvSoiYUUx/ZFsrri8o30ApVWOxFJ8TghGZwGDlPtewei9PEGWZzZDdLt6ZiLeWIdsvgJYYA+DI/sWjhwG8bCYzkJk2eP5KCkNBZJgyu2ZTp8kqX65Fw87I8jS93tbFMfBKTON0VpcWYSIowwsEIV2mSacXnEFh7W4DA+53gU0LK9klOUYoYuhj8bQ+q/O/f0dFI5JXjdJfHg9rmOgTy66XTB3tnt1BzER1yLxBaX8zXJCxKtraQFf53CA8mK3y6QHQ2LNvFCTZABl21U35VBlE6Dwj5G5VNOQZcISMZNvcqw0Z93ku1YB+tfJuvptvMsR65PJdUtI1pjh7YDcSbWYDAxDkxzfLaHC0YOVEOSrtfz8KzoR0s1lrfKEJedbbbUpOEt+WKpL2eTXnBOxRMfh3zO+oxySUfe5NdZN1BeAX0ZVdw8jDwY+bCDzkJXKUnfzBaJRYoeXGYeaLve62qoHjHKWC9AgpBc
+193A72B400BB199B4F8F3E1AE3383308|d0gW0x40db7wGdcF2Tq3KVXq2CbyI3xHENXbQalbHwlgkFWlhOmpDwFUefq11ouflioHrHH6l2J8Ayo6Mzw+e/XX6KGrwXgnCGJ3TjmYwddyKePOuQyxiu3SBrzranbDyy9WyFAukPSk0CasqDN7XpgjVCg82SgoiQWLVIJJQLiY4vH7B9emnGavNUi/zYRLqCUHIAXLWFeQvK9hbKIkY9+Mp4i3dGUYM8CpUli8TLoxxau67iMTM3iHS2T3eV3hKgEUI6OfgCmI72jQPRT9ZvYF5juT/sgCGOR5pGBcza9+/aftQaVD07LTOMWzQYnfZRo//33buKQ4GblyRpXhIWx+PQ7oCA7+FgX5YcFl8mYtFwSRgQctOhAzn/E7/Viy7zbedMxbSvX9cTBSqgXttGy967IaNYh8Y4VBcN1UeFzEPwj1r23/Pes1tCJfRJ36igAJjKHNMaqiH2SRZVcLLIoeE02n3ndWawV6Jzw2hxH9i30zNvPeovtkHNbMLAfb
 
 ]]
 
--- lidarui341@gmail.com|0B:03:98:B1:AF:E4:8E6A5B8347E27B4609D3D931CF0453A5:ACC10FCC54991C73AEAC6462BC9F71B0:WgVhUkRg0qNhT6pY1HrfmxCdSoH4p4xuoCTo31i3TFn66QJdYB7i26Fo9Sm9L0l6kgz1P1eGlEFoMFNo3bGhBiZk7cUQ3m7Sjvmn0LeVWZ4CifetuxELDzhi7KS1vPvK8uTep11NfE3xnIsdT4FSvT4nGvfrt7Gb1cKuaIQ9i82EM/U1rsdFaplcuYvcpwKYXRbnjKGj5fz0MJEiSwDQPenHD5dJOshw102YcBrEabJaxZASMSklyYOh0uwTY5Nz4B3ohP0l0gFJe8sce7i+ZyXeZ69KkMUaWlMn3rDnioKg/YiO4UDA5wh52LloGzzh51LRYZPrPczte2THK0I5HFSjk+cTzO6iwmODZXxzU1gMa9YZH80OP6j2dhML/DsF9djlBTXDurohbWuDyChj6DxoC30OkZ0GkAgFsQygtXMd3V06b/r1H6CDtl7Fq5B2eJx2n+lasmddZwq3b1AfuQ==
--- local email, mac, rid, wk, ltoken = account:match("([^|]+)|([^|]+):([^|]+):([^|]+):(.+)")
 
 
-
-
-
-
-
-
-
-
-worldBFG = "YXIS"
-bot_bypass = false
-
-
-function zeeBot(bot)
-    -- local bot = getBot()  -- Mengambil getBot() satu kali untuk menghindari pemanggilan berulang
-    local Status
-    if bot.status == BotStatus.online and bot.status == 1 then
-        Status = "online"
-    elseif bot.status == BotStatus.offline and bot.status ~= 1 then
-        Status = "offline"
-    elseif bot.status == BotStatus.wrong_password then
-        Status = "Wrong Password"
-    elseif bot.status == BotStatus.account_banned then
-        Status = "Banned"
-    elseif bot.status == BotStatus.location_banned then
-        Status = "Location Banned"
-    elseif bot.status == BotStatus.version_update then
-        Status = "Version Update"
-    elseif bot.status == BotStatus.advanced_account_protection then
-        Status = "Advanced Account Protection"
-    elseif bot.status == BotStatus.server_overload then
-        Status = "Server Overload"
-    elseif bot.status == BotStatus.too_many_login then
-        Status = "Too Many Login"
-    elseif bot.status == BotStatus.maintenance then
-        Status = "Maintenance"
-    elseif bot.status == BotStatus.http_block then
-        Status = "Http Block"
-    elseif bot.status == BotStatus.captcha_requested then
-        Status = "Captcha Requested"
-    elseif bot.status == BotStatus.error_connecting then
-        Status = "Error Connecting"
-    end
-
-    return {
-        world = bot:getWorld().name,
-        name = bot.name,
-        level = bot.level,
-        status = Status,
-        gems = bot.gem_count,
-        slots = bot:getInventory().slotcount,
-        getdoor = getTile(bot.x, bot.y).fg == 6,
+for line in bots:gmatch("[^\n]+") do
+    local rid, ltoken = line:gmatch("([^|]+)|([^|]+)")()
+    local dataBot = {
+        ["rid"] = rid,
+        ["name"] = ltoken,
+        ["platform"] = 1,
+        ["mac"] = "02:00:00:00:00:00",
+        ["wk"] = "NONE0"
     }
-end
-
-function warpnow(world, bot)
-    warp_time = 0
-    while bot:getWorld().name ~= world do
-        while bot.status ~= BotStatus.online and bot.status ~= 1 do
-            bot:connect()
-            sleep(10000)
-        end
-        bot:warp(string.upper(world))
-        sleep(7000)
-        warp_time = warp_time + 1
-        if warp_time >= 5 then
-            sleep(8000)
-        end
+    local bot = addBot(dataBot)
+    local tutorial = bot.auto_tutorial
+    bot:getConsole().enabled = true
+    if bot_bypass then
+        bot.bypass_logon = true
     end
-end
+    tutorial.enabled = true
+    tutorial.auto_quest = true
+    tutorial.set_as_home = true
+    tutorial.set_high_level = true
+    tutorial.set_random_skin = false
+    tutorial.set_random_profile = true
+    bot.dynamic_delay = true
 
-function take_remote(bot)
-    ex = math.floor(bot:getWorld():getLocal().posx/32) + 0
-    ye = math.floor(bot:getWorld():getLocal().posy/32) - 1
-    bot:wrench(ex,ye)
-    sleep(3000)
-    bot:sendPacket(2,"action|dialog_return\ndialog_name|itemsucker\ntilex|"..(ex).."|\ntiley|"..(ye).."|\nbuttonClicked|getplantationdevice")
-    sleep(3000)
-end
-
-
-
-for account in accounts:gmatch("[^\n]+") do
-    local email, mac, rid, wk, ltoken = account:match("([^|]+)|([^|]+):([^|]+):([^|]+):(.+)")
-    if mac and rid and wk and ltoken then
-        local details = {
-            ["display"] = email,
-            ["secret"] = email,
-            ["name"] = ltoken, 
-            ["rid"] = rid,
-            ["mac"] = mac,
-            ["wk"] = wk,
-            ["platform"] = 0,
-        }
-
-        local bot = addBot(details)
-        sleep(100)
-        -- local bot = addBot(details, "", "", "", Platform.android)
-        local tutorial = bot.auto_tutorial
-        bot:getConsole().enabled = true
-        if bot_bypass then
-            bot.bypass_logon = true
-        end
-        tutorial.enabled = true
-        tutorial.auto_quest = true
-        tutorial.set_as_home = true
-        tutorial.set_high_level = true
-        tutorial.set_random_skin = true
-        tutorial.set_random_profile = true
-        bot.dynamic_delay = true
-        -- sleep(3)
-        -- while true do
-        --     if bot.level >= 6 then
-        --         warpnow(worldBFG, bot)
-        --         tile_skip = 0
-        --         get_tile_world = bot:getWorld()
-        --         for _,tile in pairs(get_tile_world:getTilesSafe()) do
-        --             tile_skip = tile_skip + 1
-        --             if tile_skip >= 4 then
-        --                 if bot:getWorld():getTile(tile.x, tile.y).fg == 5638 then
-        --                     bot:findPath(tile.x,tile.y + 1)
-        --                     sleep(1000)
-        --                     take_remote(bot)
-        --                     sleep(100)
-        --                 end
-        --             end
-        --         end
-        --         bot:leaveWorld()
-        --         break
-        --     end
-        -- end
-    end
 end
