@@ -899,55 +899,59 @@ function TAKE_MAGNI(WORLD, DOOR)
     end
   end
 
-  if inv:getItemCount(TARGET_ID)==0 then
-    local function _try_take_at(w,d)
-      if (w or "")=="" then return false end
-      WARP_WORLD(w,d); sleep(250)
-      SMART_RECONNECT(w,d)  -- pastikan world sudah siap
-      txafterwarp, tyafterwarp=b.x, b.y
-      local MAX_ROUNDS, WAIT_MS = 10, 1200
-      local got = false
-      for _=1,MAX_ROUNDS do
-        if inv:getItemCount(TARGET_ID)>0 then got=true; break end
+  -- letakkan DI ATAS sebelum if, supaya scope-nya global/local-atas
+  local function _try_take_at(w, d)
+    if (w or "") == "" then return false end
+    WARP_WORLD(w, d); sleep(250)
+    SMART_RECONNECT(w, d)                 -- pastikan world siap
+    txafterwarp, tyafterwarp = b.x, b.y    -- simpan posisi door setelah warp
 
-        local objs = (getObjects and getObjects()) or {}
-        local me   = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+    local MAX_ROUNDS, WAIT_MS = 10, 1200
+    local got = false
+    ZEE_COLLECT(true)
+    for _ = 1, MAX_ROUNDS do
+      if inv:getItemCount(TARGET_ID) > 0 then got = true; break end
 
-        local best, bestd2 = nil, 1e18
-        for _, o in pairs(objs) do
-          if o.id == TARGET_ID then
-            local txo, tyo = math.floor(o.x/32), math.floor(o.y/32)
-            if me then
-              local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
-              local dx, dy = txo-mx, tyo-my
-              local d2 = dx*dx + dy*dy
-              if d2 < bestd2 then best, bestd2 = o, d2 end
-            else
-              best, bestd2 = o, 0
-            end
+      local objs = (getObjects and getObjects()) or {}
+      local me   = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+
+      local best, bestd2 = nil, 1e18
+      for _, o in pairs(objs) do
+        if o.id == TARGET_ID then
+          local txo, tyo = math.floor(o.x/32), math.floor(o.y/32)
+          if me then
+            local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
+            local dx, dy = txo - mx, tyo - my
+            local d2 = dx*dx + dy*dy
+            if d2 < bestd2 then best, bestd2 = o, d2 end
+          else
+            best, bestd2 = o, 0
           end
-        end
-
-        if best then
-          -- >>> FIX: ambil koordinat dari 'best' di SINI (scope yg benar)
-          local tx, ty = math.floor(best.x/32), math.floor(best.y/32)
-          SMART_RECONNECT(w, d, tx, ty)
-          b:findPath(tx, ty)
-          ZEE_COLLECT(true)
-          sleep(WAIT_MS)
-        else
-          ZEE_COLLECT(true)
-          SMART_RECONNECT(w, d)
-          sleep(WAIT_MS)
         end
       end
 
-      ZEE_COLLECT(false)
-      return got or (inv:getItemCount(TARGET_ID)>0)
+      if best then
+        local tx, ty = math.floor(best.x/32), math.floor(best.y/32)  -- <- pakai 'best' di sini
+        SMART_RECONNECT(w, d, tx, ty)
+        b:findPath(tx, ty)
+        sleep(WAIT_MS)
+      else
+        SMART_RECONNECT(w, d)
+        sleep(WAIT_MS)
+      end
+    end
+    ZEE_COLLECT(false)
+
+    return got or (inv:getItemCount(TARGET_ID) > 0)
+  end
+
+  -- lalu pakai begini:
+  if inv:getItemCount(TARGET_ID) == 0 then
+    if not _try_take_at(WORLD, DOOR) then
+      _try_take_at(STORAGE_MAGNI, DOOR_MAGNI)
     end
   end
 
-  if not _try_take_at(WORLD,DOOR) then _try_take_at(STORAGE_MAGNI,DOOR_MAGNI) end
 
   -- Normalisasi: pastikan tepat 1
   do
