@@ -663,8 +663,13 @@ local function _nudge_and_warp(WORLD, DOOR, tries)
     sleep(350)
 
     -- warp ulang ke door
-    b:warp(WORLD, DOOR)
+    if (DOOR or "") ~= "" then
+      b:warp(WORLD .. "|" .. DOOR)   -- benar untuk warp world+door
+    else
+      b:warp(WORLD)                  -- fallback kalau door kosong
+    end
     sleep(DELAY_WARP or 7000)
+
 
     -- cek apakah berhasil pindah (sudah bukan di door fg==6)
     local okT, tile = pcall(function() return b:getWorld():getTile(_meTile()) end)
@@ -893,8 +898,6 @@ function TAKE_MAGNI(WORLD, DOOR)
   local b=getBot and getBot() or nil; if not b or not USE_MAGNI then return false end
   local TARGET_ID=10158; local inv=b:getInventory()
   local now=os.time()
-  -- setelah warp di awal ambil magni
-  local ex, ye = b.x, b.y 
 
   -- cek cooldown
   local cd_until = MAGNI_COOLDOWN[WORLD]
@@ -920,7 +923,7 @@ function TAKE_MAGNI(WORLD, DOOR)
   if inv:getItemCount(TARGET_ID)==0 then
     local function _try_take_at(w,d)
       if (w or "")=="" then return false end
-      WARP_WORLD(w,d); sleep(200)
+      WARP_WORLD(w,d); sleep(200); tx,ty=b.x, b.y 
       local MAX_ROUNDS,WAIT_MS=10,1200; local got=false
       for _=1,MAX_ROUNDS do
         if inv:getItemCount(TARGET_ID)>0 then got=true; break end
@@ -941,7 +944,6 @@ function TAKE_MAGNI(WORLD, DOOR)
           end
         end
         if best then
-          local tx,ty=math.floor(best.x/32),math.floor(best.y/32)
           SMART_RECONNECT(w,d,tx,ty)
           b:findPath(tx,ty)
           ZEE_COLLECT(true)
