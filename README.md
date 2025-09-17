@@ -30,17 +30,17 @@ ASSIST_MODE          = tostring(ASSIST_MODE):lower()
 ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
-LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
+LOOP_MODE            = true          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
 
 -- Delay/harvest
-USE_MAGNI     = false
+USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "HVKKLL", "XX2" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "Breakgrid45", "el5"
+STORAGE_CAKE, DOOR_CAKE = "HVKKLL", "XX1"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
