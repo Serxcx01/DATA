@@ -37,10 +37,10 @@ USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "PAMPANGXS", "RQPRO" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "jeemagni", "rosi456" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "DEMAKANCAKE", "RQPRO"
+STORAGE_CAKE, DOOR_CAKE = "jeecake", "rosi456"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
@@ -894,6 +894,7 @@ function TAKE_MAGNI(WORLD, DOOR)
   local TARGET_ID=10158; local inv=b:getInventory()
   local now=os.time()
   -- setelah warp di awal ambil magni
+  local ex, ye = b.x, b.y 
 
   -- cek cooldown
   local cd_until = MAGNI_COOLDOWN[WORLD]
@@ -919,7 +920,7 @@ function TAKE_MAGNI(WORLD, DOOR)
   if inv:getItemCount(TARGET_ID)==0 then
     local function _try_take_at(w,d)
       if (w or "")=="" then return false end
-      WARP_WORLD(w,d); sleep(200); ex, ye = b.x, b.y 
+      WARP_WORLD(w,d); sleep(200)
       local MAX_ROUNDS,WAIT_MS=10,1200; local got=false
       for _=1,MAX_ROUNDS do
         if inv:getItemCount(TARGET_ID)>0 then got=true; break end
@@ -942,8 +943,8 @@ function TAKE_MAGNI(WORLD, DOOR)
         if best then
           local tx,ty=math.floor(best.x/32),math.floor(best.y/32)
           SMART_RECONNECT(w,d,tx,ty)
-          ZEE_COLLECT(true)
           b:findPath(tx,ty)
+          ZEE_COLLECT(true)
           sleep(WAIT_MS)
         else
           ZEE_COLLECT(true)
