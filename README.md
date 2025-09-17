@@ -33,14 +33,14 @@ STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
 
 -- Delay/harvest
-USE_MAGNI     = true
+USE_MAGNI     = false
 DELAY_HARVEST = 170
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "ESXHF15", "XX2" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "NASVTW", "XX2"
+STORAGE_CAKE, DOOR_CAKE = "", ""
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
@@ -899,54 +899,52 @@ function TAKE_MAGNI(WORLD, DOOR)
     end
   end
 
-  if inv:getItemCount(TARGET_ID)==0 then
-    local function _try_take_at(w,d)
-      if (w or "")=="" then return false end
-      WARP_WORLD(w,d); sleep(200); txafterwarp,tyafterwarp=b.x, b.y
-      local MAX_ROUNDS,WAIT_MS=10,1200; local got=false
-      for _=1,MAX_ROUNDS do
-        if inv:getItemCount(TARGET_ID)>0 then got=true; break end
-        local objs=(getObjects and getObjects()) or {}
-        local me=b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
-        local best,bestd2=nil,1e18
-        for _,o in pairs(objs) do
-          if o.id==TARGET_ID then
-            local tx,ty=math.floor(o.x/32),math.floor(o.y/32)
-            if me then
-              local mx,my=math.floor(me.posx/32),math.floor(me.posy/32)
-              local dx,dy=tx-mx,ty-my
-              local d2=dx*dx+dy*dy
-              if d2<bestd2 then best,bestd2=o,d2 end
-            else
-              best=o; bestd2=0
-            end
+  local function _try_take_at(w,d)
+    if (w or "")=="" then return false end
+    WARP_WORLD(w,d); sleep(250)
+    SMART_RECONNECT(w,d)  -- pastikan world sudah siap
+    txafterwarp, tyafterwarp=b.x, b.y
+    local MAX_ROUNDS, WAIT_MS = 10, 1200
+    local got = false
+    for _=1,MAX_ROUNDS do
+      if inv:getItemCount(TARGET_ID)>0 then got=true; break end
+
+      local objs = (getObjects and getObjects()) or {}
+      local me   = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+
+      local best, bestd2 = nil, 1e18
+      for _, o in pairs(objs) do
+        if o.id == TARGET_ID then
+          local txo, tyo = math.floor(o.x/32), math.floor(o.y/32)
+          if me then
+            local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
+            local dx, dy = txo-mx, tyo-my
+            local d2 = dx*dx + dy*dy
+            if d2 < bestd2 then best, bestd2 = o, d2 end
+          else
+            best, bestd2 = o, 0
           end
         end
-        if best then
-          
-          SMART_RECONNECT(w,d,tx,ty)
-          b:findPath(tx,ty)
-          ZEE_COLLECT(true)
-          sleep(WAIT_MS)
-        else
-          ZEE_COLLECT(true)
-          SMART_RECONNECT(w,d)
-          sleep(WAIT_MS)
-        end
       end
-      ZEE_COLLECT(false)
-      return got or (inv:getItemCount(TARGET_ID)>0)
+
+      if best then
+        -- >>> FIX: ambil koordinat dari 'best' di SINI (scope yg benar)
+        local tx, ty = math.floor(best.x/32), math.floor(best.y/32)
+        SMART_RECONNECT(w, d, tx, ty)
+        b:findPath(tx, ty)
+        ZEE_COLLECT(true)
+        sleep(WAIT_MS)
+      else
+        ZEE_COLLECT(true)
+        SMART_RECONNECT(w, d)
+        sleep(WAIT_MS)
+      end
     end
 
-    if not _try_take_at(WORLD,DOOR) then _try_take_at(STORAGE_MAGNI,DOOR_MAGNI) end
-
-    if inv:getItemCount(TARGET_ID)==0 then
-      print("[TAKE_MAGNI] Gagal ambil 10158.")
-      -- set cooldown kalau gagal
-      MAGNI_COOLDOWN[WORLD]= now + (MAGNI_COOLDOWN_MIN*60)
-      return false
-    end
+    ZEE_COLLECT(false)
+    return got or (inv:getItemCount(TARGET_ID)>0)
   end
+
 
   -- Normalisasi: pastikan tepat 1
   do
