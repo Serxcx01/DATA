@@ -649,38 +649,17 @@ local __door6_ticks = 0
 local __guard_cooldown_until = 0   -- NEW: penanda cooldown global
 MAX_WARP_RETRY=10; MAX_DOOR_RETRY=5; MAX_RECOLL_CYCLES=2
 
-local function _nudge_and_warp(WORLD, DOOR, tries)
-  local b = getBot and getBot() or nil
-  if not b then return false end
-  tries = tries or 3
-
-  for i=1,tries do
-    local mx,my = _meTile()
-    print(string.format("[GUARD] Nudge attempt %d/%d at (%d,%d)", i, tries, mx or -1, my or -1))
-
-    -- coba nudge kanan
-    b:findPath(mx+1,my)
-    sleep(350)
-
-    -- warp ulang ke door
-    if (DOOR or "") ~= "" then
-      b:warp(WORLD .. "|" .. DOOR)   -- benar untuk warp world+door
-    else
-      b:warp(WORLD)                  -- fallback kalau door kosong
+local function _nudge_and_warp(WORLD,DOOR,tries)
+  local b=getBot and getBot() or nil; if not b then return false end
+  tries=tries or 3
+  for _=1,tries do
+    local okW,w=pcall(function() return b:getWorld() end)
+    if okW and w then local okL,me=pcall(function() return w:getLocal() end)
+      if okL and me and b.findPath then local mx=math.floor((me.posx or 0)/32); local my=math.floor((me.posy or 0)/32); b:findPath(mx+1,my); sleep(300) end
     end
-    sleep(DELAY_WARP or 7000)
-
-
-    -- cek apakah berhasil pindah (sudah bukan di door fg==6)
-    local okT, tile = pcall(function() return b:getWorld():getTile(_meTile()) end)
-    if okT and tile and (tile.fg or 0) ~= 6 then
-      print("[GUARD] Nudge+warp berhasil, tidak stuck lagi.")
-      return true
-    end
+    if b.warp then b:warp((WORLD or ""):upper().."|"..(DOOR or "")) end
+    sleep(DELAY_WARP); local fg=_current_tile_fg_safe(6,100); if fg~=6 then return true end
   end
-
-  -- kalau sampai sini berarti semua percobaan gagal
-  print("[GUARD] Semua percobaan warp gagal. Stop mencoba sementara.")
   return false
 end
 
@@ -944,6 +923,7 @@ function TAKE_MAGNI(WORLD, DOOR)
           end
         end
         if best then
+          
           SMART_RECONNECT(w,d,tx,ty)
           b:findPath(tx,ty)
           ZEE_COLLECT(true)
