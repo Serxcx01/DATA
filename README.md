@@ -37,7 +37,7 @@ USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "HVKKLL", "XX2" -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "ESXHF15", "XX2" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
 STORAGE_CAKE, DOOR_CAKE = "HVKKLL", "XX1"
