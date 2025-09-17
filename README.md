@@ -37,10 +37,10 @@ USE_MAGNI     = true
 DELAY_HARVEST = 170
 
 -- Storage MAGNI (opsional)
-STORAGE_MAGNI, DOOR_MAGNI = "CLOVERMALADY", "CUREZIN " -- lokasi kacamata (10158)
+STORAGE_MAGNI, DOOR_MAGNI = "ESXHF15", "XX2" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "RZXFTANKS1", "ADPRD"
+STORAGE_CAKE, DOOR_CAKE = "NASVTW", "XX2"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
@@ -902,7 +902,7 @@ function TAKE_MAGNI(WORLD, DOOR)
   if inv:getItemCount(TARGET_ID)==0 then
     local function _try_take_at(w,d)
       if (w or "")=="" then return false end
-      WARP_WORLD(w,d); sleep(200); tx,ty=b.x, b.y 
+      WARP_WORLD(w,d); sleep(200); txafterwarp,tyafterwarp=b.x, b.y
       local MAX_ROUNDS,WAIT_MS=10,1200; local got=false
       for _=1,MAX_ROUNDS do
         if inv:getItemCount(TARGET_ID)>0 then got=true; break end
@@ -952,7 +952,7 @@ function TAKE_MAGNI(WORLD, DOOR)
   do
     local storageW,storageD=STORAGE_MAGNI,DOOR_MAGNI
     if (storageW or "")=="" then storageW,storageD=WORLD,DOOR end
-    b:findPath(ex, ye); sleep(400); faceSide2()
+    b:findPath(txafterwarp, tyafterwarp); sleep(400); faceSide2()
     _ensure_single_item_in_storage(10158,1,storageW,storageD,
       {chunk=200,step_ms=600,path_try=10,tile_cap=4000,stack_cap=20,tile_retries=2})
   end
