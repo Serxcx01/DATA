@@ -223,15 +223,15 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
 end
 
 -------------------- WORLD/TILE HELPERS --------------------
--- local function _get_tiles()
---   return (type(getTilesSafe)=="function" and getTilesSafe())
---       or (type(getTiles)=="function" and getTiles())
---       or {}
--- end
 local function _get_tiles()
-  if type(getTilesSafe) == "function" then return getTilesSafe() end
-  return {}
+  return (type(getTilesSafe)=="function" and getTilesSafe())
+      or (type(getTiles)=="function" and getTiles())
+      or {}
 end
+-- local function _get_tiles()
+--   if type(getTilesSafe) == "function" then return getTilesSafe() end
+--   return {}
+-- end
 
 function _current_world_upper()
   local b=getBot and getBot() or nil; local w=b and b.world or ""
@@ -1021,7 +1021,7 @@ local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
   for _,t in pairs(_get_tiles()) do
     _maybe_drop_cake()
     local tile=w:getTile(t.x,t.y)
-    if tile and tile.fg==ITEM_SEED_ID and tile:canHarvest() then
+    if tile and tile.fg==ITEM_SEED_ID and tile:canHarvest() and hasAccess(t.x,t.y) then
       local tries=0
       while tries<6 do
         b:findPath(t.x,t.y); SMART_RECONNECT(); GUARD_DOOR_STUCK()
