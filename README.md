@@ -223,10 +223,14 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
 end
 
 -------------------- WORLD/TILE HELPERS --------------------
+-- local function _get_tiles()
+--   return (type(getTilesSafe)=="function" and getTilesSafe())
+--       or (type(getTiles)=="function" and getTiles())
+--       or {}
+-- end
 local function _get_tiles()
-  return (type(getTilesSafe)=="function" and getTilesSafe())
-      or (type(getTiles)=="function" and getTiles())
-      or {}
+  if type(getTilesSafe) == "function" then return getTilesSafe() end
+  return {}
 end
 
 function _current_world_upper()
