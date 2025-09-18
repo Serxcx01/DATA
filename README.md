@@ -1003,46 +1003,142 @@ end
 
 
 -------------------- HARVEST --------------------
-local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
-  local b=getBot and getBot() or nil; if not b then return false end
+--------------------------------------------------------------------
+-- KONFIG: span tile (2 atau 3)
+TILE_SPAN = tonumber(TILE_SPAN or 3)       -- 3 default; set 2 untuk mode 2 tile
+local OFFSETS_FWD = (TILE_SPAN==2) and {0,1} or {0,1,2}
+local OFFSETS_REV = (TILE_SPAN==2) and {0,-1} or {0,-1,-2}
+--------------------------------------------------------------------
 
-  if USE_MAGNI then
-    local inv=b:getInventory(); local have=inv:getItemCount(10158); local called=false
-    if have==0 then
-      if (STORAGE_MAGNI or "")~="" then TAKE_MAGNI(STORAGE_MAGNI, DOOR_MAGNI); called=true end
-      if inv:getItemCount(10158)==0 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
-    elseif have>1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
-    if (not called) and inv:getItemCount(10158)>0 then b:wear(10158); sleep(200) end
+local function _sorted_rows_and_bounds(b)
+  -- Kumpulkan baris (y) yang bisa dipanen + batas min_x/max_x per baris
+  local rows_map, bounds = {}, {}
+  for _, t in pairs(_get_tiles()) do
+    local tile = b:getWorld():getTile(t.x, t.y)
+    if tile and tile.fg == ITEM_SEED_ID and tile:canHarvest() and b:hasAccess(t.x, t.y) > 0 then
+      rows_map[t.y] = true
+      local bd = bounds[t.y]
+      if not bd then
+        bounds[t.y] = {min_x = t.x, max_x = t.x}
+      else
+        if t.x < bd.min_x then bd.min_x = t.x end
+        if t.x > bd.max_x then bd.max_x = t.x end
+      end
+    end
   end
+  local rows = {}
+  for y,_ in pairs(rows_map) do table.insert(rows, y) end
+  table.sort(rows)  -- kecil -> besar
+  return rows, bounds
+end
+
+local function _at_tile(b, x, y)
+  local w = b:getWorld(); local me = w and w:getLocal() or nil
+  return me and (math.floor(me.posx/32) == x and math.floor(me.posy/32) == y)
+end
+
+local function _valid_seed_tile(w, b, x, y)
+  local t = w:getTile(x, y)
+  return t and t.fg == ITEM_SEED_ID and t:canHarvest() and b:hasAccess(x, y) > 0
+end
+
+--------------------------------------------------------------------
+-- HARVEST_PASS versi "anchor + offsets" (per 3 atau 2 tile)
+--------------------------------------------------------------------
+function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
+  local b = getBot and getBot() or nil; if not b then return false end
+
+  -- MAGNI seperti sebelumnya
+  if USE_MAGNI then
+    local inv = b:getInventory(); local have = inv:getItemCount(10158); local called = false
+    if have == 0 then
+      if (STORAGE_MAGNI or "") ~= "" then TAKE_MAGNI(STORAGE_MAGNI, DOOR_MAGNI); called = true end
+      if inv:getItemCount(10158) == 0 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called = true end
+    elseif have > 1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called = true end
+    if (not called) and inv:getItemCount(10158) > 0 then b:wear(10158); sleep(200) end
+  end
+
+  -- Warp & siap
   WARP_WORLD(FARM_WORLD, FARM_DOOR)
   ZEE_COLLECT(true); sleep(120); SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
 
-  local w=b:getWorld(); local did_any=false
-  for _,t in pairs(_get_tiles()) do
+  local w = b:getWorld(); if not w then ZEE_COLLECT(false); return false end
+  local did_any = false
+
+  -- Bangun daftar baris dan batas X tiap baris
+  local rows, bounds = _sorted_rows_and_bounds(b)
+
+  for i, y in ipairs(rows) do
     _maybe_drop_cake()
-    local tile=w:getTile(t.x,t.y)
-    if tile and tile.fg==ITEM_SEED_ID and tile:canHarvest() and b:hasAccess(t.x,t.y) then
-      local tries=0
-      while tries<6 do
-        b:findPath(t.x,t.y); SMART_RECONNECT(); GUARD_DOOR_STUCK()
-        local me=w:getLocal(); if me and math.floor(me.posx/32)==t.x and math.floor(me.posy/32)==t.y then break end
-        tries=tries+1
-      end
-      local cnt=0
+    SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
+
+    local bd = bounds[y]
+    if bd then
+      -- zig-zag: baris ganjil -> kanan, genap -> kiri
+      local forward     = (i % 2 == 1)
+      local direction   = forward and 1 or -1
+      local x_start     = forward and bd.min_x or bd.max_x
+      local x_end       = forward and bd.max_x or bd.min_x
+      local OFFSETS     = forward and OFFSETS_FWD or OFFSETS_REV
+      local anchor      = x_start
+
+      -- clamp awal supaya anchor ada di rentang
+      if forward and anchor < bd.min_x then anchor = bd.min_x end
+      if (not forward) and anchor > bd.max_x then anchor = bd.max_x end
+
       while true do
-        local cur=w:getTile(t.x,t.y)
-        if not (cur and cur.fg==ITEM_SEED_ID and cur:canHarvest()) and b:hasAccess(t.x,t.y) then break end
-        b:hit(t.x,t.y); sleep(DELAY_HARVEST); SMART_RECONNECT(); GUARD_DOOR_STUCK()
-        cnt=cnt+1; if cnt>=100 then print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)",t.x,t.y)); break end
+        -- stop bila melewati batas baris
+        if forward and anchor > x_end then break end
+        if (not forward) and anchor < x_end then break end
+
+        -- hanya jalankan bila anchor tile valid untuk dipanen (biar gak buang waktu)
+        if _valid_seed_tile(w, b, anchor, y) then
+          -- path ke anchor, coba beberapa kali
+          local tries = 0
+          while tries < 6 and not _at_tile(b, anchor, y) do
+            b:findPath(anchor, y); SMART_RECONNECT(); GUARD_DOOR_STUCK()
+            tries = tries + 1; sleep(80)
+          end
+
+          -- saat sudah di anchor, pukul offsets (0,1,2) atau (0,-1,-2) sesuai arah
+          if _at_tile(b, anchor, y) then
+            for _, m in ipairs(OFFSETS) do
+              local hx = anchor + m
+              -- validasi batas world
+              if hx >= 0 and hx < w.width then
+                -- selama masih seed valid, pukul
+                local hit_cnt = 0
+                while _valid_seed_tile(w, b, hx, y) and _at_tile(b, anchor, y) do
+                  b:hit(hx, y)
+                  sleep(DELAY_HARVEST)
+                  SMART_RECONNECT()
+                  GUARD_DOOR_STUCK()
+                  hit_cnt = hit_cnt + 1
+                  if hit_cnt >= 100 then
+                    print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)", hx, y))
+                    break
+                  end
+                end
+              end
+            end
+            did_any = true
+          end
+        end
+
+        _maybe_drop_cake()
+        if checkitemfarm and checkitemfarm(farmListActive) then ZEE_COLLECT(false); return did_any end
+
+        -- geser anchor dengan langkah TILE_SPAN (2 atau 3)
+        anchor = anchor + (direction * TILE_SPAN)
       end
-      did_any=true
-      _maybe_drop_cake()
-      if checkitemfarm(farmListActive) then break end
     end
   end
+
   _maybe_drop_cake()
+  ZEE_COLLECT(false)
   return did_any
 end
+
 
 function HARVEST_UNTIL_EMPTY(FARM_WORLD, FARM_DOOR, STORAGE_WORLD, STORAGE_DOOR, farmListActive, on_tick)
   local ok,reason=warp_ok_and_public(FARM_WORLD, FARM_DOOR)
