@@ -1015,7 +1015,7 @@ local function _sorted_rows_and_bounds(b)
   local rows_map, bounds = {}, {}
   for _, t in pairs(_get_tiles()) do
     local tile = b:getWorld():getTile(t.x, t.y)
-    if tile and tile.fg == ITEM_SEED_ID and tile:canHarvest() and b:hasAccess(t.x, t.y) > 0 then
+    if tile and tile.fg == ITEM_SEED_ID and tile:canHarvest() and hasAccess(t.x, t.y) > 0 then
       rows_map[t.y] = true
       local bd = bounds[t.y]
       if not bd then
@@ -1039,8 +1039,9 @@ end
 
 local function _valid_seed_tile(w, b, x, y)
   local t = w:getTile(x, y)
-  return t and t.fg == ITEM_SEED_ID and t:canHarvest() and b:hasAccess(x, y) > 0
+  return t and t.fg == ITEM_SEED_ID and t:canHarvest() and hasAccess(x, y) > 0
 end
+
 
 --------------------------------------------------------------------
 -- HARVEST_PASS versi "anchor + offsets" (per 3 atau 2 tile)
@@ -1101,12 +1102,13 @@ function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
           end
 
           -- saat sudah di anchor, pukul offsets (0,1,2) atau (0,-1,-2) sesuai arah
+          -- saat sudah di anchor, pukul offsets
           if _at_tile(b, anchor, y) then
             for _, m in ipairs(OFFSETS) do
               local hx = anchor + m
               -- validasi batas world
-              if hx >= 0 and hx < w.width then
-                -- selama masih seed valid, pukul
+              local worldW = (w.getWidth and w:getWidth()) or 200  -- fallback 200 kalau API ga ada
+              if hx >= 0 and hx < worldW then
                 local hit_cnt = 0
                 while _valid_seed_tile(w, b, hx, y) and _at_tile(b, anchor, y) do
                   b:hit(hx, y)
@@ -1123,7 +1125,7 @@ function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
             end
             did_any = true
           end
-        end
+
 
         _maybe_drop_cake()
         if checkitemfarm and checkitemfarm(farmListActive) then ZEE_COLLECT(false); return did_any end
