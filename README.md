@@ -27,7 +27,7 @@ USE_TXT_QUEUE = true          -- true: pakai worlds.txt queue
 -- >>> NEW: Assist mode <<<
 ASSIST_MODE          = (ASSIST_MODE or "always") -- "stale" atau "always"
 ASSIST_MODE          = tostring(ASSIST_MODE):lower()
-ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 3  -- max helper per world
+ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
@@ -40,7 +40,7 @@ DELAY_HARVEST = 170
 STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "Lgridbun5", "Devi"
+STORAGE_CAKE, DOOR_CAKE = "", ""
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
@@ -1031,7 +1031,7 @@ local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
       local cnt=0
       while true do
         local cur=w:getTile(t.x,t.y)
-        if not (cur and cur.fg==ITEM_SEED_ID and cur:canHarvest()) then break end
+        if not (cur and cur.fg==ITEM_SEED_ID and cur:canHarvest() and hasAccess(t.x,t.y)) then break end
         b:hit(t.x,t.y); sleep(DELAY_HARVEST); SMART_RECONNECT(); GUARD_DOOR_STUCK()
         cnt=cnt+1; if cnt>=100 then print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)",t.x,t.y)); break end
       end
