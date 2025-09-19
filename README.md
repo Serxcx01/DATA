@@ -1347,18 +1347,33 @@ end
 
 -- Hitung jumlah WORKER_ID unik yang terdaftar untuk sebuah world di inprogress.txt
 local function _count_unique_workers(world)
-  world = (world or ""):upper()
-  if world == "" then return 0 end
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local S = {}
-  for _, ln in ipairs(rows) do
-    local w, who = ln:match("^([^|]+)|([^|]+)|")
-    if w and who and (w:upper() == world) then S[who] = true end
+  local uniq, seen = 0, {}
+  for line in io.lines(JOB_FILES.inprogress) do
+    local w, who = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)")
+    if w and who and (w:upper()==world:upper()) and not seen[who] then
+      seen[who] = true; uniq = uniq + 1
+    end
   end
-  local n = 0
-  for _ in pairs(S) do n = n + 1 end
-  return n
+  return uniq
 end
+
+local function _append_or_update(world, who)
+  local lines, found = {}, false
+  for line in io.lines(JOB_FILES.inprogress) do
+    local w, slot = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)")
+    if w and slot and (w:upper()==world:upper()) and (slot==who) then
+      table.insert(lines, (world:upper().."|"..who.."|"..tostring(os.time())))
+      found = true
+    else
+      table.insert(lines, line)
+    end
+  end
+  if not found then
+    table.insert(lines, (world:upper().."|"..who.."|"..tostring(os.time())))
+  end
+  local f = io.open(JOB_FILES.inprogress, "w"); if f then f:write(table.concat(lines, "\n").."\n"); f:close() end
+end
+
 
 -- Cek apakah world masih punya job (masih ada di worlds.txt)
 local function _world_has_job(world)
@@ -1387,111 +1402,87 @@ local function _cleanup_stale_inprogress(world)
   _write_lines(JOB_FILES.inprogress, out)
 end
 
+local function _acquire_lock(tag, timeout_ms)
+  local lock = JOB_FILES.inprogress..".lock"
+  local t0 = os.time()
+  while true do
+    local f = io.open(lock, "r")
+    if not f then
+      -- create lock
+      f = io.open(lock, "w"); if f then f:write(tostring(os.time())); f:close(); return true end
+    else
+      f:close()
+    end
+    if (os.time() - t0) >= math.floor((timeout_ms or 1500)/1000) then return false end
+    sleep(120)
+  end
+end
 
--- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
+local function _release_lock()
+  os.remove(JOB_FILES.inprogress..".lock")
+end
+
 -- PICK_ASSIST_WORLD dengan limit helper + anti-race (double-check + commit)
 local function PICK_ASSIST_WORLD(mode)
-  local prog = _read_lines(JOB_FILES.inprogress)
-  if #prog == 0 then return nil, false end
-
-  -- hitung unique worker untuk world (baca file terbaru)
-  local function _count_unique_workers_for(w)
-    w = (w or ""):upper()
-    local rows = _read_lines(JOB_FILES.inprogress)
-    local S = {}
-    for _, ln in ipairs(rows) do
-      local ww, who = ln:match("^([^|]+)|([^|]+)|")
-      if ww and who and ww:upper() == w then S[who] = true end
+  mode = (mode or ASSIST_MODE or "always"):lower()
+  -- baca semua kandidat (world yang sedang dikerjakan orang lain)
+  local owners = {}   -- [world] = timestamp owner tertua
+  local mine   = {}   -- world yang sedang aku kerjakan (biar di-skip)
+  for line in io.lines(JOB_FILES.inprogress) do
+    local w, who, ts = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)%s*|%s*(%d+)")
+    if w and who and ts then
+      if who==WORKER_ID then mine[w:upper()] = true end
+      owners[w:upper()] = math.min(owners[w:upper()] or math.huge, tonumber(ts))
     end
-    local n = 0
-    for _ in pairs(S) do n = n + 1 end
-    return n, S
   end
 
-  -- coba klaim helper slot: baca → cek limit → tulis baris kita → sukses/gagal
-  local function _try_claim_helper_slot(w, who)
-    w = (w or ""):upper()
-    who = who or WORKER_ID
-    local now = _now()
+  if mode=="stale" then
+    -- (biarkan branch stale-mu yang lama)
+    -- return world_stale_terlama_yg_bleh_dibantu
+  end
 
-    -- jika sudah tercatat, hanya update timestamp
-    local rows = _read_lines(JOB_FILES.inprogress)
-    local out, present = {}, false
-    for _, ln in ipairs(rows) do
-      local ww, wh, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-      if ww and wh and ts and ww:upper() == w and wh == who then
-        table.insert(out, string.format("%s|%s|%d", w, who, now))
-        present = true
-      else
-        table.insert(out, ln)
+  -- mode "always": pilih world milik orang lain yang paling lama dikerjakan,
+  -- lalu KLAIM slot helper dengan lock + recheck limit.
+  local bestW, bestAge = nil, -1
+  local now = os.time()
+  for w, ts in pairs(owners) do
+    if not mine[w] then
+      local age = now - (ts or now)
+      if age > bestAge then bestAge, bestW = age, w end
+    end
+  end
+  if not bestW then return nil end
+
+  -- coba klaim helper-slot
+  if not _acquire_lock("assist", 2000) then return nil end
+  local ok = false
+  local total = _count_unique_workers(bestW)          -- termasuk owner
+  local helpers_now = math.max(0, total - 1)         -- exclude owner
+  if helpers_now < (ASSIST_HELPER_LIMIT or 1) then
+    _append_or_update(bestW, WORKER_ID)              -- tulis baris helper-ku
+    -- recheck setelah tulis (anti race)
+    local total2 = _count_unique_workers(bestW)
+    local helpers2 = math.max(0, total2 - 1)
+    if helpers2 <= (ASSIST_HELPER_LIMIT or 1) then
+      ok = true
+    else
+      -- keburu penuh → rollback barisku
+      local keep = {}
+      for line in io.lines(JOB_FILES.inprogress) do
+        local w, who = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)")
+        if not (w and who and w:upper()==bestW and who==WORKER_ID) then
+          table.insert(keep, line)
+        end
       end
-    end
-    if present then _write_lines(JOB_FILES.inprogress, out); return true end
-
-    -- double-check limit sebelum menambah baris kita
-    local total = _count_unique_workers_for(w)  -- total worker (owner + helpers)
-    local helpers_now = math.max(0, total - 1)  -- owner dihitung 1
-    if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
-      return false
-    end
-
-    table.insert(out, string.format("%s|%s|%d", w, who, now))
-    _write_lines(JOB_FILES.inprogress, out)
-    return true
-  end
-
-  -- pilih kandidat: world milik orang lain dengan heartbeat tertua
-  local best, best_age = nil, -1
-  local now = _now()
-  for _, ln in ipairs(prog) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts and who ~= WORKER_ID then
-      local age = now - tonumber(ts)
-      if age > best_age then best, best_age = w:upper(), age end
+      local f = io.open(JOB_FILES.inprogress, "w"); if f then f:write(table.concat(keep, "\n").."\n"); f:close() end
     end
   end
-  if not best then return nil, false end
+  _release_lock()
 
-  -- world sudah dicabut dari worlds.txt? bersihkan zombie & skip
-  if not _world_has_job(best) then
-    _cleanup_stale_inprogress(best)
-    return nil, false
-  end
-
-  if mode == "stale" then
-    -- bantu hanya jika macet cukup lama & boleh steal
-    if best_age < (STALE_SEC or 90) or not STEAL_HELP then
-      return nil, false
-    end
-    -- steal: hapus semua entry world tsb lalu jadikan kita owner
-    local rows = _read_lines(JOB_FILES.inprogress)
-    local out = {}
-    for _, ln in ipairs(rows) do
-      local w = ln:match("^([^|]+)")
-      if not (w and w:upper() == best) then table.insert(out, ln) end
-    end
-    table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
-    _write_lines(JOB_FILES.inprogress, out)
-    return best, true
-  else
-    -- mode "always": pakai lock per-world agar tidak kebobolan saat serentak
-    if not _acquire_lock("inprog_" .. best) then
-      return nil, false
-    end
-
-    local ok = _try_claim_helper_slot(best, WORKER_ID)
-
-    -- self-healing langsung setelah klaim
-    if ok then
-      _enforce_helper_limit(best)
-    end
-
-    _release_lock("inprog_" .. best)
-    return ok and best or nil, false
-  end
+  return ok and bestW or nil
 end
 
-end
+
 
 
 
@@ -1578,6 +1569,7 @@ function RUN_FROM_TXT_QUEUE()
             assistW = nil
           else
             -- re-check limit helper
+            print(string.format("[ASSIST] %s bantu world %s", WORKER_ID, assistW))
             if ASSIST_MODE == "always" then
               local total_workers = _count_unique_workers(assistW)
               local helpers_now   = math.max(0, total_workers - 1)
