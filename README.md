@@ -1453,29 +1453,30 @@ function RUN_FROM_TXT_QUEUE()
       local qs = QUEUE_STATS()
 
       -- Gating: kalau "stale", TUNGGU sampai unclaimed==0; kalau "always", langsung boleh assist
-      if ASSIST_MODE ~= "always" and qs.unclaimed > 0 then
-        print(string.format("[QUEUE] Masih ada %d world belum diklaim. Menunggu...", qs.unclaimed))
-        sleep(800)
-      else
-        local assistW, stolen = PICK_ASSIST_WORLD(ASSIST_MODE)
+      -- if ASSIST_MODE ~= "always" and qs.unclaimed > 0 then
+      --   print(string.format("[QUEUE] Masih ada %d world belum diklaim. Menunggu...", qs.unclaimed))
+      --   sleep(800)
+      -- else
+      --   local assistW, stolen = PICK_ASSIST_WORLD(ASSIST_MODE)
 
-        -- >>> NEW GUARD: anti-spam & limit helper
-        if assistW then
-          -- skip kalau world sudah tidak punya job
-          if not _world_has_job(assistW) then
-            _cleanup_stale_inprogress(assistW)
-            assistW = nil
-          else
-            -- re-check limit helper
-            if ASSIST_MODE == "always" then
-              local total_workers = _count_unique_workers(assistW)
-              local helpers_now   = math.max(0, total_workers - 1)
-              if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
-                assistW = nil
-              end
-            end
-          end
-        end
+      --   -- >>> NEW GUARD: anti-spam & limit helper
+      --   if assistW then
+      --     -- skip kalau world sudah tidak punya job
+      --     if not _world_has_job(assistW) then
+      --       _cleanup_stale_inprogress(assistW)
+      --       assistW = nil
+      --     else
+      --       -- re-check limit helper
+      --       if ASSIST_MODE == "always" then
+      --         local total_workers = _count_unique_workers(assistW)
+      --         local helpers_now   = math.max(0, total_workers - 1)
+      --         if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
+      --           assistW = nil
+      --         end
+      --       end
+      --     end
+      --   end
+        local assistW, stolen = PICK_ASSIST_WORLD(ASSIST_MODE)
         -- <<< END NEW
 
         if assistW then
