@@ -1325,6 +1325,7 @@ end
 
 
 -- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
+-- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
 local function PICK_ASSIST_WORLD(mode)
   local prog = _read_lines(JOB_FILES.inprogress)
   if #prog == 0 then return nil, false end
@@ -1379,6 +1380,7 @@ local function PICK_ASSIST_WORLD(mode)
     return best, false
   end
 end
+
 
 
 local function RECONCILE_QUEUE()
