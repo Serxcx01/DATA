@@ -725,9 +725,396 @@ function HARVEST_UNTIL_EMPTY(FARM_WORLD, FARM_DOOR, STORAGE_WORLD, STORAGE_DOOR,
   print(string.format("[HARVEST] %s selesai dalam %ds", tostring(FARM_WORLD), os.time()-t0))
 end
 
--- Runner example (adjust to your list)
--- RUN_MULTI_HARVEST({
---   "WORLD1|DOOR|4584|STORAGEW|STORAGED",
--- })
+-------------------- RR/CHUNK MODE --------------------
+local function _parse_world_entry(s)
+  local farmW,farmD,idstr,storeW,storeD = s:match("^([^|]+)|([^|]*)|(%d+)|([^|]*)|([^|]*)$")
+  if not farmW or not idstr then return nil end
+  return (farmW or ""):upper(), (farmD or ""), tonumber(idstr), (storeW or ""):upper(), (storeD or "")
+end
 
-print("[FULL SCRIPT] Loaded. HARVEST_PASS now uses 5-tile centered window.")
+function RUN_MULTI_HARVEST(list_world)
+  if USE_MAGNI then TAKE_MAGNI(STORAGE_MAGNI, DOOR_MAGNI) end
+  local old_block,old_seed=ITEM_BLOCK_ID, ITEM_SEED_ID
+  local specs={}
+  for idx,entry in ipairs(list_world or {}) do
+    local W,D,BID,SW,SD=_parse_world_entry(entry)
+    if W and BID then
+      ITEM_BLOCK_ID=BID; ITEM_SEED_ID=BID+1
+      local perworld={ITEM_BLOCK_ID, ITEM_SEED_ID}
+      print(("[MULTI] %d) %s|%s BLOCK=%d SEED=%d -> %s|%s"):format(idx,W,D,ITEM_BLOCK_ID,ITEM_SEED_ID,SW,SD))
+      local ok,reason=warp_ok_and_public(W,D)
+      if not ok then print(("⏭ Skip %s (%s)"):format(W, tostring(reason))); goto cont end
+      specs[#specs+1]={storageW=SW, storageD=SD, farmItems=perworld}
+      HARVEST_UNTIL_EMPTY(W,D,SW,SD,perworld)
+      ::cont::
+    else print("[MULTI] Entry invalid: "..tostring(entry)) end
+  end
+  ITEM_BLOCK_ID,ITEM_SEED_ID=old_block,old_seed
+  print("[MULTI] Final drop per-world...")
+  for _,sp in ipairs(specs) do DROP_ITEMS_SNAKE(sp.storageW, sp.storageD, sp.farmItems, {tile_cap=3000, stack_cap=20}) end
+  if (STORAGE_CAKE or "")~="" and has_any_cake() then pcall(function() DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList, {tile_cap=3000, stack_cap=20}) end) end
+  local b=getBot and getBot() or nil; if b and b.leaveWorld then b:leaveWorld() end; sleep(900); if b then b.auto_reconnect=true end
+  print("[MULTI] Done.")
+end
+
+-------------------- TXT QUEUE (assist: "stale" / "always") --------------------
+local function _read_lines(path)
+  local t, f={}, io.open(path,"r"); if not f then return t end
+  for line in f:lines() do line=line:gsub("\r",""):gsub("\n",""); if line~="" and not line:match("^%s*;") then table.insert(t,line) end end
+  f:close(); return t
+end
+local function _write_lines(path, lines) local f=io.open(path,"w"); if not f then return false end; for _,ln in ipairs(lines or {}) do f:write(ln.."\n") end; f:close(); return true end
+local function _append_line(path,line) local f=io.open(path,"a"); if not f then return false end; f:write(line.."\n"); f:close(); return true end
+local function _now() return os.time() end
+
+local function _parse_world_line(s)
+  local farmW,farmD,bid,storeW,storeD = s:match("^([^|]+)|([^|]*)|(%d+)|([^|]*)|([^|]*)$")
+  if not farmW then return nil end
+  return farmW:upper(), (farmD or ""), tonumber(bid), (storeW or ""):upper(), (storeD or "")
+end
+local function _set_of_worlds(lines) local S={}; for _,ln in ipairs(lines) do local w=ln:match("^([^|]+)"); if w then S[w:upper()]=true end end; return S end
+
+local function _update_heartbeat(world, who_slot)
+  world=(world or ""):upper(); who_slot=who_slot or WORKER_ID
+  local now=_now(); local rows=_read_lines(JOB_FILES.inprogress); local out,touched={},false
+  for _,ln in ipairs(rows) do
+    local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts then
+      if w:upper()==world and who==who_slot then table.insert(out, string.format("%s|%s|%d", w, who_slot, now)); touched=true
+      else table.insert(out, ln) end
+    end
+  end
+  if not touched then table.insert(out, string.format("%s|%s|%d", world, who_slot, now)) end
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
+local function CLAIM_NEXT_JOB()
+  local worlds=_read_lines(JOB_FILES.worlds)
+  local prog=_read_lines(JOB_FILES.inprogress)
+  local done=_read_lines(JOB_FILES.done)
+  local S_prog,S_done=_set_of_worlds(prog), _set_of_worlds(done)
+  for _,ln in ipairs(worlds) do
+    local W=ln:match("^([^|]+)")
+    if W and (not S_prog[W:upper()]) and (not S_done[W:upper()]) then
+      _append_line(JOB_FILES.inprogress, string.format("%s|%s|%d", W:upper(), WORKER_ID, _now()))
+      return ln
+    end
+  end
+  return nil
+end
+
+local function MARK_DONE(world)
+  world=(world or ""):upper()
+  local rows=_read_lines(JOB_FILES.inprogress); local out={}
+  for _,ln in ipairs(rows) do local w=ln:match("^([^|]+)"); if w and w:upper()~=world then table.insert(out,ln) end end
+  _write_lines(JOB_FILES.inprogress, out)
+  _append_line(JOB_FILES.done, string.format("%s|%s|%d", world, WORKER_ID, _now()))
+end
+
+local function QUEUE_STATS()
+  local worlds=_read_lines(JOB_FILES.worlds)
+  local prog=_read_lines(JOB_FILES.inprogress)
+  local done=_read_lines(JOB_FILES.done)
+  local S_prog,S_done=_set_of_worlds(prog), _set_of_worlds(done)
+  local total,unclaimed,inprog,ndone=0,0,0,0
+  for _,ln in ipairs(worlds) do
+    local W=(ln:match("^([^|]+)") or ""):upper()
+    if W~="" then
+      total=total+1
+      local is_prog=S_prog[W] and true or false
+      local is_done=S_done[W] and true or false
+      if (not is_prog) and (not is_done) then unclaimed=unclaimed+1 end
+      if is_prog then inprog=inprog+1 end
+      if is_done then ndone=ndone+1 end
+    end
+  end
+  return {total=total, unclaimed=unclaimed, inprogress=inprog, done=ndone}
+end
+
+-- PICK_ASSIST_WORLD dengan mode:
+--  - "stale": pilih inprogress milik orang lain yang macet >= STALE_SEC dan STEAL owner -> bisa MARK_DONE
+--  - "always": pilih inprogress milik orang lain (terlama), TANPA steal -> tidak MARK_DONE
+
+-- Hitung jumlah WORKER_ID unik yang terdaftar untuk sebuah world di inprogress.txt
+local function _count_unique_workers(world)
+  world = (world or ""):upper()
+  if world == "" then return 0 end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local S = {}
+  for _, ln in ipairs(rows) do
+    local w, who = ln:match("^([^|]+)|([^|]+)|")
+    if w and who and (w:upper() == world) then S[who] = true end
+  end
+  local n = 0
+  for _ in pairs(S) do n = n + 1 end
+  return n
+end
+
+-- Cek apakah world masih punya job (masih ada di worlds.txt)
+local function _world_has_job(world)
+  world = (world or ""):upper()
+  if world == "" then return false end
+  local rows = _read_lines(JOB_FILES.worlds)
+  for _, ln in ipairs(rows) do
+    local W = ln:match("^([^|]+)")
+    if W and W:upper() == world then return true end
+  end
+  return false
+end
+
+-- Bersihkan semua entry inprogress untuk world tertentu (owner/helpers yang nyangkut)
+local function _cleanup_stale_inprogress(world)
+  world = (world or ""):upper()
+  if world == "" then return end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local out = {}
+  for _, ln in ipairs(rows) do
+    local W = ln:match("^([^|]+)")
+    if not (W and W:upper() == world) then
+      table.insert(out, ln)
+    end
+  end
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
+
+-- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
+local function PICK_ASSIST_WORLD(mode)
+  local prog = _read_lines(JOB_FILES.inprogress)
+  if #prog == 0 then return nil, false end
+
+  -- pilih world kandidat milik orang lain (terlama heartbeat)
+  local best, best_age, best_owner = nil, -1, nil
+  local now = _now()
+  for _, ln in ipairs(prog) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and who ~= WORKER_ID then
+      local age = now - tonumber(ts)
+      if age > best_age then
+        best, best_age, best_owner = w:upper(), age, who
+      end
+    end
+  end
+  if not best then return nil, false end
+
+  -- jika world ini sudah tidak ada di worlds.txt → cleanup & skip
+  if not _world_has_job(best) then
+    _cleanup_stale_inprogress(best)
+    return nil, false
+  end
+
+  if mode == "stale" then
+    -- seperti semula: bantu hanya jika macet >= STALE_SEC dan boleh steal
+    if best_age < (STALE_SEC or 90) or not STEAL_HELP then
+      return nil, false
+    end
+
+    -- steal owner → set owner jadi kita di inprogress
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local out, stolen = {}, false
+    for _, ln in ipairs(rows) do
+      local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+      if w and who and ts and w:upper() == best then
+        table.insert(out, string.format("%s|%s|%d", w:upper(), WORKER_ID, _now()))
+        stolen = true
+      else
+        table.insert(out, ln)
+      end
+    end
+    if stolen then _write_lines(JOB_FILES.inprogress, out) end
+    return best, true
+  else
+    -- mode "always": bantu tanpa steal, tapi hormati limit helper
+    local total_workers = _count_unique_workers(best)   -- owner + helpers
+    local helpers_now   = math.max(0, total_workers - 1)
+    if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
+      return nil, false   -- sudah penuh helper untuk world ini
+    end
+    return best, false
+  end
+end
+
+
+local function RECONCILE_QUEUE()
+  local worlds=_read_lines(JOB_FILES.worlds)
+  local done=_read_lines(JOB_FILES.done); local S_done=_set_of_worlds(done)
+  local out={}
+  for _,ln in ipairs(worlds) do local W=ln:match("^([^|]+)") or ""; if W~="" and (not S_done[W:upper()]) then table.insert(out, ln) end end
+  _write_lines(JOB_FILES.worlds, out)
+end
+
+local function SPEC_FOR_WORLD(W)
+  local worlds=_read_lines(JOB_FILES.worlds)
+  for _,ln in ipairs(worlds) do local w,d,bid,sw,sd=_parse_world_line(ln); if w and w==(W or ""):upper() then return w,d,bid,sw,sd end end
+  return nil
+end
+
+local function FIND_OWN_INPROGRESS()
+  local rows=_read_lines(JOB_FILES.inprogress); local bestW,bestTS=nil,-1
+  for _,ln in ipairs(rows) do
+    local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and who==WORKER_ID then local t=tonumber(ts) or 0; if t>bestTS then bestTS,bestW=t,(w or ""):upper() end end
+  end
+  return bestW
+end
+
+local function UNCLAIM(world)
+  world=(world or ""):upper()
+  local rows=_read_lines(JOB_FILES.inprogress); local out={}
+  for _,ln in ipairs(rows) do local w=ln:match("^([^|]+)"); if w and w:upper()~=world then table.insert(out,ln) end end
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
+function RUN_FROM_TXT_QUEUE()
+  -- Auto-resume by SLOT
+  local resumeW = FIND_OWN_INPROGRESS()
+  if resumeW then
+    local W,D,BID,SW,SD = SPEC_FOR_WORLD(resumeW)
+    if W and BID then
+      ITEM_BLOCK_ID = BID; ITEM_SEED_ID = BID+1
+      print(string.format("[RESUME] %s lanjut %s|%s (BID=%d)", WORKER_ID, W, (D or ""), BID))
+      local hb = function(world) _update_heartbeat(world, WORKER_ID) end
+      _update_heartbeat(W, WORKER_ID)
+      HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID}, hb)
+      MARK_DONE(W); RECONCILE_QUEUE()
+      print(string.format("[RESUME] %s selesai %s", WORKER_ID, W))
+    else
+      print(string.format("[RESUME] Spec %s tidak ditemukan; unclaim.", tostring(resumeW)))
+      UNCLAIM(resumeW)
+    end
+  end
+
+  while true do
+    -- Klaim baru
+    local job = CLAIM_NEXT_JOB()
+    if job then
+      local W,D,BID,SW,SD = _parse_world_line(job)
+      if W and BID then
+        ITEM_BLOCK_ID = BID; ITEM_SEED_ID = BID+1
+        print(string.format("[JOB] %s klaim %s|%s (BID=%d)", WORKER_ID, W, (D or ""), BID))
+        local hb = function(world) _update_heartbeat(world, WORKER_ID) end
+        _update_heartbeat(W, WORKER_ID)
+        HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID}, hb)
+        MARK_DONE(W); RECONCILE_QUEUE()
+        print(string.format("[JOB] %s selesai %s", WORKER_ID, W))
+      end
+
+    else
+      -- Tidak ada yang bisa diklaim
+      local qs = QUEUE_STATS()
+
+      -- Gating: kalau "stale", TUNGGU sampai unclaimed==0; kalau "always", langsung boleh assist
+      if ASSIST_MODE ~= "always" and qs.unclaimed > 0 then
+        print(string.format("[QUEUE] Masih ada %d world belum diklaim. Menunggu...", qs.unclaimed))
+        sleep(800)
+      else
+        local assistW, stolen = PICK_ASSIST_WORLD(ASSIST_MODE)
+
+        -- >>> NEW GUARD: anti-spam & limit helper
+        if assistW then
+          -- skip kalau world sudah tidak punya job
+          if not _world_has_job(assistW) then
+            _cleanup_stale_inprogress(assistW)
+            assistW = nil
+          else
+            -- re-check limit helper
+            if ASSIST_MODE == "always" then
+              local total_workers = _count_unique_workers(assistW)
+              local helpers_now   = math.max(0, total_workers - 1)
+              if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
+                assistW = nil
+              end
+            end
+          end
+        end
+        -- <<< END NEW
+
+        if assistW then
+          print(string.format("[HELP] %s bantu %s (mode=%s%s)",
+            WORKER_ID, assistW, ASSIST_MODE, stolen and " +steal" or ""))
+          local worlds = _read_lines(JOB_FILES.worlds)
+          for _,ln in ipairs(worlds) do
+            local W,D,BID,SW,SD = _parse_world_line(ln)
+            if W == assistW then
+              ITEM_BLOCK_ID = BID; ITEM_SEED_ID = BID+1
+              local hb = function(world) _update_heartbeat(world, WORKER_ID) end
+              _update_heartbeat(W, WORKER_ID)
+              HARVEST_UNTIL_EMPTY(W,D,SW,SD,{ITEM_BLOCK_ID,ITEM_SEED_ID}, hb)
+
+              -- MARK_DONE hanya jika owner pindah ke kita (steal pada mode "stale")
+              local rows = _read_lines(JOB_FILES.inprogress); local owner_now = nil
+              for _,ll in ipairs(rows) do
+                local ww,who = ll:match("^([^|]+)|([^|]+)|")
+                if ww and ww:upper() == W then owner_now = who; break end
+              end
+              if owner_now == WORKER_ID then
+                MARK_DONE(W); RECONCILE_QUEUE()
+                print(string.format("[HELP] %s menutup %s", WORKER_ID, W))
+              end
+              break
+            end
+          end
+        else
+          -- Tidak ada aktif sama sekali
+          local qs2 = QUEUE_STATS()
+          if LOOP_MODE then
+            RECONCILE_QUEUE()
+            print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprog=%d, done=%d). Menunggu...",
+              qs2.total, qs2.inprogress, qs2.done))
+            -- idle actions
+            if (STORAGE_CAKE or "") ~= "" and has_any_cake() then
+              pcall(function()
+                DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList,
+                  {tile_cap=3000, stack_cap=20})
+              end)
+            end
+            local b=getBot and getBot() or nil
+            if b and b.leaveWorld then b:leaveWorld() end
+            sleep(1000)
+            if b then b.auto_reconnect = true end
+            sleep(1200)
+          else
+            RECONCILE_QUEUE()
+            print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprog=%d, done=%d). LOOP_MODE=false -> exit.",
+              qs2.total, qs2.inprogress, qs2.done))
+            break
+          end
+        end
+      end
+    end
+    sleep(350)
+  end
+
+  -- Final cleanup
+  if (STORAGE_CAKE or "") ~= "" and has_any_cake() then
+    pcall(function()
+      DROP_ITEMS_SNAKE(STORAGE_CAKE, DOOR_CAKE, cakeList,
+        {tile_cap=3000, stack_cap=20})
+    end)
+  end
+  local b=getBot and getBot() or nil
+  if b and b.leaveWorld then b:leaveWorld() end
+  sleep(900)
+  if b then b.auto_reconnect = true end
+end
+
+
+-------------------- MAIN --------------------
+do
+  ASSIGN_MODE=(ASSIGN_MODE or "rr"):lower():gsub("%s+",""); if ASSIGN_MODE~="rr" and ASSIGN_MODE~="chunk" then ASSIGN_MODE="rr" end
+  print(string.format("[CONFIG] SLOT=%d | WORKER_ID=%s | USE_TXT_QUEUE=%s | ASSIST_MODE=%s | ASSIGN_MODE=%s",
+    MY_SLOT, WORKER_ID, tostring(USE_TXT_QUEUE), ASSIST_MODE, ASSIGN_MODE))
+
+  if USE_TXT_QUEUE then
+    RUN_FROM_TXT_QUEUE()
+  else
+    local myList=build_worlds_for_bot(LIST_WORLD, MY_SLOT, TOTAL_BOTS, FARM_PER_BOT, ASSIGN_MODE)
+    print(string.format("[CHECK] I am slot %d of %d (mode=%s)", MY_SLOT, TOTAL_BOTS, ASSIGN_MODE))
+    if #myList==0 then print(string.format("[ASSIGN] SLOT %d tidak mendapat world. Cek TOTAL_BOTS/ASSIGN_MODE/ROTATE_LIST.", MY_SLOT))
+    else
+      print("[CHECK] Worlds assigned to me:"); for i,w in ipairs(myList) do print(string.format("  %02d) %s", i,w)) end
+      RUN_MULTI_HARVEST(myList)
+    end
+  end
+end
+
