@@ -1,3 +1,58 @@
+
+-- [[ Lock helpers guard: ensure available even if included early ]]
+if not _acquire_lock then
+  local function _locks_dir_from_jobs()
+    local base
+    if JOB_FILES and JOB_FILES.inprogress then
+      base = JOB_FILES.inprogress:gsub("([/\\])[^/\\]+$", "%1")
+    else
+      base = (extraFilePath or ".") .. (package.config:sub(1,1)=="\\" and "\\" or "/")
+    end
+    local sep = package.config:sub(1,1)=="\\" and "\\" or "/"
+    local dir = base .. ".locks"
+    local is_windows = package.config:sub(1,1)=="\\"
+    if is_windows then
+      os.execute(string.format('if not exist "%s" mkdir "%s" >nul 2>&1', dir, dir))
+    else
+      os.execute(string.format('mkdir -p "%s" 2>/dev/null', dir))
+    end
+    return dir
+  end
+
+  local function _lock_path(key)
+    local dir = _locks_dir_from_jobs()
+    key = tostring(key or "global"):gsub("[^%w_%-.]", "_")
+    local sep = package.config:sub(1,1)=="\\" and "\\" or "/"
+    return dir .. sep .. key .. ".lck"
+  end
+
+  function _acquire_lock(key, attempts, sleep_ms)
+    local path = _lock_path(key)
+    attempts  = attempts or 30
+    sleep_ms  = sleep_ms or 80
+    for _=1, attempts do
+      local is_windows = package.config:sub(1,1)=="\\"
+      local cmd = is_windows
+        and (string.format('cmd /c "mkdir "%s" >nul 2>&1"', path))
+        or  (string.format('mkdir "%s" 2>/dev/null', path))
+      local ok = os.execute(cmd)
+      if ok == true or ok == 0 then return true end
+      if sleep then sleep(sleep_ms) end
+    end
+    return false
+  end
+
+  function _release_lock(key)
+    local path = _lock_path(key)
+    local is_windows = package.config:sub(1,1)=="\\"
+    local cmd = is_windows
+      and (string.format('cmd /c "rmdir "%s" >nul 2>&1"', path))
+      or  (string.format('rmdir "%s" 2>/dev/null', path))
+    os.execute(cmd)
+  end
+end
+-- [[ end lock helpers guard ]]
+
 ----------------------------------------------------------------
 -- MULTI WORLD HARVEST + DROP SNAKE (ANTI-SKIP 2 TILE)
 -- + TXT JOB QUEUE (worlds.txt / inprogress.txt / done.txt)
