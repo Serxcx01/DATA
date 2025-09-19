@@ -1221,18 +1221,81 @@ local function _parse_world_line(s)
 end
 local function _set_of_worlds(lines) local S={}; for _,ln in ipairs(lines) do local w=ln:match("^([^|]+)"); if w then S[w:upper()]=true end end; return S end
 
-local function _update_heartbeat(world, who_slot)
-  world=(world or ""):upper(); who_slot=who_slot or WORKER_ID
-  local now=_now(); local rows=_read_lines(JOB_FILES.inprogress); local out,touched={},false
-  for _,ln in ipairs(rows) do
-    local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts then
-      if w:upper()==world and who==who_slot then table.insert(out, string.format("%s|%s|%d", w, who_slot, now)); touched=true
-      else table.insert(out, ln) end
+
+-- Pangkas inprogress untuk sebuah world agar hanya owner + N helper
+local function _enforce_helper_limit(world)
+  world = (world or ""):upper()
+  if world == "" then return end
+  local limit = tonumber(ASSIST_HELPER_LIMIT or 0) or 0
+
+  local rows = _read_lines(JOB_FILES.inprogress)
+  -- Kumpulkan entri world ini
+  local mine = {}
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and (w:upper() == world) then
+      mine[#mine+1] = {who = who, ts = tonumber(ts)}
     end
   end
-  if not touched then table.insert(out, string.format("%s|%s|%d", world, who_slot, now)) end
+
+  -- Tidak perlu pangkas
+  if #mine <= (1 + limit) then return end
+
+  -- Urutkan berdasarkan timestamp paling lama (owner = yang paling lama)
+  table.sort(mine, function(a,b) return (a.ts or 0) < (b.ts or 0) end)
+
+  -- Tentukan siapa saja yang dipertahankan: 1 owner + limit helper
+  local keep = {}
+  local keep_count = math.min(#mine, 1 + limit)
+  for i = 1, keep_count do keep[mine[i].who] = true end
+
+  -- Tulis ulang file: world lain tetap; world ini hanya yang di-keep
+  local out = {}
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts then
+      if w:upper() ~= world or keep[who] then
+        out[#out+1] = ln
+      end
+    else
+      out[#out+1] = ln
+    end
+  end
   _write_lines(JOB_FILES.inprogress, out)
+end
+
+
+-- Update heartbeat + sekaligus enforce helper limit pada world tsb
+local function _update_heartbeat(world, who_slot)
+  world = (world or ""):upper()
+  who_slot = who_slot or WORKER_ID
+  local now = _now()
+
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local out, touched = {}, false
+
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts then
+      if (w:upper() == world) and (who == who_slot) then
+        out[#out+1] = string.format("%s|%s|%d", w, who_slot, now)
+        touched = true
+      else
+        out[#out+1] = ln
+      end
+    else
+      out[#out+1] = ln
+    end
+  end
+
+  if not touched and world ~= "" then
+    out[#out+1] = string.format("%s|%s|%d", world, who_slot, now)
+  end
+
+  _write_lines(JOB_FILES.inprogress, out)
+
+  -- Penting: pangkas jika melebihi limit (self-healing)
+  if world ~= "" then _enforce_helper_limit(world) end
 end
 
 local function CLAIM_NEXT_JOB()
@@ -1411,12 +1474,20 @@ local function PICK_ASSIST_WORLD(mode)
     _write_lines(JOB_FILES.inprogress, out)
     return best, true
   else
-    -- mode "always": reserve helper slot atomically
-    if _try_claim_helper_slot(best, WORKER_ID) then
-      return best, false
-    else
-      return nil, false  -- slot penuh; jangan ikut
+    -- mode "always": pakai lock per-world agar tidak kebobolan saat serentak
+    if not _acquire_lock("inprog_" .. best) then
+      return nil, false
     end
+
+    local ok = _try_claim_helper_slot(best, WORKER_ID)
+
+    -- self-healing langsung setelah klaim
+    if ok then
+      _enforce_helper_limit(best)
+    end
+
+    _release_lock("inprog_" .. best)
+    return ok and best or nil, false
   end
 end
 
