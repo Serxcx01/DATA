@@ -31,6 +31,7 @@ ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
+DELAY_EXE            = 3000
 
 -- Delay/harvest
 USE_MAGNI     = false
@@ -1560,7 +1561,7 @@ function RUN_FROM_TXT_QUEUE()
             if b and b.leaveWorld then b:leaveWorld() end
             sleep(1000)
             if b then b.auto_reconnect = true end
-            sleep(1200)
+            sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
           else
             RECONCILE_QUEUE()
             print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprog=%d, done=%d). LOOP_MODE=false -> exit.",
@@ -1588,6 +1589,7 @@ end
 
 
 -------------------- MAIN --------------------
+sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
 do
   ASSIGN_MODE=(ASSIGN_MODE or "rr"):lower():gsub("%s+",""); if ASSIGN_MODE~="rr" and ASSIGN_MODE~="chunk" then ASSIGN_MODE="rr" end
   print(string.format("[CONFIG] SLOT=%d | WORKER_ID=%s | USE_TXT_QUEUE=%s | ASSIST_MODE=%s | ASSIGN_MODE=%s",
