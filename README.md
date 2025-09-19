@@ -27,7 +27,7 @@ USE_TXT_QUEUE = true          -- true: pakai worlds.txt queue
 -- >>> NEW: Assist mode <<<
 ASSIST_MODE          = (ASSIST_MODE or "always") -- "stale" atau "always"
 ASSIST_MODE          = tostring(ASSIST_MODE):lower()
-ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 3  -- max helper per world
+ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
