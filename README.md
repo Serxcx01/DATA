@@ -1,12 +1,4 @@
-# Create a single, self-contained Lua script that includes:
-# - Safe helpers (warp/reconnect/guard, getters)
-# - 5-tile centered HARVEST_PASS
-# - TAKE_MAGNI with cooldown-after-fail
-# - DROP_ITEMS_SNAKE
-# - TXT queue runner RUN_FROM_TXT_QUEUE with helper-limit logic (applies to both modes)
-# Save as SC_HARVEST_FULL_5TILE_QUEUE_PATCHED.lua
-
-full_with_queue = r'''----------------------------------------------------------------
+----------------------------------------------------------------
 -- FULL HARVEST SCRIPT + TXT QUEUE (PATCHED, SELF-CONTAINED)
 -- - Safe warp/reconnect (anti "|" world)
 -- - HARVEST_PASS 5-tile centered (left2, center, right2) zig-zag
@@ -29,7 +21,7 @@ DELAY_EXE            = DELAY_EXE or 1000         -- loop delay in ms
 
 USE_MAGNI     = USE_MAGNI or false
 DELAY_HARVEST = DELAY_HARVEST or 170
-
+USE_TXT_QUEUE = true
 -- Storage MAGNI (optional)
 STORAGE_MAGNI = (STORAGE_MAGNI or "")
 DOOR_MAGNI    = (DOOR_MAGNI or "")
