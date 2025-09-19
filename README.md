@@ -1325,60 +1325,100 @@ end
 
 
 -- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
--- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
+-- PICK_ASSIST_WORLD dengan limit helper + anti-race (double-check + commit)
 local function PICK_ASSIST_WORLD(mode)
   local prog = _read_lines(JOB_FILES.inprogress)
   if #prog == 0 then return nil, false end
 
-  -- pilih world kandidat milik orang lain (terlama heartbeat)
-  local best, best_age, best_owner = nil, -1, nil
+  -- hitung unique worker untuk world (baca file terbaru)
+  local function _count_unique_workers_for(w)
+    w = (w or ""):upper()
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local S = {}
+    for _, ln in ipairs(rows) do
+      local ww, who = ln:match("^([^|]+)|([^|]+)|")
+      if ww and who and ww:upper() == w then S[who] = true end
+    end
+    local n = 0
+    for _ in pairs(S) do n = n + 1 end
+    return n, S
+  end
+
+  -- coba klaim helper slot: baca → cek limit → tulis baris kita → sukses/gagal
+  local function _try_claim_helper_slot(w, who)
+    w = (w or ""):upper()
+    who = who or WORKER_ID
+    local now = _now()
+
+    -- jika sudah tercatat, hanya update timestamp
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local out, present = {}, false
+    for _, ln in ipairs(rows) do
+      local ww, wh, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+      if ww and wh and ts and ww:upper() == w and wh == who then
+        table.insert(out, string.format("%s|%s|%d", w, who, now))
+        present = true
+      else
+        table.insert(out, ln)
+      end
+    end
+    if present then _write_lines(JOB_FILES.inprogress, out); return true end
+
+    -- double-check limit sebelum menambah baris kita
+    local total = _count_unique_workers_for(w)  -- total worker (owner + helpers)
+    local helpers_now = math.max(0, total - 1)  -- owner dihitung 1
+    if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
+      return false
+    end
+
+    table.insert(out, string.format("%s|%s|%d", w, who, now))
+    _write_lines(JOB_FILES.inprogress, out)
+    return true
+  end
+
+  -- pilih kandidat: world milik orang lain dengan heartbeat tertua
+  local best, best_age = nil, -1
   local now = _now()
   for _, ln in ipairs(prog) do
     local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
     if w and who and ts and who ~= WORKER_ID then
       local age = now - tonumber(ts)
-      if age > best_age then
-        best, best_age, best_owner = w:upper(), age, who
-      end
+      if age > best_age then best, best_age = w:upper(), age end
     end
   end
   if not best then return nil, false end
 
-  -- jika world ini sudah tidak ada di worlds.txt → cleanup & skip
+  -- world sudah dicabut dari worlds.txt? bersihkan zombie & skip
   if not _world_has_job(best) then
     _cleanup_stale_inprogress(best)
     return nil, false
   end
 
   if mode == "stale" then
-    -- seperti semula: bantu hanya jika macet >= STALE_SEC dan boleh steal
+    -- bantu hanya jika macet cukup lama & boleh steal
     if best_age < (STALE_SEC or 90) or not STEAL_HELP then
       return nil, false
     end
-
-    -- steal owner → set owner jadi kita di inprogress
+    -- steal: hapus semua entry world tsb lalu jadikan kita owner
     local rows = _read_lines(JOB_FILES.inprogress)
-    local out, stolen = {}, false
+    local out = {}
     for _, ln in ipairs(rows) do
-      local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-      if w and who and ts and w:upper() == best then
-        table.insert(out, string.format("%s|%s|%d", w:upper(), WORKER_ID, _now()))
-        stolen = true
-      else
-        table.insert(out, ln)
-      end
+      local w = ln:match("^([^|]+)")
+      if not (w and w:upper() == best) then table.insert(out, ln) end
     end
-    if stolen then _write_lines(JOB_FILES.inprogress, out) end
+    table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
+    _write_lines(JOB_FILES.inprogress, out)
     return best, true
   else
-    -- mode "always": bantu tanpa steal, tapi hormati limit helper
-    local total_workers = _count_unique_workers(best)   -- owner + helpers
-    local helpers_now   = math.max(0, total_workers - 1)
-    if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
-      return nil, false   -- sudah penuh helper untuk world ini
+    -- mode "always": reserve helper slot atomically
+    if _try_claim_helper_slot(best, WORKER_ID) then
+      return best, false
+    else
+      return nil, false  -- slot penuh; jangan ikut
     end
-    return best, false
   end
+end
+
 end
 
 
