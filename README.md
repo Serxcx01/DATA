@@ -1318,6 +1318,55 @@ local function _enforce_helper_limit(world)
 end
 
 
+
+-- Hapus satu baris helper tertentu dari inprogress
+local function RELEASE_HELPER_SLOT(world, who)
+  world = (world or ""):upper(); who = who or WORKER_ID
+  if world == "" then return end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local out = {}
+  for _, ln in ipairs(rows) do
+    local w, who2 = ln:match("^([^|]+)|([^|]+)|")
+    if not (w and who2 and w:upper()==world and who2==who) then
+      out[#out+1] = ln
+    end
+  end
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
+
+-- Bersihkan helper zombie (heartbeat kadaluarsa) & patuhi limit
+ZOMBIE_HELPER_TTL = ZOMBIE_HELPER_TTL or 90
+local function CLEAN_ZOMBIE_HELPERS()
+  local now = _now()
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local perW = {}
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts then
+      w = w:upper()
+      perW[w] = perW[w] or {}
+      table.insert(perW[w], { who=who, ts=tonumber(ts) or 0, raw=ln })
+    end
+  end
+  local out = {}
+  for w, list in pairs(perW) do
+    table.sort(list, function(a,b) return a.ts < b.ts end)
+    local owner = list[1]
+    if owner then table.insert(out, owner.raw) end
+    for i=2,#list do
+      local e = list[i]
+      if (now - e.ts) <= (ZOMBIE_HELPER_TTL or 90) then
+        table.insert(out, e.raw)
+      end
+    end
+  end
+  _write_lines(JOB_FILES.inprogress, out)
+  -- enforce per world
+  for w,_ in pairs(perW) do _enforce_helper_limit(w) end
+end
+
+
 -- Update heartbeat + sekaligus enforce helper limit pada world tsb
 -- Update heartbeat + enforce helper limit + cleaner zombie
 local function _update_heartbeat(world, who_slot)
@@ -1702,52 +1751,4 @@ do
       RUN_MULTI_HARVEST(myList)
     end
   end
-end
-
-
--- Hapus satu baris helper tertentu dari inprogress
-local function RELEASE_HELPER_SLOT(world, who)
-  world = (world or ""):upper(); who = who or WORKER_ID
-  if world == "" then return end
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local out = {}
-  for _, ln in ipairs(rows) do
-    local w, who2 = ln:match("^([^|]+)|([^|]+)|")
-    if not (w and who2 and w:upper()==world and who2==who) then
-      out[#out+1] = ln
-    end
-  end
-  _write_lines(JOB_FILES.inprogress, out)
-end
-
-
--- Bersihkan helper zombie (heartbeat kadaluarsa) & patuhi limit
-ZOMBIE_HELPER_TTL = ZOMBIE_HELPER_TTL or 90
-local function CLEAN_ZOMBIE_HELPERS()
-  local now = _now()
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local perW = {}
-  for _, ln in ipairs(rows) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts then
-      w = w:upper()
-      perW[w] = perW[w] or {}
-      table.insert(perW[w], { who=who, ts=tonumber(ts) or 0, raw=ln })
-    end
-  end
-  local out = {}
-  for w, list in pairs(perW) do
-    table.sort(list, function(a,b) return a.ts < b.ts end)
-    local owner = list[1]
-    if owner then table.insert(out, owner.raw) end
-    for i=2,#list do
-      local e = list[i]
-      if (now - e.ts) <= (ZOMBIE_HELPER_TTL or 90) then
-        table.insert(out, e.raw)
-      end
-    end
-  end
-  _write_lines(JOB_FILES.inprogress, out)
-  -- enforce per world
-  for w,_ in pairs(perW) do _enforce_helper_limit(w) end
 end
