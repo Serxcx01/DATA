@@ -25,12 +25,13 @@ USE_TXT_QUEUE = true          -- true: pakai worlds.txt queue
 
 
 -- >>> NEW: Assist mode <<<
-ASSIST_MODE          = (ASSIST_MODE or "always") -- "stale" atau "always"
+ASSIST_MODE          = (ASSIST_MODE or "stale") -- "stale" atau "always"
 ASSIST_MODE          = tostring(ASSIST_MODE):lower()
 ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
+DELAY_EXE            = 1000
 
 -- Delay/harvest
 USE_MAGNI     = false
@@ -40,7 +41,7 @@ DELAY_HARVEST = 170
 STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "", ""
+STORAGE_CAKE, DOOR_CAKE = "Lgridbun5", "Devi"
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
@@ -570,7 +571,7 @@ function DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS, opts)
 
         -- jeda pendek + reconnect ringan (tanpa guard door di inner loop)
         sleep(STEP_MS)
-        SMART_RECONNECT()
+        SMART_RECONNECT(WORLD, DOOR)
 
         local ok, after = _poll_inv_drop_ok(ITEM, before)
         if ok then
@@ -849,7 +850,9 @@ local function _ensure_single_item_in_storage(item_id, keep, storageW, storageD,
       attempts_here=attempts_here+1
       local before=inv:getItemCount(item_id)
       b:drop(tostring(item_id), drop_try)
-      sleep(STEP_MS); SMART_RECONNECT(); GUARD_DOOR_STUCK()
+      sleep(STEP_MS)
+      SMART_RECONNECT(storageW, storageD)
+      GUARD_DOOR_STUCK(storageW, storageD)
       local after=inv:getItemCount(item_id)
       if after<before then
         local dropped=before-after; extras=math.max(0, extras-dropped)
@@ -1003,46 +1006,145 @@ end
 
 
 -------------------- HARVEST --------------------
-local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
-  local b=getBot and getBot() or nil; if not b then return false end
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+-- KONFIG: mode 5 tile terpusat (kiri 2, tengah, kanan 2)
+TILE_WINDOW  = tonumber(TILE_WINDOW or 5)     -- harus ganjil; 5 = [-2..2]
+CENTERED     = true                           -- pakai anchor di tengah window
+local HALF_W = math.floor((TILE_WINDOW - 1) / 2)   -- 2 untuk window 5
+local OFFSETS_CENTER = {}
+for m = -HALF_W, HALF_W do table.insert(OFFSETS_CENTER, m) end
+local TILE_STEP  = TILE_WINDOW                 -- langkah anchor per iterasi
+--------------------------------------------------------------------
 
-  if USE_MAGNI then
-    local inv=b:getInventory(); local have=inv:getItemCount(10158); local called=false
-    if have==0 then
-      if (STORAGE_MAGNI or "")~="" then TAKE_MAGNI(STORAGE_MAGNI, DOOR_MAGNI); called=true end
-      if inv:getItemCount(10158)==0 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
-    elseif have>1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
-    if (not called) and inv:getItemCount(10158)>0 then b:wear(10158); sleep(200) end
+-- util yang dipakai
+local function _sorted_rows_and_bounds(b)
+  local rows_map, bounds = {}, {}
+  local w = b:getWorld()
+  for _, t in pairs(_get_tiles()) do
+    local tile = w:getTile(t.x, t.y)
+    if tile and tile.fg == ITEM_SEED_ID and tile:canHarvest() and hasAccess(t.x, t.y) > 0 then
+      rows_map[t.y] = true
+      local bd = bounds[t.y]
+      if not bd then
+        bounds[t.y] = {min_x = t.x, max_x = t.x}
+      else
+        if t.x < bd.min_x then bd.min_x = t.x end
+        if t.x > bd.max_x then bd.max_x = t.x end
+      end
+    end
   end
+  local rows = {}
+  for y,_ in pairs(rows_map) do table.insert(rows, y) end
+  table.sort(rows)
+  return rows, bounds
+end
+
+local function _at_tile(b, x, y)
+  local w = b:getWorld(); local me = w and w:getLocal() or nil
+  return me and (math.floor(me.posx/32)==x and math.floor(me.posy/32)==y)
+end
+
+local function _valid_seed_tile(w, x, y)
+  local t = w:getTile(x, y)
+  return t and t.fg == ITEM_SEED_ID and t:canHarvest() and hasAccess(x, y) > 0
+end
+
+--------------------------------------------------------------------
+-- HARVEST_PASS: panen 5 tile terpusat (kiri 2, tengah, kanan 2)
+--------------------------------------------------------------------
+function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
+  local b = getBot and getBot() or nil; if not b then return false end
+
+  -- MAGNI seperti sebelumnya
+  if USE_MAGNI then
+    local inv = b:getInventory(); local have = inv:getItemCount(10158); local called = false
+    if have == 0 then
+      if (STORAGE_MAGNI or "") ~= "" then TAKE_MAGNI(STORAGE_MAGNI, DOOR_MAGNI); called = true end
+      if inv:getItemCount(10158) == 0 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called = true end
+    elseif have > 1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called = true end
+    if (not called) and inv:getItemCount(10158) > 0 then b:wear(10158); sleep(200) end
+  end
+
+  -- Warp & siap
   WARP_WORLD(FARM_WORLD, FARM_DOOR)
   ZEE_COLLECT(true); sleep(120); SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
 
-  local w=b:getWorld(); local did_any=false
-  for _,t in pairs(_get_tiles()) do
+  local w = b:getWorld(); if not w then ZEE_COLLECT(false); return false end
+  local worldW = (w.getWidth and w:getWidth()) or 200  -- fallback aman
+  local did_any = false
+
+  -- baris y yang berisi seed + batas x tiap baris
+  local rows, bounds = _sorted_rows_and_bounds(b)
+
+  for i, y in ipairs(rows) do
     _maybe_drop_cake()
-    local tile=w:getTile(t.x,t.y)
-    if tile and tile.fg==ITEM_SEED_ID and tile:canHarvest() and b:hasAccess(t.x,t.y)>0 then
-      local tries=0
-      while tries<6 do
-        b:findPath(t.x,t.y); SMART_RECONNECT(); GUARD_DOOR_STUCK()
-        local me=w:getLocal(); if me and math.floor(me.posx/32)==t.x and math.floor(me.posy/32)==t.y then break end
-        tries=tries+1
+    SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
+
+    local bd = bounds[y]
+    if bd then
+      -- agar anchor di tengah punya ruang 2 tile kiri/kanan, geser batas
+      local minA = bd.min_x + HALF_W
+      local maxA = bd.max_x - HALF_W
+      if minA > maxA then
+        -- baris terlalu sempit untuk window 5; tetap dipanen parsial via bound check
+        minA, maxA = bd.min_x, bd.max_x
       end
-      local cnt=0
+
+      -- zig-zag: baris ganjil ke kanan, genap ke kiri
+      local forward   = (i % 2 == 1)
+      local direction = forward and 1 or -1
+      local x_start   = forward and minA or maxA
+      local x_end     = forward and maxA or minA
+      local anchor    = x_start
+
       while true do
-        local cur=w:getTile(t.x,t.y)
-        if not (cur and cur.fg==ITEM_SEED_ID and cur:canHarvest() and hasAccess(t.x,t.y)>0) then break end
-        b:hit(t.x,t.y); sleep(DELAY_HARVEST); SMART_RECONNECT(); GUARD_DOOR_STUCK()
-        cnt=cnt+1; if cnt>=100 then print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)",t.x,t.y)); break end
+        if forward and anchor > x_end then break end
+        if (not forward) and anchor < x_end then break end
+
+        -- path ke anchor (tengah)
+        local tries = 0
+        while tries < 6 and not _at_tile(b, anchor, y) do
+          b:findPath(anchor, y); SMART_RECONNECT(FARM_WORLD, FARM_DOOR); GUARD_DOOR_STUCK(FARM_WORLD, FARM_DOOR)
+          tries = tries + 1; sleep(80)
+        end
+
+        if _at_tile(b, anchor, y) then
+          -- pukul kiri 2 .. kanan 2 dari anchor
+          for _, m in ipairs(OFFSETS_CENTER) do
+            local hx = anchor + m
+            if hx >= 0 and hx < worldW then
+              local hit_cnt = 0
+              while _valid_seed_tile(w, hx, y) and _at_tile(b, anchor, y) do
+                b:hit(hx, y)
+                sleep(DELAY_HARVEST)
+                SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
+                GUARD_DOOR_STUCK(FARM_WORLD, FARM_DOOR)
+                hit_cnt = hit_cnt + 1
+                if hit_cnt >= 100 then
+                  print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)", hx, y))
+                  break
+                end
+              end
+            end
+          end
+          did_any = true
+        end
+
+        _maybe_drop_cake()
+        if checkitemfarm and checkitemfarm(farmListActive) then ZEE_COLLECT(false); return did_any end
+
+        -- geser anchor 5 tile (atau sesuai TILE_WINDOW)
+        anchor = anchor + (direction * TILE_STEP)
       end
-      did_any=true
-      _maybe_drop_cake()
-      if checkitemfarm(farmListActive) then break end
     end
   end
+
   _maybe_drop_cake()
+  ZEE_COLLECT(false)
   return did_any
 end
+
 
 function HARVEST_UNTIL_EMPTY(FARM_WORLD, FARM_DOOR, STORAGE_WORLD, STORAGE_DOOR, farmListActive, on_tick)
   local ok,reason=warp_ok_and_public(FARM_WORLD, FARM_DOOR)
@@ -1224,6 +1326,7 @@ end
 
 
 -- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
+-- PICK_ASSIST_WORLD dengan limit helper + anti-race (double-check + commit)
 local function PICK_ASSIST_WORLD(mode)
   local prog = _read_lines(JOB_FILES.inprogress)
   if #prog == 0 then return nil, false end
@@ -1278,6 +1381,7 @@ local function PICK_ASSIST_WORLD(mode)
     return best, false
   end
 end
+
 
 
 local function RECONCILE_QUEUE()
@@ -1417,7 +1521,7 @@ function RUN_FROM_TXT_QUEUE()
             if b and b.leaveWorld then b:leaveWorld() end
             sleep(1000)
             if b then b.auto_reconnect = true end
-            sleep(1200)
+            sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
           else
             RECONCILE_QUEUE()
             print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprog=%d, done=%d). LOOP_MODE=false -> exit.",
@@ -1445,6 +1549,7 @@ end
 
 
 -------------------- MAIN --------------------
+sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
 do
   ASSIGN_MODE=(ASSIGN_MODE or "rr"):lower():gsub("%s+",""); if ASSIGN_MODE~="rr" and ASSIGN_MODE~="chunk" then ASSIGN_MODE="rr" end
   print(string.format("[CONFIG] SLOT=%d | WORKER_ID=%s | USE_TXT_QUEUE=%s | ASSIST_MODE=%s | ASSIGN_MODE=%s",
