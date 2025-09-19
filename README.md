@@ -1,58 +1,3 @@
-
--- [[ Lock helpers guard: ensure available even if included early ]]
-if not _acquire_lock then
-  local function _locks_dir_from_jobs()
-    local base
-    if JOB_FILES and JOB_FILES.inprogress then
-      base = JOB_FILES.inprogress:gsub("([/\\])[^/\\]+$", "%1")
-    else
-      base = (extraFilePath or ".") .. (package.config:sub(1,1)=="\\" and "\\" or "/")
-    end
-    local sep = package.config:sub(1,1)=="\\" and "\\" or "/"
-    local dir = base .. ".locks"
-    local is_windows = package.config:sub(1,1)=="\\"
-    if is_windows then
-      os.execute(string.format('if not exist "%s" mkdir "%s" >nul 2>&1', dir, dir))
-    else
-      os.execute(string.format('mkdir -p "%s" 2>/dev/null', dir))
-    end
-    return dir
-  end
-
-  local function _lock_path(key)
-    local dir = _locks_dir_from_jobs()
-    key = tostring(key or "global"):gsub("[^%w_%-.]", "_")
-    local sep = package.config:sub(1,1)=="\\" and "\\" or "/"
-    return dir .. sep .. key .. ".lck"
-  end
-
-  function _acquire_lock(key, attempts, sleep_ms)
-    local path = _lock_path(key)
-    attempts  = attempts or 30
-    sleep_ms  = sleep_ms or 80
-    for _=1, attempts do
-      local is_windows = package.config:sub(1,1)=="\\"
-      local cmd = is_windows
-        and (string.format('cmd /c "mkdir "%s" >nul 2>&1"', path))
-        or  (string.format('mkdir "%s" 2>/dev/null', path))
-      local ok = os.execute(cmd)
-      if ok == true or ok == 0 then return true end
-      if sleep then sleep(sleep_ms) end
-    end
-    return false
-  end
-
-  function _release_lock(key)
-    local path = _lock_path(key)
-    local is_windows = package.config:sub(1,1)=="\\"
-    local cmd = is_windows
-      and (string.format('cmd /c "rmdir "%s" >nul 2>&1"', path))
-      or  (string.format('rmdir "%s" 2>/dev/null', path))
-    os.execute(cmd)
-  end
-end
--- [[ end lock helpers guard ]]
-
 ----------------------------------------------------------------
 -- MULTI WORLD HARVEST + DROP SNAKE (ANTI-SKIP 2 TILE)
 -- + TXT JOB QUEUE (worlds.txt / inprogress.txt / done.txt)
@@ -86,7 +31,6 @@ ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
-DELAY_EXE            = 3000
 
 -- Delay/harvest
 USE_MAGNI     = false
@@ -96,7 +40,7 @@ DELAY_HARVEST = 170
 STORAGE_MAGNI, DOOR_MAGNI = "", "" -- lokasi kacamata (10158)
 
 -- Storage CAKE (final/idle drop tanpa ambang)
-STORAGE_CAKE, DOOR_CAKE = "Lgridbun5", "Devi"
+STORAGE_CAKE, DOOR_CAKE = "", ""
 cakeList  = {1058,1094,1096,1098,1828,3870,7058,10134,10136,10138,10140,10142,10146,10150,10164,10228,11286}
 cekepremium = {1828}
 MAX_CAKE_PREMIUM = 2
@@ -626,7 +570,7 @@ function DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS, opts)
 
         -- jeda pendek + reconnect ringan (tanpa guard door di inner loop)
         sleep(STEP_MS)
-        SMART_RECONNECT(WORLD, DOOR)
+        SMART_RECONNECT()
 
         local ok, after = _poll_inv_drop_ok(ITEM, before)
         if ok then
@@ -905,9 +849,7 @@ local function _ensure_single_item_in_storage(item_id, keep, storageW, storageD,
       attempts_here=attempts_here+1
       local before=inv:getItemCount(item_id)
       b:drop(tostring(item_id), drop_try)
-      sleep(STEP_MS)
-      SMART_RECONNECT(storageW, storageD)
-      GUARD_DOOR_STUCK(storageW, storageD)
+      sleep(STEP_MS); SMART_RECONNECT(); GUARD_DOOR_STUCK()
       local after=inv:getItemCount(item_id)
       if after<before then
         local dropped=before-after; extras=math.max(0, extras-dropped)
@@ -1061,145 +1003,46 @@ end
 
 
 -------------------- HARVEST --------------------
---------------------------------------------------------------------
---------------------------------------------------------------------
--- KONFIG: mode 5 tile terpusat (kiri 2, tengah, kanan 2)
-TILE_WINDOW  = tonumber(TILE_WINDOW or 5)     -- harus ganjil; 5 = [-2..2]
-CENTERED     = true                           -- pakai anchor di tengah window
-local HALF_W = math.floor((TILE_WINDOW - 1) / 2)   -- 2 untuk window 5
-local OFFSETS_CENTER = {}
-for m = -HALF_W, HALF_W do table.insert(OFFSETS_CENTER, m) end
-local TILE_STEP  = TILE_WINDOW                 -- langkah anchor per iterasi
---------------------------------------------------------------------
+local function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
+  local b=getBot and getBot() or nil; if not b then return false end
 
--- util yang dipakai
-local function _sorted_rows_and_bounds(b)
-  local rows_map, bounds = {}, {}
-  local w = b:getWorld()
-  for _, t in pairs(_get_tiles()) do
-    local tile = w:getTile(t.x, t.y)
-    if tile and tile.fg == ITEM_SEED_ID and tile:canHarvest() and hasAccess(t.x, t.y) > 0 then
-      rows_map[t.y] = true
-      local bd = bounds[t.y]
-      if not bd then
-        bounds[t.y] = {min_x = t.x, max_x = t.x}
-      else
-        if t.x < bd.min_x then bd.min_x = t.x end
-        if t.x > bd.max_x then bd.max_x = t.x end
-      end
-    end
-  end
-  local rows = {}
-  for y,_ in pairs(rows_map) do table.insert(rows, y) end
-  table.sort(rows)
-  return rows, bounds
-end
-
-local function _at_tile(b, x, y)
-  local w = b:getWorld(); local me = w and w:getLocal() or nil
-  return me and (math.floor(me.posx/32)==x and math.floor(me.posy/32)==y)
-end
-
-local function _valid_seed_tile(w, x, y)
-  local t = w:getTile(x, y)
-  return t and t.fg == ITEM_SEED_ID and t:canHarvest() and hasAccess(x, y) > 0
-end
-
---------------------------------------------------------------------
--- HARVEST_PASS: panen 5 tile terpusat (kiri 2, tengah, kanan 2)
---------------------------------------------------------------------
-function HARVEST_PASS(FARM_WORLD, FARM_DOOR, farmListActive)
-  local b = getBot and getBot() or nil; if not b then return false end
-
-  -- MAGNI seperti sebelumnya
   if USE_MAGNI then
-    local inv = b:getInventory(); local have = inv:getItemCount(10158); local called = false
-    if have == 0 then
-      if (STORAGE_MAGNI or "") ~= "" then TAKE_MAGNI(STORAGE_MAGNI, DOOR_MAGNI); called = true end
-      if inv:getItemCount(10158) == 0 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called = true end
-    elseif have > 1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called = true end
-    if (not called) and inv:getItemCount(10158) > 0 then b:wear(10158); sleep(200) end
+    local inv=b:getInventory(); local have=inv:getItemCount(10158); local called=false
+    if have==0 then
+      if (STORAGE_MAGNI or "")~="" then TAKE_MAGNI(STORAGE_MAGNI, DOOR_MAGNI); called=true end
+      if inv:getItemCount(10158)==0 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
+    elseif have>1 then TAKE_MAGNI(FARM_WORLD, FARM_DOOR); called=true end
+    if (not called) and inv:getItemCount(10158)>0 then b:wear(10158); sleep(200) end
   end
-
-  -- Warp & siap
   WARP_WORLD(FARM_WORLD, FARM_DOOR)
   ZEE_COLLECT(true); sleep(120); SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
 
-  local w = b:getWorld(); if not w then ZEE_COLLECT(false); return false end
-  local worldW = (w.getWidth and w:getWidth()) or 200  -- fallback aman
-  local did_any = false
-
-  -- baris y yang berisi seed + batas x tiap baris
-  local rows, bounds = _sorted_rows_and_bounds(b)
-
-  for i, y in ipairs(rows) do
+  local w=b:getWorld(); local did_any=false
+  for _,t in pairs(_get_tiles()) do
     _maybe_drop_cake()
-    SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
-
-    local bd = bounds[y]
-    if bd then
-      -- agar anchor di tengah punya ruang 2 tile kiri/kanan, geser batas
-      local minA = bd.min_x + HALF_W
-      local maxA = bd.max_x - HALF_W
-      if minA > maxA then
-        -- baris terlalu sempit untuk window 5; tetap dipanen parsial via bound check
-        minA, maxA = bd.min_x, bd.max_x
+    local tile=w:getTile(t.x,t.y)
+    if tile and tile.fg==ITEM_SEED_ID and tile:canHarvest() and b:hasAccess(t.x,t.y)>0 then
+      local tries=0
+      while tries<6 do
+        b:findPath(t.x,t.y); SMART_RECONNECT(); GUARD_DOOR_STUCK()
+        local me=w:getLocal(); if me and math.floor(me.posx/32)==t.x and math.floor(me.posy/32)==t.y then break end
+        tries=tries+1
       end
-
-      -- zig-zag: baris ganjil ke kanan, genap ke kiri
-      local forward   = (i % 2 == 1)
-      local direction = forward and 1 or -1
-      local x_start   = forward and minA or maxA
-      local x_end     = forward and maxA or minA
-      local anchor    = x_start
-
+      local cnt=0
       while true do
-        if forward and anchor > x_end then break end
-        if (not forward) and anchor < x_end then break end
-
-        -- path ke anchor (tengah)
-        local tries = 0
-        while tries < 6 and not _at_tile(b, anchor, y) do
-          b:findPath(anchor, y); SMART_RECONNECT(FARM_WORLD, FARM_DOOR); GUARD_DOOR_STUCK(FARM_WORLD, FARM_DOOR)
-          tries = tries + 1; sleep(80)
-        end
-
-        if _at_tile(b, anchor, y) then
-          -- pukul kiri 2 .. kanan 2 dari anchor
-          for _, m in ipairs(OFFSETS_CENTER) do
-            local hx = anchor + m
-            if hx >= 0 and hx < worldW then
-              local hit_cnt = 0
-              while _valid_seed_tile(w, hx, y) and _at_tile(b, anchor, y) do
-                b:hit(hx, y)
-                sleep(DELAY_HARVEST)
-                SMART_RECONNECT(FARM_WORLD, FARM_DOOR)
-                GUARD_DOOR_STUCK(FARM_WORLD, FARM_DOOR)
-                hit_cnt = hit_cnt + 1
-                if hit_cnt >= 100 then
-                  print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)", hx, y))
-                  break
-                end
-              end
-            end
-          end
-          did_any = true
-        end
-
-        _maybe_drop_cake()
-        if checkitemfarm and checkitemfarm(farmListActive) then ZEE_COLLECT(false); return did_any end
-
-        -- geser anchor 5 tile (atau sesuai TILE_WINDOW)
-        anchor = anchor + (direction * TILE_STEP)
+        local cur=w:getTile(t.x,t.y)
+        if not (cur and cur.fg==ITEM_SEED_ID and cur:canHarvest() and hasAccess(t.x,t.y)>0) then break end
+        b:hit(t.x,t.y); sleep(DELAY_HARVEST); SMART_RECONNECT(); GUARD_DOOR_STUCK()
+        cnt=cnt+1; if cnt>=100 then print(string.format("[HARVEST_PASS] Stop 100 hits (%d,%d)",t.x,t.y)); break end
       end
+      did_any=true
+      _maybe_drop_cake()
+      if checkitemfarm(farmListActive) then break end
     end
   end
-
   _maybe_drop_cake()
-  ZEE_COLLECT(false)
   return did_any
 end
-
 
 function HARVEST_UNTIL_EMPTY(FARM_WORLD, FARM_DOOR, STORAGE_WORLD, STORAGE_DOOR, farmListActive, on_tick)
   local ok,reason=warp_ok_and_public(FARM_WORLD, FARM_DOOR)
@@ -1276,125 +1119,18 @@ local function _parse_world_line(s)
 end
 local function _set_of_worlds(lines) local S={}; for _,ln in ipairs(lines) do local w=ln:match("^([^|]+)"); if w then S[w:upper()]=true end end; return S end
 
-
--- Pangkas inprogress untuk sebuah world agar hanya owner + N helper
--- Pangkas inprogress: sisakan owner (tertua) + N helper terbaru
-local function _enforce_helper_limit(world)
-  world = (world or ""):upper()
-  if world == "" then return end
-  local limit = tonumber(ASSIST_HELPER_LIMIT or 0) or 0
-
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local entries, others = {}, {}
-  for _, ln in ipairs(rows) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts and (w:upper() == world) then
-      entries[#entries+1] = { who = who, ts = tonumber(ts) or 0, raw = ln }
-    else
-      others[#others+1] = ln
-    end
-  end
-  if #entries <= (1 + limit) then return end
-
-  table.sort(entries, function(a,b) return (a.ts or 0) < (b.ts or 0) end)
-  local owner = entries[1]
-  local helpers = {}
-  for i = 2, #entries do helpers[#helpers+1] = entries[i] end
-  table.sort(helpers, function(a,b) return (a.ts or 0) > (b.ts or 0) end)
-
-  local keep = { [owner.who] = true }
-  for i = 1, math.min(limit, #helpers) do keep[helpers[i].who] = true end
-
-  local out = {}
-  for _, ln in ipairs(rows) do
-    local w, who = ln:match("^([^|]+)|([^|]+)|")
-    if w and who and (w:upper() == world) then
-      if keep[who] then out[#out+1] = ln end
-    else
-      out[#out+1] = ln
-    end
-  end
-  _write_lines(JOB_FILES.inprogress, out)
-end
-
-
-
--- Hapus satu baris helper tertentu dari inprogress
-local function RELEASE_HELPER_SLOT(world, who)
-  world = (world or ""):upper(); who = who or WORKER_ID
-  if world == "" then return end
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local out = {}
-  for _, ln in ipairs(rows) do
-    local w, who2 = ln:match("^([^|]+)|([^|]+)|")
-    if not (w and who2 and w:upper()==world and who2==who) then
-      out[#out+1] = ln
-    end
-  end
-  _write_lines(JOB_FILES.inprogress, out)
-end
-
-
--- Bersihkan helper zombie (heartbeat kadaluarsa) & patuhi limit
-ZOMBIE_HELPER_TTL = ZOMBIE_HELPER_TTL or 90
-local function CLEAN_ZOMBIE_HELPERS()
-  local now = _now()
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local perW = {}
-  for _, ln in ipairs(rows) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts then
-      w = w:upper()
-      perW[w] = perW[w] or {}
-      table.insert(perW[w], { who=who, ts=tonumber(ts) or 0, raw=ln })
-    end
-  end
-  local out = {}
-  for w, list in pairs(perW) do
-    table.sort(list, function(a,b) return a.ts < b.ts end)
-    local owner = list[1]
-    if owner then table.insert(out, owner.raw) end
-    for i=2,#list do
-      local e = list[i]
-      if (now - e.ts) <= (ZOMBIE_HELPER_TTL or 90) then
-        table.insert(out, e.raw)
-      end
-    end
-  end
-  _write_lines(JOB_FILES.inprogress, out)
-  -- enforce per world
-  for w,_ in pairs(perW) do _enforce_helper_limit(w) end
-end
-
-
--- Update heartbeat + sekaligus enforce helper limit pada world tsb
--- Update heartbeat + enforce helper limit + cleaner zombie
 local function _update_heartbeat(world, who_slot)
-  world = (world or ""):upper()
-  who_slot = who_slot or WORKER_ID
-  local now = _now()
-
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local out, touched = {}, false
-  for _, ln in ipairs(rows) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+  world=(world or ""):upper(); who_slot=who_slot or WORKER_ID
+  local now=_now(); local rows=_read_lines(JOB_FILES.inprogress); local out,touched={},false
+  for _,ln in ipairs(rows) do
+    local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
     if w and who and ts then
-      if (w:upper() == world) and (who == who_slot) then
-        table.insert(out, string.format("%s|%s|%d", w, who_slot, now))
-        touched = true
-      else
-        table.insert(out, ln)
-      end
-    else
-      table.insert(out, ln)
+      if w:upper()==world and who==who_slot then table.insert(out, string.format("%s|%s|%d", w, who_slot, now)); touched=true
+      else table.insert(out, ln) end
     end
   end
-  if not touched and world ~= "" then
-    table.insert(out, string.format("%s|%s|%d", world, who_slot, now))
-  end
+  if not touched then table.insert(out, string.format("%s|%s|%d", world, who_slot, now)) end
   _write_lines(JOB_FILES.inprogress, out)
-  if world ~= "" then _enforce_helper_limit(world) end
-  CLEAN_ZOMBIE_HELPERS()
 end
 
 local function CLAIM_NEXT_JOB()
@@ -1488,85 +1224,60 @@ end
 
 
 -- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
--- PICK_ASSIST_WORLD dengan limit helper + anti-race (double-check + commit)
--- PICK_ASSIST_WORLD dengan lock & limit helper (always) + steal (stale)
 local function PICK_ASSIST_WORLD(mode)
   local prog = _read_lines(JOB_FILES.inprogress)
   if #prog == 0 then return nil, false end
 
-  -- pilih kandidat milik orang lain (heartbeat tertua)
-  local best, best_age = nil, -1
+  -- pilih world kandidat milik orang lain (terlama heartbeat)
+  local best, best_age, best_owner = nil, -1, nil
   local now = _now()
   for _, ln in ipairs(prog) do
     local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
     if w and who and ts and who ~= WORKER_ID then
       local age = now - tonumber(ts)
-      if age > best_age then best, best_age = w:upper(), age end
+      if age > best_age then
+        best, best_age, best_owner = w:upper(), age, who
+      end
     end
   end
   if not best then return nil, false end
 
+  -- jika world ini sudah tidak ada di worlds.txt → cleanup & skip
   if not _world_has_job(best) then
     _cleanup_stale_inprogress(best)
     return nil, false
   end
 
-  mode = (mode or ASSIST_MODE or "always"):lower()
   if mode == "stale" then
+    -- seperti semula: bantu hanya jika macet >= STALE_SEC dan boleh steal
     if best_age < (STALE_SEC or 90) or not STEAL_HELP then
       return nil, false
     end
-    if not _acquire_lock("inprog_"..best) then return nil, false end
-    -- steal owner: jadikan kita owner tunggal
-    local rows = _read_lines(JOB_FILES.inprogress)
-    local out = {}
-    for _, ln in ipairs(rows) do
-      local w = ln:match("^([^|]+)")
-      if not (w and w:upper()==best) then table.insert(out, ln) end
-    end
-    table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
-    _write_lines(JOB_FILES.inprogress, out)
-    _release_lock("inprog_"..best)
-    return best, true
-  else
-    -- ALWAYS: klaim helper-slot secara atomik
-    if not _acquire_lock("inprog_"..best) then return nil, false end
-    local rows = _read_lines(JOB_FILES.inprogress)
-    local uniq = {}
-    for _, ln in ipairs(rows) do
-      local w, who = ln:match("^([^|]+)|([^|]+)|")
-      if w and who and w:upper()==best then uniq[who]=true end
-    end
-    local total = 0; for _ in pairs(uniq) do total=total+1 end
-    local helpers_now = math.max(0, total-1)
-    if helpers_now >= (ASSIST_HELPER_LIMIT or 1) then
-      _release_lock("inprog_"..best); return nil, false
-    end
 
-    -- append/update baris kita
-    local out, present = {}, false
+    -- steal owner → set owner jadi kita di inprogress
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local out, stolen = {}, false
     for _, ln in ipairs(rows) do
       local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-      if w and who and ts and w:upper()==best and who==WORKER_ID then
-        table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
-        present = true
+      if w and who and ts and w:upper() == best then
+        table.insert(out, string.format("%s|%s|%d", w:upper(), WORKER_ID, _now()))
+        stolen = true
       else
         table.insert(out, ln)
       end
     end
-    if not present then
-      table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
+    if stolen then _write_lines(JOB_FILES.inprogress, out) end
+    return best, true
+  else
+    -- mode "always": bantu tanpa steal, tapi hormati limit helper
+    local total_workers = _count_unique_workers(best)   -- owner + helpers
+    local helpers_now   = math.max(0, total_workers - 1)
+    if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
+      return nil, false   -- sudah penuh helper untuk world ini
     end
-    _write_lines(JOB_FILES.inprogress, out)
-
-    -- enforce & release
-    _enforce_helper_limit(best)
-    _release_lock("inprog_"..best)
     return best, false
   end
 end
-
-
 
 
 local function RECONCILE_QUEUE()
@@ -1706,7 +1417,7 @@ function RUN_FROM_TXT_QUEUE()
             if b and b.leaveWorld then b:leaveWorld() end
             sleep(1000)
             if b then b.auto_reconnect = true end
-            sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
+            sleep(1200)
           else
             RECONCILE_QUEUE()
             print(string.format("[QUEUE] Tidak ada job aktif (total=%d, inprog=%d, done=%d). LOOP_MODE=false -> exit.",
@@ -1734,7 +1445,6 @@ end
 
 
 -------------------- MAIN --------------------
-sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
 do
   ASSIGN_MODE=(ASSIGN_MODE or "rr"):lower():gsub("%s+",""); if ASSIGN_MODE~="rr" and ASSIGN_MODE~="chunk" then ASSIGN_MODE="rr" end
   print(string.format("[CONFIG] SLOT=%d | WORKER_ID=%s | USE_TXT_QUEUE=%s | ASSIST_MODE=%s | ASSIGN_MODE=%s",
