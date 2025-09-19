@@ -1223,40 +1223,38 @@ local function _set_of_worlds(lines) local S={}; for _,ln in ipairs(lines) do lo
 
 
 -- Pangkas inprogress untuk sebuah world agar hanya owner + N helper
+-- Pangkas inprogress: sisakan owner (tertua) + N helper terbaru
 local function _enforce_helper_limit(world)
   world = (world or ""):upper()
   if world == "" then return end
   local limit = tonumber(ASSIST_HELPER_LIMIT or 0) or 0
 
   local rows = _read_lines(JOB_FILES.inprogress)
-  -- Kumpulkan entri world ini
-  local mine = {}
+  local entries, others = {}, {}
   for _, ln in ipairs(rows) do
     local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
     if w and who and ts and (w:upper() == world) then
-      mine[#mine+1] = {who = who, ts = tonumber(ts)}
+      entries[#entries+1] = { who = who, ts = tonumber(ts) or 0, raw = ln }
+    else
+      others[#others+1] = ln
     end
   end
+  if #entries <= (1 + limit) then return end
 
-  -- Tidak perlu pangkas
-  if #mine <= (1 + limit) then return end
+  table.sort(entries, function(a,b) return (a.ts or 0) < (b.ts or 0) end)
+  local owner = entries[1]
+  local helpers = {}
+  for i = 2, #entries do helpers[#helpers+1] = entries[i] end
+  table.sort(helpers, function(a,b) return (a.ts or 0) > (b.ts or 0) end)
 
-  -- Urutkan berdasarkan timestamp paling lama (owner = yang paling lama)
-  table.sort(mine, function(a,b) return (a.ts or 0) < (b.ts or 0) end)
+  local keep = { [owner.who] = true }
+  for i = 1, math.min(limit, #helpers) do keep[helpers[i].who] = true end
 
-  -- Tentukan siapa saja yang dipertahankan: 1 owner + limit helper
-  local keep = {}
-  local keep_count = math.min(#mine, 1 + limit)
-  for i = 1, keep_count do keep[mine[i].who] = true end
-
-  -- Tulis ulang file: world lain tetap; world ini hanya yang di-keep
   local out = {}
   for _, ln in ipairs(rows) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts then
-      if w:upper() ~= world or keep[who] then
-        out[#out+1] = ln
-      end
+    local w, who = ln:match("^([^|]+)|([^|]+)|")
+    if w and who and (w:upper() == world) then
+      if keep[who] then out[#out+1] = ln end
     else
       out[#out+1] = ln
     end
@@ -1266,6 +1264,7 @@ end
 
 
 -- Update heartbeat + sekaligus enforce helper limit pada world tsb
+-- Update heartbeat + enforce helper limit + cleaner zombie
 local function _update_heartbeat(world, who_slot)
   world = (world or ""):upper()
   who_slot = who_slot or WORKER_ID
@@ -1273,29 +1272,25 @@ local function _update_heartbeat(world, who_slot)
 
   local rows = _read_lines(JOB_FILES.inprogress)
   local out, touched = {}, false
-
   for _, ln in ipairs(rows) do
     local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
     if w and who and ts then
       if (w:upper() == world) and (who == who_slot) then
-        out[#out+1] = string.format("%s|%s|%d", w, who_slot, now)
+        table.insert(out, string.format("%s|%s|%d", w, who_slot, now))
         touched = true
       else
-        out[#out+1] = ln
+        table.insert(out, ln)
       end
     else
-      out[#out+1] = ln
+      table.insert(out, ln)
     end
   end
-
   if not touched and world ~= "" then
-    out[#out+1] = string.format("%s|%s|%d", world, who_slot, now)
+    table.insert(out, string.format("%s|%s|%d", world, who_slot, now))
   end
-
   _write_lines(JOB_FILES.inprogress, out)
-
-  -- Penting: pangkas jika melebihi limit (self-healing)
   if world ~= "" then _enforce_helper_limit(world) end
+  CLEAN_ZOMBIE_HELPERS()
 end
 
 local function CLAIM_NEXT_JOB()
@@ -1347,33 +1342,18 @@ end
 
 -- Hitung jumlah WORKER_ID unik yang terdaftar untuk sebuah world di inprogress.txt
 local function _count_unique_workers(world)
-  local uniq, seen = 0, {}
-  for line in io.lines(JOB_FILES.inprogress) do
-    local w, who = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)")
-    if w and who and (w:upper()==world:upper()) and not seen[who] then
-      seen[who] = true; uniq = uniq + 1
-    end
+  world = (world or ""):upper()
+  if world == "" then return 0 end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local S = {}
+  for _, ln in ipairs(rows) do
+    local w, who = ln:match("^([^|]+)|([^|]+)|")
+    if w and who and (w:upper() == world) then S[who] = true end
   end
-  return uniq
+  local n = 0
+  for _ in pairs(S) do n = n + 1 end
+  return n
 end
-
-local function _append_or_update(world, who)
-  local lines, found = {}, false
-  for line in io.lines(JOB_FILES.inprogress) do
-    local w, slot = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)")
-    if w and slot and (w:upper()==world:upper()) and (slot==who) then
-      table.insert(lines, (world:upper().."|"..who.."|"..tostring(os.time())))
-      found = true
-    else
-      table.insert(lines, line)
-    end
-  end
-  if not found then
-    table.insert(lines, (world:upper().."|"..who.."|"..tostring(os.time())))
-  end
-  local f = io.open(JOB_FILES.inprogress, "w"); if f then f:write(table.concat(lines, "\n").."\n"); f:close() end
-end
-
 
 -- Cek apakah world masih punya job (masih ada di worlds.txt)
 local function _world_has_job(world)
@@ -1402,86 +1382,85 @@ local function _cleanup_stale_inprogress(world)
   _write_lines(JOB_FILES.inprogress, out)
 end
 
-local function _acquire_lock(tag, timeout_ms)
-  local lock = JOB_FILES.inprogress..".lock"
-  local t0 = os.time()
-  while true do
-    local f = io.open(lock, "r")
-    if not f then
-      -- create lock
-      f = io.open(lock, "w"); if f then f:write(tostring(os.time())); f:close(); return true end
-    else
-      f:close()
-    end
-    if (os.time() - t0) >= math.floor((timeout_ms or 1500)/1000) then return false end
-    sleep(120)
-  end
-end
 
-local function _release_lock()
-  os.remove(JOB_FILES.inprogress..".lock")
-end
-
+-- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
 -- PICK_ASSIST_WORLD dengan limit helper + anti-race (double-check + commit)
+-- PICK_ASSIST_WORLD dengan lock & limit helper (always) + steal (stale)
 local function PICK_ASSIST_WORLD(mode)
+  local prog = _read_lines(JOB_FILES.inprogress)
+  if #prog == 0 then return nil, false end
+
+  -- pilih kandidat milik orang lain (heartbeat tertua)
+  local best, best_age = nil, -1
+  local now = _now()
+  for _, ln in ipairs(prog) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and who ~= WORKER_ID then
+      local age = now - tonumber(ts)
+      if age > best_age then best, best_age = w:upper(), age end
+    end
+  end
+  if not best then return nil, false end
+
+  if not _world_has_job(best) then
+    _cleanup_stale_inprogress(best)
+    return nil, false
+  end
+
   mode = (mode or ASSIST_MODE or "always"):lower()
-  -- baca semua kandidat (world yang sedang dikerjakan orang lain)
-  local owners = {}   -- [world] = timestamp owner tertua
-  local mine   = {}   -- world yang sedang aku kerjakan (biar di-skip)
-  for line in io.lines(JOB_FILES.inprogress) do
-    local w, who, ts = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)%s*|%s*(%d+)")
-    if w and who and ts then
-      if who==WORKER_ID then mine[w:upper()] = true end
-      owners[w:upper()] = math.min(owners[w:upper()] or math.huge, tonumber(ts))
+  if mode == "stale" then
+    if best_age < (STALE_SEC or 90) or not STEAL_HELP then
+      return nil, false
     end
-  end
-
-  if mode=="stale" then
-    -- (biarkan branch stale-mu yang lama)
-    -- return world_stale_terlama_yg_bleh_dibantu
-  end
-
-  -- mode "always": pilih world milik orang lain yang paling lama dikerjakan,
-  -- lalu KLAIM slot helper dengan lock + recheck limit.
-  local bestW, bestAge = nil, -1
-  local now = os.time()
-  for w, ts in pairs(owners) do
-    if not mine[w] then
-      local age = now - (ts or now)
-      if age > bestAge then bestAge, bestW = age, w end
+    if not _acquire_lock("inprog_"..best) then return nil, false end
+    -- steal owner: jadikan kita owner tunggal
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local out = {}
+    for _, ln in ipairs(rows) do
+      local w = ln:match("^([^|]+)")
+      if not (w and w:upper()==best) then table.insert(out, ln) end
     end
-  end
-  if not bestW then return nil end
+    table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
+    _write_lines(JOB_FILES.inprogress, out)
+    _release_lock("inprog_"..best)
+    return best, true
+  else
+    -- ALWAYS: klaim helper-slot secara atomik
+    if not _acquire_lock("inprog_"..best) then return nil, false end
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local uniq = {}
+    for _, ln in ipairs(rows) do
+      local w, who = ln:match("^([^|]+)|([^|]+)|")
+      if w and who and w:upper()==best then uniq[who]=true end
+    end
+    local total = 0; for _ in pairs(uniq) do total=total+1 end
+    local helpers_now = math.max(0, total-1)
+    if helpers_now >= (ASSIST_HELPER_LIMIT or 1) then
+      _release_lock("inprog_"..best); return nil, false
+    end
 
-  -- coba klaim helper-slot
-  if not _acquire_lock("assist", 2000) then return nil end
-  local ok = false
-  local total = _count_unique_workers(bestW)          -- termasuk owner
-  local helpers_now = math.max(0, total - 1)         -- exclude owner
-  if helpers_now < (ASSIST_HELPER_LIMIT or 1) then
-    _append_or_update(bestW, WORKER_ID)              -- tulis baris helper-ku
-    -- recheck setelah tulis (anti race)
-    local total2 = _count_unique_workers(bestW)
-    local helpers2 = math.max(0, total2 - 1)
-    if helpers2 <= (ASSIST_HELPER_LIMIT or 1) then
-      ok = true
-    else
-      -- keburu penuh → rollback barisku
-      local keep = {}
-      for line in io.lines(JOB_FILES.inprogress) do
-        local w, who = line:match("^%s*([%w_%-]+)%s*|%s*([%w_%-]+)")
-        if not (w and who and w:upper()==bestW and who==WORKER_ID) then
-          table.insert(keep, line)
-        end
+    -- append/update baris kita
+    local out, present = {}, false
+    for _, ln in ipairs(rows) do
+      local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+      if w and who and ts and w:upper()==best and who==WORKER_ID then
+        table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
+        present = true
+      else
+        table.insert(out, ln)
       end
-      local f = io.open(JOB_FILES.inprogress, "w"); if f then f:write(table.concat(keep, "\n").."\n"); f:close() end
     end
+    if not present then
+      table.insert(out, string.format("%s|%s|%d", best, WORKER_ID, _now()))
+    end
+    _write_lines(JOB_FILES.inprogress, out)
+
+    -- enforce & release
+    _enforce_helper_limit(best)
+    _release_lock("inprog_"..best)
+    return best, false
   end
-  _release_lock()
-
-  return ok and bestW or nil
 end
-
 
 
 
@@ -1569,7 +1548,6 @@ function RUN_FROM_TXT_QUEUE()
             assistW = nil
           else
             -- re-check limit helper
-            print(string.format("[ASSIST] %s bantu world %s", WORKER_ID, assistW))
             if ASSIST_MODE == "always" then
               local total_workers = _count_unique_workers(assistW)
               local helpers_now   = math.max(0, total_workers - 1)
@@ -1669,4 +1647,52 @@ do
       RUN_MULTI_HARVEST(myList)
     end
   end
+end
+
+
+-- Hapus satu baris helper tertentu dari inprogress
+local function RELEASE_HELPER_SLOT(world, who)
+  world = (world or ""):upper(); who = who or WORKER_ID
+  if world == "" then return end
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local out = {}
+  for _, ln in ipairs(rows) do
+    local w, who2 = ln:match("^([^|]+)|([^|]+)|")
+    if not (w and who2 and w:upper()==world and who2==who) then
+      out[#out+1] = ln
+    end
+  end
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
+
+-- Bersihkan helper zombie (heartbeat kadaluarsa) & patuhi limit
+ZOMBIE_HELPER_TTL = ZOMBIE_HELPER_TTL or 90
+local function CLEAN_ZOMBIE_HELPERS()
+  local now = _now()
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local perW = {}
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts then
+      w = w:upper()
+      perW[w] = perW[w] or {}
+      table.insert(perW[w], { who=who, ts=tonumber(ts) or 0, raw=ln })
+    end
+  end
+  local out = {}
+  for w, list in pairs(perW) do
+    table.sort(list, function(a,b) return a.ts < b.ts end)
+    local owner = list[1]
+    if owner then table.insert(out, owner.raw) end
+    for i=2,#list do
+      local e = list[i]
+      if (now - e.ts) <= (ZOMBIE_HELPER_TTL or 90) then
+        table.insert(out, e.raw)
+      end
+    end
+  end
+  _write_lines(JOB_FILES.inprogress, out)
+  -- enforce per world
+  for w,_ in pairs(perW) do _enforce_helper_limit(w) end
 end
