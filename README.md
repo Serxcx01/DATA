@@ -1411,31 +1411,58 @@ local function UNCLAIM(world)
   _write_lines(JOB_FILES.inprogress, out)
 end
 
+local function _uncommit_self(world)
+  world = (world or ""):upper()
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local out  = {}
+  for _, ln in ipairs(rows) do
+    local w, who = ln:match("^([^|]+)|([^|]+)|")
+    if not (w and who and w:upper()==world and who==WORKER_ID) then
+      table.insert(out, ln)
+    end
+  end
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
 local function _try_commit_helper(world)
   world = (world or ""):upper()
   if world == "" then return false end
 
-  -- 1) append heartbeat kita (claim helper)
-  _update_heartbeat(world, WORKER_ID)
-
-  -- 2) re-check setelah commit
-  local total = _count_unique_workers(world)   -- owner + helpers
-  local helpers_now = math.max(0, total - 1)   -- exclude owner
-  if helpers_now > (ASSIST_HELPER_LIMIT or 1) then
-    -- 3) rollback: hapus baris milik kita untuk world ini
-    local rows = _read_lines(JOB_FILES.inprogress)
-    local out = {}
-    for _, ln in ipairs(rows) do
-      local w, who = ln:match("^([^|]+)|([^|]+)|")
-      if not (w and who and w:upper()==world and who==WORKER_ID) then
-        table.insert(out, ln)
-      end
-    end
-    _write_lines(JOB_FILES.inprogress, out)
+  -- 0) PRE-CHECK (hemat): kalau sudah penuh, langsung batal
+  local t0 = _count_unique_workers(world)
+  local h0 = math.max(0, t0 - 1)
+  if h0 >= (ASSIST_HELPER_LIMIT or 1) then
     return false
   end
+
+  -- 1) APPEND baris kita (atomic append, bukan rewrite seluruh file)
+  local f = io.open(JOB_FILES.inprogress, "a")
+  if not f then return false end
+  f:write(string.format("%s|%s|%d\n", world, WORKER_ID, _now()))
+  f:close()
+
+  -- 2) RE-CHECK setelah append
+  local t1 = _count_unique_workers(world)
+  local h1 = math.max(0, t1 - 1)
+  if h1 > (ASSIST_HELPER_LIMIT or 1) then
+    -- 3) ROLLBACK: hapus baris kita sendiri
+    _uncommit_self(world)
+    return false
+  end
+
+  -- 4) HEDGE CHECK (opsional, nutup race yg sangat jarang)
+  --   kalau dalam jeda sangat kecil ada helper lain ikut commit,
+  --   kita cek sekali lagi.
+  local t2 = _count_unique_workers(world)
+  local h2 = math.max(0, t2 - 1)
+  if h2 > (ASSIST_HELPER_LIMIT or 1) then
+    _uncommit_self(world)
+    return false
+  end
+
   return true
 end
+
 
 
 function RUN_FROM_TXT_QUEUE()
@@ -1500,6 +1527,18 @@ function RUN_FROM_TXT_QUEUE()
           _cleanup_stale_inprogress(assistW)
           assistW = nil
         end
+
+        if assistW then
+          -- Hedge: pastikan setelah commit jumlah helper tetap <= limit
+          local total = _count_unique_workers(assistW)
+          local helpers_now = math.max(0, total - 1)
+          if helpers_now > (ASSIST_HELPER_LIMIT or 1) then
+            -- rollback baris kita & batal bantu
+            if type(_uncommit_self) == "function" then _uncommit_self(assistW) end
+            assistW = nil
+          end
+        end
+
 
         if assistW then
           -- Steal flow: kosongkan dulu semua inprogress world tsb
