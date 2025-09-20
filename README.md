@@ -1411,6 +1411,33 @@ local function UNCLAIM(world)
   _write_lines(JOB_FILES.inprogress, out)
 end
 
+local function _try_commit_helper(world)
+  world = (world or ""):upper()
+  if world == "" then return false end
+
+  -- 1) append heartbeat kita (claim helper)
+  _update_heartbeat(world, WORKER_ID)
+
+  -- 2) re-check setelah commit
+  local total = _count_unique_workers(world)   -- owner + helpers
+  local helpers_now = math.max(0, total - 1)   -- exclude owner
+  if helpers_now > (ASSIST_HELPER_LIMIT or 1) then
+    -- 3) rollback: hapus baris milik kita untuk world ini
+    local rows = _read_lines(JOB_FILES.inprogress)
+    local out = {}
+    for _, ln in ipairs(rows) do
+      local w, who = ln:match("^([^|]+)|([^|]+)|")
+      if not (w and who and w:upper()==world and who==WORKER_ID) then
+        table.insert(out, ln)
+      end
+    end
+    _write_lines(JOB_FILES.inprogress, out)
+    return false
+  end
+  return true
+end
+
+
 function RUN_FROM_TXT_QUEUE()
   -- helper kecil: commit dengan anti-race kalau tersedia
   local function _commit_ok(world)
