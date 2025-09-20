@@ -95,7 +95,7 @@ for nomor, bb in pairs(getBots()) do
   if getBot().name:upper() == bb.name:upper() then index = nomor; break end
 end
 MY_SLOT = (Bot[index] and Bot[index].slot) or 1
-
+sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
 local function _simple_hash(s) local h=1469598107; for i=1,#s do h=(h*131 + s:byte(i)) % 4294967296 end; return h end
 local function _auto_slot_and_total()
   local self = getBot and getBot() or nil
@@ -128,7 +128,6 @@ local function _detect_my_slot(default_slot)
 end
 MY_SLOT = MY_SLOT or _detect_my_slot(1)
 WORKER_ID = "SLOT"..tostring(MY_SLOT)
-
 
 
 -- di bagian atas, dekat definisi JOB_FILES:
@@ -1563,15 +1562,14 @@ function RUN_FROM_TXT_QUEUE()
         end
 
         if assistW then
-          -- Hedge: pastikan setelah commit jumlah helper tetap <= limit
-          local total = _count_unique_workers(assistW)
-          local helpers_now = math.max(0, total - 1)
-          if helpers_now > (ASSIST_HELPER_LIMIT or 1) then
-            -- rollback baris kita & batal bantu
-            if type(_uncommit_self) == "function" then _uncommit_self(assistW) end
+          local t = _count_unique_workers(assistW)
+          local h = math.max(0, t - 1)
+          if h > (ASSIST_HELPER_LIMIT or 1) then
+            if _uncommit_self then _uncommit_self(assistW) end
             assistW = nil
           end
         end
+
 
 
         if assistW then
@@ -1667,7 +1665,6 @@ end
 
 
 -------------------- MAIN --------------------
-sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
 do
   ASSIGN_MODE=(ASSIGN_MODE or "rr"):lower():gsub("%s+",""); if ASSIGN_MODE~="rr" and ASSIGN_MODE~="chunk" then ASSIGN_MODE="rr" end
   print(string.format("[CONFIG] SLOT=%d | WORKER_ID=%s | USE_TXT_QUEUE=%s | ASSIST_MODE=%s | ASSIGN_MODE=%s",
