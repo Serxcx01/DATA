@@ -129,6 +129,38 @@ end
 MY_SLOT = MY_SLOT or _detect_my_slot(1)
 WORKER_ID = "SLOT"..tostring(MY_SLOT)
 
+
+
+-- di bagian atas, dekat definisi JOB_FILES:
+local LOCKS_DIR = _pjoin(extraFilePath, "locks/")
+_ensure_dir(LOCKS_DIR)
+
+local function _lock_path(world) return LOCKS_DIR .. (world or ""):upper() .. ".lock" end
+local function _is_windows() return package.config:sub(1,1) == "\\" end
+
+local function _acquire_world_lock(world, timeout_ms)
+  timeout_ms = timeout_ms or 1200
+  local path = _lock_path(world)
+  local deadline = os.time() + math.ceil(timeout_ms/1000)
+  while os.time() < deadline do
+    local cmd = _is_windows()
+      and ('cmd /c mkdir "%s" 2>nul'):format(path)
+      or  ('mkdir "%s" 2>/dev/null'):format(path)
+    local ok = os.execute(cmd)
+    if ok then return path end
+    if sleep then sleep(30) end
+  end
+  return nil
+end
+
+local function _release_world_lock(lock_path)
+  if not lock_path then return end
+  local cmd = _is_windows()
+    and ('cmd /c rmdir "%s" 2>nul'):format(lock_path)
+    or  ('rmdir "%s" 2>/dev/null'):format(lock_path)
+  os.execute(cmd)
+end
+
 -------------------- ASSIGN (mode RR/CHUNK opsional) --------------------
 local function _rotate_list(base, seed)
   if (not ROTATE_LIST) or (#base==0) then return base end
@@ -1428,33 +1460,41 @@ local function _try_commit_helper(world)
   world = (world or ""):upper()
   if world == "" then return false end
 
-  -- 1) APPEND atomik claim helper (hindari lost-update)
+  local lk = _acquire_world_lock(world, 1500)
+  if not lk then return false end
+  local ok = false
+
+  -- APPEND claim helper
   local fh = io.open(JOB_FILES.inprogress, "a")
-  if not fh then return false end
-  fh:write(string.format("%s|%s|%d\n", world, WORKER_ID, _now()))
-  fh:close()
+  if fh then
+    fh:write(string.format("%s|%s|%d\n", world, WORKER_ID, _now()))
+    fh:close()
+    if sleep and math and math.random then sleep(math.random(40,80)) end
 
-  -- 2) beri sedikit waktu supaya append serempak terlihat semua
-  if sleep and math and math.random then sleep(math.random(50,100)) end -- 30–80ms oke
-
-  -- 3) re-check setelah commit
-  local total = _count_unique_workers(world)   -- owner + helpers
-  local helpers_now = math.max(0, total - 1)   -- exclude owner
-  if helpers_now > (ASSIST_HELPER_LIMIT or 1) then
-    -- 4) rollback: hapus baris milik kita untuk world ini
-    local rows = _read_lines(JOB_FILES.inprogress)
-    local out = {}
-    for _, ln in ipairs(rows) do
-      local w, who = ln:match("^([^|]+)|([^|]+)|")
-      if not (w and who and w:upper()==world and who==WORKER_ID) then
-        table.insert(out, ln)
+    -- RECHECK
+    local total = _count_unique_workers(world)
+    local helpers_now = math.max(0, total - 1)
+    if helpers_now > (ASSIST_HELPER_LIMIT or 1) then
+      -- ROLLBACK baris milik kita
+      local rows = _read_lines(JOB_FILES.inprogress)
+      local out = {}
+      for _, ln in ipairs(rows) do
+        local w, who = ln:match("^([^|]+)|([^|]+)|")
+        if not (w and who and w:upper()==world and who==WORKER_ID) then
+          table.insert(out, ln)
+        end
       end
+      _write_lines(JOB_FILES.inprogress, out)
+      ok = false
+    else
+      ok = true
     end
-    _write_lines(JOB_FILES.inprogress, out)
-    return false
   end
-  return true
+
+  _release_world_lock(lk)
+  return ok
 end
+
 
 
 
