@@ -1275,10 +1275,7 @@ local function QUEUE_STATS()
   return {total=total, unclaimed=unclaimed, inprogress=inprog, done=ndone}
 end
 
--- PICK_ASSIST_WORLD dengan mode:
---  - "stale": pilih inprogress milik orang lain yang macet >= STALE_SEC dan STEAL owner -> bisa MARK_DONE
---  - "always": pilih inprogress milik orang lain (terlama), TANPA steal -> tidak MARK_DONE
-
+--- ################### pick asis
 -- Hitung jumlah WORKER_ID unik yang terdaftar untuk sebuah world di inprogress.txt
 local function _count_unique_workers(world)
   world = (world or ""):upper()
@@ -1322,7 +1319,68 @@ local function _cleanup_stale_inprogress(world)
 end
 
 
--- PICK_ASSIST_WORLD dengan limit helper & cleanup zombie
+-- Fungsi untuk menghitung helper aktif (bukan owner) untuk sebuah world
+local function _count_helpers_for_world(world)
+  world = (world or ""):upper()
+  if world == "" then return 0 end
+  
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local owner_worker = nil
+  local helpers = {}
+  
+  -- Cari owner (entry pertama/terlama untuk world ini)
+  local oldest_ts = math.huge
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and (w:upper() == world) then
+      local timestamp = tonumber(ts) or 0
+      if timestamp < oldest_ts then
+        oldest_ts = timestamp
+        owner_worker = who
+      end
+    end
+  end
+  
+  -- Hitung helper (semua worker selain owner)
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and (w:upper() == world) and (who ~= owner_worker) then
+      helpers[who] = true
+    end
+  end
+  
+  local helper_count = 0
+  for _ in pairs(helpers) do helper_count = helper_count + 1 end
+  
+  return helper_count, owner_worker
+end
+
+-- Fungsi untuk menambahkan diri sebagai helper ke inprogress
+local function _add_as_helper(world)
+  world = (world or ""):upper()
+  if world == "" then return false end
+  
+  -- Cek apakah sudah ada entry untuk kita di world ini
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local already_exists = false
+  
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and (w:upper() == world) and (who == WORKER_ID) then
+      already_exists = true
+      break
+    end
+  end
+  
+  if not already_exists then
+    _append_line(JOB_FILES.inprogress, string.format("%s|%s|%d", world, WORKER_ID, _now()))
+    return true
+  end
+  
+  return false
+end
+
+-- Perbaikan fungsi PICK_ASSIST_WORLD
 local function PICK_ASSIST_WORLD(mode)
   local prog = _read_lines(JOB_FILES.inprogress)
   if #prog == 0 then return nil, false end
@@ -1367,16 +1425,80 @@ local function PICK_ASSIST_WORLD(mode)
     end
     if stolen then _write_lines(JOB_FILES.inprogress, out) end
     return best, true
+    
   else
     -- mode "always": bantu tanpa steal, tapi hormati limit helper
-    local total_workers = _count_unique_workers(best)   -- owner + helpers
-    local helpers_now   = math.max(0, total_workers - 1)
-    if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
-      return nil, false   -- sudah penuh helper untuk world ini
+    local helper_count, owner = _count_helpers_for_world(best)
+    
+    -- Cek apakah kita sudah terdaftar sebagai helper
+    local we_are_helper = false
+    for _, ln in ipairs(prog) do
+      local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+      if w and who and (w:upper() == best) and (who == WORKER_ID) then
+        we_are_helper = true
+        break
+      end
     end
+    
+    -- Jika kita belum helper dan limit sudah tercapai, skip
+    if not we_are_helper and helper_count >= (ASSIST_HELPER_LIMIT or 0) then
+      return nil, false
+    end
+    
+    -- Tambahkan diri sebagai helper jika belum ada
+    if not we_are_helper then
+      _add_as_helper(best)
+    end
+    
     return best, false
   end
 end
+
+-- Perbaikan untuk cleanup helper setelah selesai bantu
+local function _remove_helper_entry(world, worker_id)
+  world = (world or ""):upper()
+  worker_id = worker_id or WORKER_ID
+  
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local out = {}
+  local removed = false
+  
+  -- Cari owner (entry terlama)
+  local owner_worker = nil
+  local oldest_ts = math.huge
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and (w:upper() == world) then
+      local timestamp = tonumber(ts) or 0
+      if timestamp < oldest_ts then
+        oldest_ts = timestamp
+        owner_worker = who
+      end
+    end
+  end
+  
+  -- Hapus entry helper (bukan owner)
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and (w:upper() == world) and (who == worker_id) and (who ~= owner_worker) then
+      removed = true
+      -- Skip entry ini (tidak masuk ke out)
+    else
+      table.insert(out, ln)
+    end
+  end
+  
+  if removed then
+    _write_lines(JOB_FILES.inprogress, out)
+    print(string.format("[HELPER] %s removed from %s helpers", worker_id, world))
+  end
+end
+
+
+
+
+
+-- ################
 
 
 local function RECONCILE_QUEUE()
@@ -1454,24 +1576,14 @@ function RUN_FROM_TXT_QUEUE()
       else
         local assistW, stolen = PICK_ASSIST_WORLD(ASSIST_MODE)
 
-        -- >>> NEW GUARD: anti-spam & limit helper
+        -- Guard: anti-spam & limit helper
         if assistW then
           -- skip kalau world sudah tidak punya job
           if not _world_has_job(assistW) then
             _cleanup_stale_inprogress(assistW)
             assistW = nil
-          else
-            -- re-check limit helper
-            if ASSIST_MODE == "always" then
-              local total_workers = _count_unique_workers(assistW)
-              local helpers_now   = math.max(0, total_workers - 1)
-              if helpers_now >= (ASSIST_HELPER_LIMIT or 0) then
-                assistW = nil
-              end
-            end
           end
         end
-        -- <<< END NEW
 
         if assistW then
           print(string.format("[HELP] %s bantu %s (mode=%s%s)",
@@ -1494,6 +1606,10 @@ function RUN_FROM_TXT_QUEUE()
               if owner_now == WORKER_ID then
                 MARK_DONE(W); RECONCILE_QUEUE()
                 print(string.format("[HELP] %s menutup %s", WORKER_ID, W))
+              else
+                -- Kita cuma helper, hapus entry helper kita setelah selesai bantu
+                _remove_helper_entry(W, WORKER_ID)
+                print(string.format("[HELP] %s selesai bantu %s", WORKER_ID, W))
               end
               break
             end
