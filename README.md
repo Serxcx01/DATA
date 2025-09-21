@@ -1558,19 +1558,48 @@ end
 
 local function _set_of_worlds(lines) local S={}; for _,ln in ipairs(lines) do local w=ln:match("^([^|]+)"); if w then S[w:upper()]=true end end; return S end
 
+-- REPLACE seluruh _update_heartbeat dengan ini
 local function _update_heartbeat(world, who_slot)
-  world=(world or ""):upper(); who_slot=who_slot or WORKER_ID
-  local now=_now(); local rows=_read_lines(JOB_FILES.inprogress); local out,touched={},false
-  for _,ln in ipairs(rows) do
-    local w,who,ts=ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts then
-      if w:upper()==world and who==who_slot then table.insert(out, string.format("%s|%s|%d", w, who_slot, now)); touched=true
-      else table.insert(out, ln) end
+  world = (world or ""):upper()
+  who_slot = who_slot or WORKER_ID
+  local now  = _now()
+  local rows = _read_lines(JOB_FILES.inprogress)
+
+  -- tentukan owner sebagai baris dengan timestamp TERKECIL untuk world tsb
+  local owner_worker, oldest_ts = nil, math.huge
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and w:upper() == world then
+      local t = tonumber(ts) or math.huge
+      if t < oldest_ts then oldest_ts, owner_worker = t, who end
     end
   end
-  if not touched then table.insert(out, string.format("%s|%s|%d", world, who_slot, now)) end
+
+  local out, touched = {}, false
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts then
+      if w:upper() == world and who == who_slot then
+        if who_slot ~= owner_worker then
+          table.insert(out, string.format("%s|%s|%d", w, who_slot, now))  -- update helper
+        else
+          table.insert(out, ln)  -- JANGAN sentuh owner
+        end
+        touched = true
+      else
+        table.insert(out, ln)
+      end
+    end
+  end
+
+  -- kalau helper belum punya baris, tambahkan baru
+  if not touched and who_slot ~= owner_worker then
+    table.insert(out, string.format("%s|%s|%d", world, who_slot, now))
+  end
+
   _write_lines(JOB_FILES.inprogress, out)
 end
+
 
 local function CLAIM_NEXT_JOB()
   local worlds=_read_lines(JOB_FILES.worlds)
