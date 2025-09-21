@@ -1333,30 +1333,35 @@ local function _add_helper_atomic(world)
         end
       end
 
-      -- 3) Hitung helper unik (selain owner)
-      local helpers = {}
-      for _, ln in ipairs(rows) do
-        local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-        if w and who and ts and (w:upper() == world) and (who ~= owner_worker) then
-          helpers[who] = true
-        end
-      end
-      local helper_count = 0
-      for _ in pairs(helpers) do helper_count = helper_count + 1 end
-
-      if helper_count >= limit then
-        success, reason = false, "limit_reached"
+      -- >>> GUARD: owner harus ada
+      if not owner_worker then
+        success, reason = false, "no_owner"
       else
-        -- 4) Tambah entry helper kita
-        if _append_line(JOB_FILES.inprogress, string.format("%s|%s|%d", world, WORKER_ID, _now())) then
-          success, reason, just_added = true, "added", true
+        -- 3) Hitung helper unik (selain owner)
+        local helpers = {}
+        for _, ln in ipairs(rows) do
+          local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+          if w and who and ts and (w:upper() == world) and (who ~= owner_worker) then
+            helpers[who] = true
+          end
+        end
+        local helper_count = 0
+        for _ in pairs(helpers) do helper_count = helper_count + 1 end
+
+        if helper_count >= limit then
+          success, reason = false, "limit_reached"
         else
-          success, reason = false, "file_error"
+          -- 4) Tambah entry helper kita
+          if _append_line(JOB_FILES.inprogress, string.format("%s|%s|%d", world, WORKER_ID, _now())) then
+            success, reason, just_added = true, "added", true
+          else
+            success, reason = false, "file_error"
+          end
         end
       end
     end
 
-    -- 5) Safety re-check (rollback) — tetap di DALAM lock & TANPA call fungsi lain (hindari deadlock)
+    -- 5) Safety re-check (rollback) — tetap di DALAM lock & TANPA call fungsi lain
     if success and reason == "added" and just_added then
       local rows2 = _read_lines(JOB_FILES.inprogress)
 
@@ -1396,7 +1401,6 @@ local function _add_helper_atomic(world)
         end
         if removed then _write_lines(JOB_FILES.inprogress, out) end
         success, reason = false, "limit_reached_race"
-        -- (opsional) print debug:
         print(string.format("[HELP][ROLLBACK] %s di %s (new_count=%d > limit=%d)", WORKER_ID, world, new_count, limit))
       end
     end
