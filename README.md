@@ -1530,7 +1530,9 @@ local function PICK_ASSIST_WORLD(mode)
   else
     -- Mode "always": bantu dengan atomic limit checking
     local success, reason = _add_helper_atomic(best)
-    print("[HELP-RESULT]", WORKER_ID, best, ok and "OK" or "FAIL", why)
+    local cnt, owner = _count_helpers_for_world_safe(best)
+    print("[HELP-RESULT]", WORKER_ID, best, success and "OK" or "FAIL", reason, "helpers=", cnt, "owner=", owner or "-")
+
     if success then
       if reason == "added" then
         print(string.format("[HELP] %s bergabung sebagai helper di %s", WORKER_ID, best))
