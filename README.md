@@ -31,7 +31,7 @@ ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
-
+DELAY_EXE            = 10000
 -- Delay/harvest
 USE_MAGNI     = false
 DELAY_HARVEST = 170
@@ -91,7 +91,7 @@ getBot().auto_reconnect = false
 for slot=1,TOTAL_BOTS do Bot[slot] = {slot=slot} end
 for nomor, bb in pairs(getBots()) do if getBot().name:upper() == bb.name:upper() then index = nomor end end
 MY_SLOT = Bot[index].slot
-
+sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
 local function _simple_hash(s) local h=1469598107; for i=1,#s do h=(h*131 + s:byte(i)) % 4294967296 end; return h end
 local function _auto_slot_and_total()
   local self = getBot and getBot() or nil
@@ -124,7 +124,6 @@ local function _detect_my_slot(default_slot)
 end
 MY_SLOT = MY_SLOT or _detect_my_slot(1)
 WORKER_ID = "SLOT"..tostring(MY_SLOT)
-
 -------------------- ASSIGN (mode RR/CHUNK opsional) --------------------
 local function _rotate_list(base, seed)
   if (not ROTATE_LIST) or (#base==0) then return base end
