@@ -1250,82 +1250,120 @@ end
 
 
 -- Fungsi atomic untuk menambahkan helper dengan limit check
+-- Fungsi untuk menghitung helper aktif dengan double-check
+local function _count_helpers_for_world_safe(world)
+  world = (world or ""):upper()
+  if world == "" then return 0, nil end
+  
+  local rows = _read_lines(JOB_FILES.inprogress)
+  local owner_worker = nil
+  local helpers = {}
+  
+  -- Cari owner (entry dengan timestamp terkecil)
+  local oldest_ts = math.huge
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and (w:upper() == world) then
+      local timestamp = tonumber(ts) or math.huge
+      if timestamp < oldest_ts then
+        oldest_ts = timestamp
+        owner_worker = who
+      end
+    end
+  end
+  
+  -- Hitung helper (semua worker selain owner)
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and (w:upper() == world) and (who ~= owner_worker) then
+      helpers[who] = true
+    end
+  end
+  
+  local helper_count = 0
+  for _ in pairs(helpers) do helper_count = helper_count + 1 end
+  
+  return helper_count, owner_worker
+end
+
 local function _add_helper_atomic(world)
   world = (world or ""):upper()
   if world == "" then return false, "invalid_world" end
-  
+
   local lockname = "assist_" .. world
   if not _acquire_lock(lockname, 3) then
     return false, "lock_timeout"
   end
-  
-  local success = false
-  local reason = "unknown"
-  
-  -- Critical section dengan lock
+
+  local success, reason = false, "unknown"
+  local limit = tonumber(ASSIST_HELPER_LIMIT) or 0
+
+  -- Critical section (di dalam lock)
   do
-    -- Double-check: cek apakah kita sudah terdaftar
     local rows = _read_lines(JOB_FILES.inprogress)
-    local already_helper = false
+
+    -- 1) Cegah duplikat diri sendiri
     for _, ln in ipairs(rows) do
       local w, who = ln:match("^([^|]+)|([^|]+)|")
       if w and who and (w:upper() == world) and (who == WORKER_ID) then
-        already_helper = true
+        success, reason = true, "already_helper"
         break
       end
     end
-    
-    if already_helper then
-      success = true
-      reason = "already_helper"
-    else
-      -- Cek limit helper dengan menghitung ulang dari file
-      local owner_worker = nil
-      local helpers = {}
-      
-      -- Cari owner (entry dengan timestamp terkecil)
-      local oldest_ts = math.huge
+
+    if not success then
+      -- 2) Tentukan owner = timestamp paling tua (tie-breaker: who terkecil)
+      local owner_worker, oldest_ts = nil, math.huge
       for _, ln in ipairs(rows) do
         local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
         if w and who and ts and (w:upper() == world) then
-          local timestamp = tonumber(ts) or math.huge
-          if timestamp < oldest_ts then
-            oldest_ts = timestamp
-            owner_worker = who
+          local t = tonumber(ts) or math.huge
+          if (t < oldest_ts) or (t == oldest_ts and (owner_worker == nil or who < owner_worker)) then
+            oldest_ts, owner_worker = t, who
           end
         end
       end
-      
-      -- Hitung helper (semua worker selain owner)
+
+      -- 3) Hitung helper unik (selain owner)
+      local helpers = {}
       for _, ln in ipairs(rows) do
         local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
         if w and who and ts and (w:upper() == world) and (who ~= owner_worker) then
           helpers[who] = true
         end
       end
-      
       local helper_count = 0
       for _ in pairs(helpers) do helper_count = helper_count + 1 end
-      
-      if helper_count >= (ASSIST_HELPER_LIMIT or 0) then
-        success = false
-        reason = "limit_reached"
+
+      if helper_count >= limit then
+        success, reason = false, "limit_reached"
       else
-        -- Safe untuk menambah helper
+        -- 4) Tambah entry helper kita
         if _append_line(JOB_FILES.inprogress, string.format("%s|%s|%d", world, WORKER_ID, _now())) then
-          success = true
-          reason = "added"
+          success, reason = true, "added"
         else
-          success = false
-          reason = "file_error"
+          success, reason = false, "file_error"
         end
       end
     end
+
+    -- 5) Safety re-check: hanya jika barusan "added"
+    if success and reason == "added" then
+      local new_count = _count_helpers_for_world_safe(world) or 0 -- harusnya hitung helper (bukan total)
+      if new_count > limit then
+        -- kebobolan karena race → rollback diri sendiri
+        _remove_helper_entry_safe(world, WORKER_ID)
+        success, reason = false, "limit_reached_race"
+      end
+    end
   end
-  
+
   _release_lock(lockname)
   return success, reason
 end
+
+
+
 
 -- Cleanup helper dengan lock protection
 local function _remove_helper_entry_safe(world, worker_id)
@@ -1559,45 +1597,6 @@ local function _cleanup_stale_inprogress(world)
 end
 
 
-
--- Perbaikan fungsi PICK_ASSIST_WORLD
--- File locking utilities untuk mencegah race condition
-
--- Fungsi untuk menghitung helper aktif dengan double-check
-local function _count_helpers_for_world_safe(world)
-  world = (world or ""):upper()
-  if world == "" then return 0, nil end
-  
-  local rows = _read_lines(JOB_FILES.inprogress)
-  local owner_worker = nil
-  local helpers = {}
-  
-  -- Cari owner (entry dengan timestamp terkecil)
-  local oldest_ts = math.huge
-  for _, ln in ipairs(rows) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts and (w:upper() == world) then
-      local timestamp = tonumber(ts) or math.huge
-      if timestamp < oldest_ts then
-        oldest_ts = timestamp
-        owner_worker = who
-      end
-    end
-  end
-  
-  -- Hitung helper (semua worker selain owner)
-  for _, ln in ipairs(rows) do
-    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
-    if w and who and ts and (w:upper() == world) and (who ~= owner_worker) then
-      helpers[who] = true
-    end
-  end
-  
-  local helper_count = 0
-  for _ in pairs(helpers) do helper_count = helper_count + 1 end
-  
-  return helper_count, owner_worker
-end
 
 
 -- ################
