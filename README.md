@@ -1384,6 +1384,18 @@ local function _remove_helper_entry_safe(world, worker_id)
   return removed
 end
 
+-- Cek apakah world masih punya job (masih ada di worlds.txt)
+local function _world_has_job(world)
+  world = (world or ""):upper()
+  if world == "" then return false end
+  local rows = _read_lines(JOB_FILES.worlds)
+  for _, ln in ipairs(rows) do
+    local W = ln:match("^([^|]+)")
+    if W and W:upper() == world then return true end
+  end
+  return false
+end
+
 -- REPLACE fungsi PICK_ASSIST_WORLD yang lama dengan ini:
 local function PICK_ASSIST_WORLD(mode)
   local prog = _read_lines(JOB_FILES.inprogress)
@@ -1530,17 +1542,6 @@ local function _count_unique_workers(world)
   return n
 end
 
--- Cek apakah world masih punya job (masih ada di worlds.txt)
-local function _world_has_job(world)
-  world = (world or ""):upper()
-  if world == "" then return false end
-  local rows = _read_lines(JOB_FILES.worlds)
-  for _, ln in ipairs(rows) do
-    local W = ln:match("^([^|]+)")
-    if W and W:upper() == world then return true end
-  end
-  return false
-end
 
 -- Bersihkan semua entry inprogress untuk world tertentu (owner/helpers yang nyangkut)
 local function _cleanup_stale_inprogress(world)
