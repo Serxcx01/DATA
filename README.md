@@ -31,7 +31,7 @@ ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
-DELAY_EXE            = 10000
+DELAY_EXE            = 5000
 -- Delay/harvest
 USE_MAGNI     = false
 DELAY_HARVEST = 170
@@ -2083,4 +2083,45 @@ local function _add_helper_atomic(world)
 
   _release_lock(lockname)
   return success, reason
+end
+
+
+
+
+-- ========== Override: PICK_ASSIST_WORLD prefers worlds that still need helpers ==========
+-- This avoids repeatedly trying a world that already reached ASSIST_HELPER_LIMIT.
+local function __list_worlds_from_queue()
+  local file = (JOB_FILES and (JOB_FILES.worlds or JOB_FILES.WORLDS)) or "worlds.txt"
+  local rows = _read_lines(file)
+  local out = {}
+  for _, ln in ipairs(rows) do
+    -- take token before first '|' or whitespace
+    local w = (ln:match("^%s*([^|%s]+)") or ""):upper()
+    if w ~= "" then table.insert(out, w) end
+  end
+  return out
+end
+
+function PICK_ASSIST_WORLD(mode)
+  mode = tostring(mode or ASSIST_MODE or "always")
+  local limit = tonumber(ASSIST_HELPER_LIMIT) or 0
+  if limit <= 0 then return nil, false end
+
+  local best, best_need = nil, -1
+  for _, w in ipairs(__list_worlds_from_queue()) do
+    if _world_has_job(w) then
+      local cnt = _count_helpers_for_world_safe(w) or 0
+      local need = limit - cnt
+      if need > best_need then
+        best_need = need
+        best = w
+      end
+    end
+  end
+
+  if best and best_need > 0 then
+    return best, false  -- 'stolen' flag false (we didn't steal/override anything)
+  else
+    return nil, false
+  end
 end
