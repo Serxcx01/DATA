@@ -1220,32 +1220,40 @@ local function _parse_world_line(s)
 end
 
 -- File locking utilities untuk mencegah race condition
+-- File locking utilities: atomic via mkdir (cross-platform)
 local function _acquire_lock(lockname, timeout_sec)
   timeout_sec = timeout_sec or 5
-  local lockfile = _pjoin(LOCK_DIR, lockname .. ".lock")
-  local deadline = os.time() + timeout_sec
-  
+  local is_windows = package.config:sub(1,1) == "\\"
+  local lockdir    = _pjoin(LOCK_DIR, lockname .. ".lck")
+  local deadline   = os.time() + timeout_sec
+
   while os.time() < deadline do
-    local f = io.open(lockfile, "r")
-    if not f then
-      -- Lock tidak ada, coba buat
-      f = io.open(lockfile, "w")
-      if f then
-        f:write(tostring(os.time()) .. "|" .. WORKER_ID)
-        f:close()
-        return true
-      end
-    else
-      f:close()
-      sleep(100) -- tunggu 100ms sebelum retry
+    local cmd = is_windows
+      and ('cmd /C mkdir "%s" >NUL 2>&1'):format(lockdir)
+      or  ('mkdir "%s" >/dev/null 2>&1'):format(lockdir)
+
+    local ret = os.execute(cmd)
+    local ok  = (ret == true) or (ret == 0)  -- Lua 5.1/5.4 kompatibel
+
+    if ok then
+      -- simpan owner lock (opsional, buat debugging)
+      local f = io.open(_pjoin(lockdir, "owner.txt"), "w")
+      if f then f:write(tostring(os.time()) .. "|" .. (WORKER_ID or "?")); f:close() end
+      return true
     end
+    sleep(100) -- 100 ms
   end
   return false
 end
 
 local function _release_lock(lockname)
-  local lockfile = _pjoin(LOCK_DIR, lockname .. ".lock")
-  os.remove(lockfile)
+  local is_windows = package.config:sub(1,1) == "\\"
+  local lockdir    = _pjoin(LOCK_DIR, lockname .. ".lck")
+  if is_windows then
+    os.execute(('cmd /C rmdir /Q /S "%s" >NUL 2>&1'):format(lockdir))
+  else
+    os.execute(('rm -rf "%s" >/dev/null 2>&1'):format(lockdir))
+  end
 end
 
 
@@ -1286,6 +1294,7 @@ local function _count_helpers_for_world_safe(world)
   return helper_count, owner_worker
 end
 
+-- Fungsi atomic untuk menambahkan helper dengan limit check + rollback anti-race
 local function _add_helper_atomic(world)
   world = (world or ""):upper()
   if world == "" then return false, "invalid_world" end
@@ -1297,8 +1306,9 @@ local function _add_helper_atomic(world)
 
   local success, reason = false, "unknown"
   local limit = tonumber(ASSIST_HELPER_LIMIT) or 0
+  local just_added = false
 
-  -- Critical section (di dalam lock)
+  -- Critical section (terlindungi lock)
   do
     local rows = _read_lines(JOB_FILES.inprogress)
 
@@ -1340,20 +1350,55 @@ local function _add_helper_atomic(world)
       else
         -- 4) Tambah entry helper kita
         if _append_line(JOB_FILES.inprogress, string.format("%s|%s|%d", world, WORKER_ID, _now())) then
-          success, reason = true, "added"
+          success, reason, just_added = true, "added", true
         else
           success, reason = false, "file_error"
         end
       end
     end
 
-    -- 5) Safety re-check: hanya jika barusan "added"
-    if success and reason == "added" then
-      local new_count = _count_helpers_for_world_safe(world) or 0 -- harusnya hitung helper (bukan total)
+    -- 5) Safety re-check (rollback) — tetap di DALAM lock & TANPA call fungsi lain (hindari deadlock)
+    if success and reason == "added" and just_added then
+      local rows2 = _read_lines(JOB_FILES.inprogress)
+
+      -- cari owner terbaru
+      local owner_worker2, oldest_ts2 = nil, math.huge
+      for _, ln in ipairs(rows2) do
+        local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+        if w and who and ts and (w:upper() == world) then
+          local t = tonumber(ts) or math.huge
+          if (t < oldest_ts2) or (t == oldest_ts2 and (owner_worker2 == nil or who < owner_worker2)) then
+            oldest_ts2, owner_worker2 = t, who
+          end
+        end
+      end
+
+      -- hitung helper lagi
+      local helpers2 = {}
+      for _, ln in ipairs(rows2) do
+        local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+        if w and who and ts and (w:upper() == world) and (who ~= owner_worker2) then
+          helpers2[who] = true
+        end
+      end
+      local new_count = 0
+      for _ in pairs(helpers2) do new_count = new_count + 1 end
+
       if new_count > limit then
-        -- kebobolan karena race → rollback diri sendiri
-        _remove_helper_entry_safe(world, WORKER_ID)
+        -- rollback: hapus entry kita (bukan owner)
+        local out, removed = {}, false
+        for _, ln in ipairs(rows2) do
+          local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+          if w and who and (w:upper() == world) and (who == WORKER_ID) and (who ~= owner_worker2) and (not removed) then
+            removed = true -- skip satu entry milik kita
+          else
+            table.insert(out, ln)
+          end
+        end
+        if removed then _write_lines(JOB_FILES.inprogress, out) end
         success, reason = false, "limit_reached_race"
+        -- (opsional) print debug:
+        print(string.format("[HELP][ROLLBACK] %s di %s (new_count=%d > limit=%d)", WORKER_ID, world, new_count, limit))
       end
     end
   end
@@ -1361,6 +1406,7 @@ local function _add_helper_atomic(world)
   _release_lock(lockname)
   return success, reason
 end
+
 
 
 
