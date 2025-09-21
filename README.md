@@ -1559,13 +1559,14 @@ end
 local function _set_of_worlds(lines) local S={}; for _,ln in ipairs(lines) do local w=ln:match("^([^|]+)"); if w then S[w:upper()]=true end end; return S end
 
 -- REPLACE seluruh _update_heartbeat dengan ini
+-- _update_heartbeat yang tidak pernah “menyentuh” baris owner
 local function _update_heartbeat(world, who_slot)
-  world = (world or ""):upper()
+  world    = (world or ""):upper()
   who_slot = who_slot or WORKER_ID
   local now  = _now()
   local rows = _read_lines(JOB_FILES.inprogress)
 
-  -- tentukan owner sebagai baris dengan timestamp TERKECIL untuk world tsb
+  -- tentukan owner = baris dengan timestamp TERKECIL
   local owner_worker, oldest_ts = nil, math.huge
   for _, ln in ipairs(rows) do
     local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
@@ -1581,9 +1582,9 @@ local function _update_heartbeat(world, who_slot)
     if w and who and ts then
       if w:upper() == world and who == who_slot then
         if who_slot ~= owner_worker then
-          table.insert(out, string.format("%s|%s|%d", w, who_slot, now))  -- update helper
+          table.insert(out, string.format("%s|%s|%d", w, who_slot, now)) -- update helper
         else
-          table.insert(out, ln)  -- JANGAN sentuh owner
+          table.insert(out, ln) -- JANGAN sentuh owner
         end
         touched = true
       else
@@ -1592,13 +1593,14 @@ local function _update_heartbeat(world, who_slot)
     end
   end
 
-  -- kalau helper belum punya baris, tambahkan baru
   if not touched and who_slot ~= owner_worker then
     table.insert(out, string.format("%s|%s|%d", world, who_slot, now))
   end
 
   _write_lines(JOB_FILES.inprogress, out)
 end
+
+
 
 
 local function CLAIM_NEXT_JOB()
@@ -1870,4 +1872,215 @@ do
       RUN_MULTI_HARVEST(myList)
     end
   end
+end
+
+
+
+-- ============================================================
+-- OVERRIDE (placed at end of file): atomic dir lock + safe heartbeat + helper add with rollback
+-- These definitions override any earlier duplicates above.
+-- ============================================================
+
+-- Fallback path join if _pjoin is not defined
+local function __pjoin_fallback(a, b)
+  if not a or a == "" then return b or "" end
+  if not b or b == "" then return a end
+  local sep = package.config:sub(1,1) == "\\" and "\\" or "/"
+  if a:sub(-1) == "/" or a:sub(-1) == "\\" then
+    return a .. b
+  else
+    return a .. sep .. b
+  end
+end
+local _pjoin = _pjoin or __pjoin_fallback
+
+-- ========== Atomic directory lock ==========
+local function _acquire_lock(lockname, timeout_sec)
+  timeout_sec = timeout_sec or 5
+  local is_windows = package.config:sub(1,1) == "\\"
+  local lockdir    = _pjoin(LOCK_DIR or ".", (lockname or "lock") .. ".lck")
+  local deadline   = os.time() + timeout_sec
+
+  while os.time() < deadline do
+    local cmd = is_windows
+      and ('cmd /C mkdir "%s" >NUL 2>&1'):format(lockdir)
+      or  ('mkdir "%s" >/dev/null 2>&1'):format(lockdir)
+    local ret = os.execute(cmd)
+    local ok  = (ret == true) or (ret == 0)
+    if ok then
+      local f = io.open(_pjoin(lockdir, "owner.txt"), "w")
+      if f then f:write(string.format("%d|%s", os.time(), tostring(WORKER_ID or "?"))); f:close() end
+      return true
+    end
+    if sleep then sleep(100) end -- 100ms backoff
+  end
+  return false
+end
+
+local function _release_lock(lockname)
+  local is_windows = package.config:sub(1,1) == "\\"
+  local lockdir    = _pjoin(LOCK_DIR or ".", (lockname or "lock") .. ".lck")
+  if is_windows then
+    os.execute(('cmd /C rmdir /Q /S "%s" >NUL 2>&1'):format(lockdir))
+  else
+    os.execute(('rm -rf "%s" >/dev/null 2>&1'):format(lockdir))
+  end
+end
+
+-- ========== Safe heartbeat: NEVER touch owner row ==========
+local function _update_heartbeat(world, who_slot)
+  world    = (world or ""):upper()
+  who_slot = who_slot or WORKER_ID
+  local now  = (_now and _now()) or os.time()
+  local rows = _read_lines(JOB_FILES.inprogress)
+
+  -- owner = row with smallest timestamp
+  local owner_worker, oldest_ts = nil, math.huge
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts and w:upper() == world then
+      local t = tonumber(ts) or math.huge
+      if t < oldest_ts then oldest_ts, owner_worker = t, who end
+    end
+  end
+
+  local out, touched = {}, false
+  for _, ln in ipairs(rows) do
+    local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+    if w and who and ts then
+      if w:upper() == world and who == who_slot then
+        if who_slot ~= owner_worker then
+          table.insert(out, string.format("%s|%s|%d", w, who_slot, now)) -- update helper
+        else
+          table.insert(out, ln) -- DO NOT touch owner row
+        end
+        touched = true
+      else
+        table.insert(out, ln)
+      end
+    end
+  end
+
+  if not touched and who_slot ~= owner_worker then
+    table.insert(out, string.format("%s|%s|%d", world, who_slot, now))
+  end
+
+  _write_lines(JOB_FILES.inprogress, out)
+end
+
+-- ========== Atomic add-helper with guard + rollback ==========
+local function _add_helper_atomic(world)
+  world = (world or ""):upper()
+  if world == "" then return false, "invalid_world" end
+
+  local lockname = "assist_" .. world
+  if not _acquire_lock(lockname, 3) then
+    return false, "lock_timeout"
+  end
+
+  local success, reason = false, "unknown"
+  local limit = tonumber(ASSIST_HELPER_LIMIT) or 0
+  local just_added = false
+
+  do
+    local rows = _read_lines(JOB_FILES.inprogress)
+
+    -- 1) de-duplicate self
+    for _, ln in ipairs(rows) do
+      local w, who = ln:match("^([^|]+)|([^|]+)|")
+      if w and who and (w:upper() == world) and (who == WORKER_ID) then
+        success, reason = true, "already_helper"
+        break
+      end
+    end
+
+    if not success then
+      -- 2) owner = oldest timestamp (tie-break by worker id)
+      local owner_worker, oldest_ts = nil, math.huge
+      for _, ln in ipairs(rows) do
+        local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+        if w and who and ts and (w:upper() == world) then
+          local t = tonumber(ts) or math.huge
+          if (t < oldest_ts) or (t == oldest_ts and (owner_worker == nil or who < owner_worker)) then
+            oldest_ts, owner_worker = t, who
+          end
+        end
+      end
+
+      -- GUARD: require owner present
+      if not owner_worker then
+        success, reason = false, "no_owner"
+      else
+        -- 3) count helpers (unique, excluding owner)
+        local helpers = {}
+        for _, ln in ipairs(rows) do
+          local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+          if w and who and ts and (w:upper() == world) and (who ~= owner_worker) then
+            helpers[who] = true
+          end
+        end
+        local helper_count = 0
+        for _ in pairs(helpers) do helper_count = helper_count + 1 end
+
+        if helper_count >= limit then
+          success, reason = false, "limit_reached"
+        else
+          -- 4) append our helper row
+          if _append_line(JOB_FILES.inprogress, string.format("%s|%s|%d", world, WORKER_ID, (_now and _now()) or os.time())) then
+            success, reason, just_added = true, "added", true
+          else
+            success, reason = false, "file_error"
+          end
+        end
+      end
+    end
+
+    -- 5) safety re-check + rollback (inside lock)
+    if success and reason == "added" and just_added then
+      local rows2 = _read_lines(JOB_FILES.inprogress)
+
+      -- recompute owner
+      local owner_worker2, oldest_ts2 = nil, math.huge
+      for _, ln in ipairs(rows2) do
+        local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+        if w and who and ts and (w:upper() == world) then
+          local t = tonumber(ts) or math.huge
+          if (t < oldest_ts2) or (t == oldest_ts2 and (owner_worker2 == nil or who < owner_worker2)) then
+            oldest_ts2, owner_worker2 = t, who
+          end
+        end
+      end
+
+      -- recount helpers
+      local helpers2 = {}
+      for _, ln in ipairs(rows2) do
+        local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+        if w and who and ts and (w:upper() == world) and (who ~= owner_worker2) then
+          helpers2[who] = true
+        end
+      end
+      local new_count = 0
+      for _ in pairs(helpers2) do new_count = new_count + 1 end
+
+      if new_count > limit then
+        local out, removed = {}, false
+        for _, ln in ipairs(rows2) do
+          local w, who, ts = ln:match("^([^|]+)|([^|]+)|(%d+)$")
+          if w and who and (w:upper() == world) and (who == WORKER_ID) and (who ~= owner_worker2) and (not removed) then
+            removed = true -- remove our just-added helper row
+          else
+            table.insert(out, ln)
+          end
+        end
+        if removed then _write_lines(JOB_FILES.inprogress, out) end
+        success, reason = false, "limit_reached_race"
+        if print then
+          print(string.format("[HELP][ROLLBACK] %s di %s (new_count=%d > limit=%d)", tostring(WORKER_ID or "?"), world, new_count, limit))
+        end
+      end
+    end
+  end
+
+  _release_lock(lockname)
+  return success, reason
 end
