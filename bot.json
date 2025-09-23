@@ -1,0 +1,2802 @@
+{
+  "bots": [
+    {
+      "automations": {
+        "blarney": {
+          "active": false,
+          "lvl": 10,
+          "storage": ""
+        },
+        "build": {
+          "active": false,
+          "custom_id": "",
+          "door_id": 12,
+          "entrance_id": 224,
+          "insert_rotation": true,
+          "item_storage": "",
+          "name_length": 5,
+          "no_cave": true,
+          "no_lava": true,
+          "no_number": false,
+          "output_path": "farm.txt",
+          "platform_id": 102,
+          "soil_mode": false,
+          "soil_storage": "",
+          "use_fire": false,
+          "use_plat": false,
+          "use_water": false
+        },
+        "carnival": {
+          "active": false,
+          "buy": false,
+          "game": 0,
+          "reward": "",
+          "ticket": "",
+          "trash": false
+        },
+        "clear": {
+          "active": false,
+          "item_storage": "",
+          "keep_jammer": false,
+          "keep_lock": true,
+          "name_length": 5,
+          "no_number": false,
+          "output_path": "clear.txt",
+          "seed_storage": ""
+        },
+        "combine": {
+          "active": false,
+          "combine_world": "",
+          "id": 0,
+          "ingredient_storage": "",
+          "ingredients": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "output_world": ""
+        },
+        "crime": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "villains": "0000000000000000000"
+        },
+        "event": {
+          "active": false,
+          "storage": ""
+        },
+        "farm": {
+          "active": false,
+          "auto_break": true,
+          "auto_place": true,
+          "auto_retrieve": false,
+          "block_storage": "AFILFENCE2|NOWXX123",
+          "item": 8640,
+          "mag_x": -1,
+          "mag_y": -1,
+          "seed_storage": "CSHARDNY|NOWXX123",
+          "take_remote": false,
+          "tiles": 896
+        },
+        "fish": {
+          "active": false,
+          "auto_drill": false,
+          "auto_gemonade": false,
+          "auto_trash": false,
+          "auto_trawler": false,
+          "bait": 0,
+          "bait_storage": "",
+          "reward_storage": "",
+          "rod": 0,
+          "world": "",
+          "x": 0,
+          "y": 0
+        },
+        "fossil": {
+          "active": false,
+          "interval": 1.0,
+          "loop": false,
+          "reward": "",
+          "tool": "",
+          "use_rock": true
+        },
+        "geiger": {
+          "active": false,
+          "chocolate": false,
+          "insta_path": true,
+          "selected_storage": "",
+          "selected_world": ""
+        },
+        "harvest": {
+          "active": false,
+          "recycleMode": false,
+          "storage": "BIRUJEMBUT5|SUKILIAR9",
+          "useFuel": false
+        },
+        "malady": {
+          "active": false,
+          "auto_chicken_feet": false,
+          "auto_disconnect": false,
+          "auto_grumbleteeth": false,
+          "auto_refresh": true,
+          "auto_surgery_station": false,
+          "auto_vial": false,
+          "disconnect_interval": 10,
+          "storage": "",
+          "use_home": false,
+          "vial": 2
+        },
+        "message": {
+          "active": false,
+          "anti_exit": false,
+          "auto_sb": false,
+          "ignore": false,
+          "interval": 5.0,
+          "loop_mode": false,
+          "message": "",
+          "type": 3
+        },
+        "npc": {
+          "active": false,
+          "auto_spawner": false,
+          "auto_sucker": false,
+          "collect_mode": false,
+          "item": "",
+          "main": "",
+          "reward": "",
+          "spawner_limit": 100,
+          "sucker_limit": 5
+        },
+        "pack": {
+          "active": false,
+          "storage": ""
+        },
+        "parkour": {
+          "active": false,
+          "block": 0,
+          "game": 0,
+          "limit": 1,
+          "reward": "",
+          "ticket": ""
+        },
+        "plant": {
+          "active": false,
+          "storage": "MASLGRID969|ROSI456"
+        },
+        "rotation": {
+          "active": false,
+          "auto_exchange": false,
+          "auto_fill": false,
+          "auto_fossil": true,
+          "auto_jammer": true,
+          "auto_leave": false,
+          "auto_rest": false,
+          "break_tile": 896,
+          "break_x": 3,
+          "break_y": 1,
+          "clear_history": false,
+          "custom_position": false,
+          "detect_objects": true,
+          "harvest_roots": false,
+          "harvest_till_level": false,
+          "ignore_plant": false,
+          "item": 0,
+          "legacy_mode": false,
+          "pnb_in_home": true,
+          "pnb_world": "",
+          "primary": 0,
+          "secondary": 0,
+          "seed_amount": 100,
+          "suppress_pack_storage": false,
+          "suppress_seed_storage": false,
+          "webhook": false,
+          "webhook_interval": 300,
+          "webhook_link": ""
+        },
+        "setpos": {
+          "action_list": [
+            {
+              "data": "",
+              "type": 0,
+              "x": 8,
+              "y": 18
+            }
+          ],
+          "active": false,
+          "main": "GUBEMIXE4000",
+          "move_delay": 10,
+          "warp_delay": 30
+        },
+        "skin": {
+          "active": false,
+          "interval": 0.5
+        },
+        "spam": {
+          "active": false,
+          "color": false,
+          "emote": false,
+          "interval": 4.0,
+          "random_interval": false,
+          "randomizer": false,
+          "texts": []
+        },
+        "startopia": {
+          "active": false,
+          "auto_gemonade": false,
+          "auto_spice": false,
+          "blast": 2,
+          "mode": 0,
+          "primary": "",
+          "reward": "",
+          "secondary": "",
+          "sector": 3
+        },
+        "synth": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "x": 0,
+          "y": 0
+        },
+        "transfer": {
+          "active": false,
+          "auto_buy": false,
+          "auto_restock": false,
+          "drop_vertical": false,
+          "id": 0,
+          "input": "",
+          "item_price": 0,
+          "output": "",
+          "per_item": false
+        },
+        "tutorial": {
+          "auto_quest": true,
+          "clear_inventory": true,
+          "detect_tutorial": false,
+          "enabled": true,
+          "set_as_home": true,
+          "set_high_level": true,
+          "set_random_profile": false,
+          "set_random_skin": false
+        },
+        "zombie": {
+          "active": false,
+          "gvirus": "",
+          "infect_mode": false,
+          "limit": 5,
+          "main": "",
+          "punch_door": false,
+          "punch_mode": false,
+          "reward": ""
+        }
+      },
+      "credentials": {
+        "aat": 2,
+        "age": 18,
+        "aid": "",
+        "appleCookie": "",
+        "appleData": "",
+        "category": "_-5100",
+        "country": "",
+        "custom": true,
+        "display": "",
+        "gid": "07366bae-0127-1663-09a8-2ceb013b8827",
+        "guest": "",
+        "h-ua": "\"Google Chrome\";v=\"90\", \"Not=A?Brand\";v=\"99\", \"Chromium\";v=\"90\"",
+        "hash": 387621141,
+        "ltoken": "NKbBpi4L8jrwtAlyyWMST3G+Mg+etHl4IsMPsuq6K5hOPqBtOYncUEVsm3TbW4J+ExrUYFHwWqA826E5hZ+rlPhoAdsKHxaa2LpUjqXzU1bpxoXYQv6DwhdG34niL74gqj9MbZYGvrxj/cr1zxanJQJQiL0FkN7Xt9eh9eJlU8bvrST9iFV96Xp4IHSlcZI4RCdYxAvnZCfbquq0lIOBLVNIDxAJxlQ4njZlma6Ws3n5h539/HF6CbaZJRwc2S/0EpOP5V0RqOJBkE2u71eQ5dg2A0ChCmdwPhFg2KxWr688w8egThHDxyyE7ot7zyHkWYtBD06n5PvcT9L2AnCEzMGwE6iyUU/EGeUeH0Rg6cd9I8EEfzxGcnhn8K4SnHM7eGaZSjhXReINPSMOvlYYxa14eLek3V5iZb+OwBJWVfWG5ntmhB5VHEf+8uE2u/Dzsb1D3XpTAlv0DpIlqic2Pw==",
+        "ltokents": 1758621654,
+        "mac": "a9:2f:d9:68:e9:45",
+        "platform": 0,
+        "rid": "3776cddaa56742f7b56d7f9887b5d3fc",
+        "secret": "",
+        "steam_login": "",
+        "steam_token": "",
+        "ua": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "vid": "",
+        "wk": "9B88C30A4B6E0C0930951239D9C9BB43"
+      },
+      "dialog": {
+        "display_image": false,
+        "show_store": true
+      },
+      "intervals": [
+        0.23499999940395355,
+        0.10000000149011612,
+        0.15000000596046448,
+        0.15000000596046448,
+        0.1599999964237213,
+        0.1599999964237213,
+        10.0,
+        4.0,
+        4.0
+      ],
+      "level": 24,
+      "mail": "",
+      "main": {
+        "birth_storage": "",
+        "cloth_ids": [
+          12994,
+          8846,
+          0,
+          0,
+          0,
+          98,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collect": {
+          "collect_all": true,
+          "delay": 200,
+          "enabled": false,
+          "essence": false,
+          "gem": false,
+          "path_check": false,
+          "range": 10
+        },
+        "console": {
+          "enabled": true,
+          "show_ts": true
+        },
+        "consume_id": 0,
+        "consume_interval": 1800.0,
+        "gem_limit": 1000000,
+        "hose_storage": "",
+        "log": {
+          "enabled": false,
+          "generic": false,
+          "http": false,
+          "incoming": true,
+          "limit": true,
+          "message": false,
+          "outgoing": false,
+          "track": false,
+          "update": false,
+          "variantlist": false
+        },
+        "max_reconnect_interval": 18,
+        "maximum_ping": 1800,
+        "maximum_warp": 10,
+        "min_reconnect_interval": 12,
+        "move_range": 4,
+        "move_x": 6,
+        "move_y": 2,
+        "obtained_gems": 12,
+        "obtained_packs": 0,
+        "preferences": 5243604,
+        "reconnect_interval": 13,
+        "rest_interval": 600,
+        "rest_time": 60,
+        "selected_pack": 0,
+        "wear_storage": "ZEZ9999|ZEROAJA1"
+      },
+      "name": "gubemixe",
+      "pass": "",
+      "recovery": ""
+    },
+    {
+      "automations": {
+        "blarney": {
+          "active": false,
+          "lvl": 10,
+          "storage": ""
+        },
+        "build": {
+          "active": false,
+          "custom_id": "",
+          "door_id": 12,
+          "entrance_id": 224,
+          "insert_rotation": true,
+          "item_storage": "",
+          "name_length": 5,
+          "no_cave": true,
+          "no_lava": true,
+          "no_number": false,
+          "output_path": "farm.txt",
+          "platform_id": 102,
+          "soil_mode": false,
+          "soil_storage": "",
+          "use_fire": false,
+          "use_plat": false,
+          "use_water": false
+        },
+        "carnival": {
+          "active": false,
+          "buy": false,
+          "game": 0,
+          "reward": "",
+          "ticket": "",
+          "trash": false
+        },
+        "clear": {
+          "active": false,
+          "item_storage": "",
+          "keep_jammer": false,
+          "keep_lock": true,
+          "name_length": 5,
+          "no_number": false,
+          "output_path": "clear.txt",
+          "seed_storage": ""
+        },
+        "combine": {
+          "active": false,
+          "combine_world": "",
+          "id": 0,
+          "ingredient_storage": "",
+          "ingredients": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "output_world": ""
+        },
+        "crime": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "villains": "0000000000000000000"
+        },
+        "event": {
+          "active": false,
+          "storage": ""
+        },
+        "farm": {
+          "active": false,
+          "auto_break": true,
+          "auto_place": true,
+          "auto_retrieve": false,
+          "block_storage": "AFILFENCE2|NOWXX123",
+          "item": 8640,
+          "mag_x": -1,
+          "mag_y": -1,
+          "seed_storage": "CSHARDNY|NOWXX123",
+          "take_remote": false,
+          "tiles": 896
+        },
+        "fish": {
+          "active": false,
+          "auto_drill": false,
+          "auto_gemonade": false,
+          "auto_trash": false,
+          "auto_trawler": false,
+          "bait": 0,
+          "bait_storage": "",
+          "reward_storage": "",
+          "rod": 0,
+          "world": "",
+          "x": 0,
+          "y": 0
+        },
+        "fossil": {
+          "active": false,
+          "interval": 1.0,
+          "loop": false,
+          "reward": "",
+          "tool": "",
+          "use_rock": true
+        },
+        "geiger": {
+          "active": false,
+          "chocolate": false,
+          "insta_path": true,
+          "selected_storage": "",
+          "selected_world": ""
+        },
+        "harvest": {
+          "active": false,
+          "recycleMode": false,
+          "storage": "BIRUJEMBUT5|SUKILIAR9",
+          "useFuel": false
+        },
+        "malady": {
+          "active": false,
+          "auto_chicken_feet": false,
+          "auto_disconnect": false,
+          "auto_grumbleteeth": false,
+          "auto_refresh": true,
+          "auto_surgery_station": false,
+          "auto_vial": false,
+          "disconnect_interval": 10,
+          "storage": "",
+          "use_home": false,
+          "vial": 2
+        },
+        "message": {
+          "active": false,
+          "anti_exit": false,
+          "auto_sb": false,
+          "ignore": false,
+          "interval": 5.0,
+          "loop_mode": false,
+          "message": "",
+          "type": 3
+        },
+        "npc": {
+          "active": false,
+          "auto_spawner": false,
+          "auto_sucker": false,
+          "collect_mode": false,
+          "item": "",
+          "main": "",
+          "reward": "",
+          "spawner_limit": 100,
+          "sucker_limit": 5
+        },
+        "pack": {
+          "active": false,
+          "storage": ""
+        },
+        "parkour": {
+          "active": false,
+          "block": 0,
+          "game": 0,
+          "limit": 1,
+          "reward": "",
+          "ticket": ""
+        },
+        "plant": {
+          "active": false,
+          "storage": "MASLGRID969|ROSI456"
+        },
+        "rotation": {
+          "active": false,
+          "auto_exchange": false,
+          "auto_fill": false,
+          "auto_fossil": true,
+          "auto_jammer": true,
+          "auto_leave": false,
+          "auto_rest": false,
+          "break_tile": 896,
+          "break_x": 3,
+          "break_y": 1,
+          "clear_history": false,
+          "custom_position": false,
+          "detect_objects": true,
+          "harvest_roots": false,
+          "harvest_till_level": false,
+          "ignore_plant": false,
+          "item": 0,
+          "legacy_mode": false,
+          "pnb_in_home": true,
+          "pnb_world": "",
+          "primary": 0,
+          "secondary": 0,
+          "seed_amount": 100,
+          "suppress_pack_storage": false,
+          "suppress_seed_storage": false,
+          "webhook": false,
+          "webhook_interval": 300,
+          "webhook_link": ""
+        },
+        "setpos": {
+          "action_list": [
+            {
+              "data": "",
+              "type": 0,
+              "x": 89,
+              "y": 18
+            }
+          ],
+          "active": false,
+          "main": "HECAPUQU",
+          "move_delay": 10,
+          "warp_delay": 30
+        },
+        "skin": {
+          "active": false,
+          "interval": 0.5
+        },
+        "spam": {
+          "active": false,
+          "color": false,
+          "emote": false,
+          "interval": 4.0,
+          "random_interval": false,
+          "randomizer": false,
+          "texts": []
+        },
+        "startopia": {
+          "active": false,
+          "auto_gemonade": false,
+          "auto_spice": false,
+          "blast": 2,
+          "mode": 0,
+          "primary": "",
+          "reward": "",
+          "secondary": "",
+          "sector": 3
+        },
+        "synth": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "x": 0,
+          "y": 0
+        },
+        "transfer": {
+          "active": false,
+          "auto_buy": false,
+          "auto_restock": false,
+          "drop_vertical": false,
+          "id": 0,
+          "input": "",
+          "item_price": 0,
+          "output": "",
+          "per_item": false
+        },
+        "tutorial": {
+          "auto_quest": true,
+          "clear_inventory": true,
+          "detect_tutorial": false,
+          "enabled": true,
+          "set_as_home": true,
+          "set_high_level": true,
+          "set_random_profile": true,
+          "set_random_skin": false
+        },
+        "zombie": {
+          "active": false,
+          "gvirus": "",
+          "infect_mode": false,
+          "limit": 5,
+          "main": "",
+          "punch_door": false,
+          "punch_mode": false,
+          "reward": ""
+        }
+      },
+      "credentials": {
+        "aat": 2,
+        "age": 25,
+        "aid": "",
+        "appleCookie": "",
+        "appleData": "",
+        "category": "_-5100",
+        "country": "",
+        "custom": true,
+        "display": "",
+        "gid": "0ad1a6c8-0bde-47ce-04f5-fabf03e1a672",
+        "guest": "",
+        "h-ua": "\"Opera\";v=\"76\", \"Opera\";v=\"76\", \"Not=A?Brand\";v=\"99\"",
+        "hash": -724996163,
+        "ltoken": "BEMNEMJre8Q8syPw6oX7+8Wnry43e3vb3GUSwd9XedaNoU5a8+hfLxseBZjz0MhvzcJXbBVdfjTIbBRH/BgptabTE1N6GnBo9yJD8QSmow0l730oHeJdQ6CALVY6SMtEjqwpFxxOVcAcWa5EABHEChCWpmrSJDp5v0+gyKzwqpDmPyc1XLW5veABf+NLlZo1daPfOoNPN5UO0piqpZFe6cONaJWtMT5+WJbsNcXyFNfIP+ROrJmqZd5KFGeV7ASLwL8+2JsbeMNJCFQLzaFvIIx5ux8jIottqOyIuQW3avuDkz5QcbOayxPCPX14Iy0dYaFsTXSuGuKJtYyBAhTwbxl8buPXrOSInGf0iV9v7LsntVYkDOL+ZkhyMVq21QGXJC/+1z6emepQPX8AHv0QgJMCBAa27D1g0V+gTEhCJKrXqZfUy1p7qcElqf+EFa4LlKyMDZCLf3OMFH74Ta9lRw==",
+        "ltokents": 1758621651,
+        "mac": "02:00:00:00:00:00",
+        "platform": 1,
+        "rid": "12E6DF265A4978629EEBE147B1BC2745",
+        "secret": "",
+        "steam_login": "",
+        "steam_token": "",
+        "ua": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "vid": "",
+        "wk": "8CB7F267CE4FF4A40720E840AB07A10E"
+      },
+      "dialog": {
+        "display_image": false,
+        "show_store": true
+      },
+      "intervals": [
+        0.23499999940395355,
+        0.10000000149011612,
+        0.15000000596046448,
+        0.15000000596046448,
+        0.1599999964237213,
+        0.1599999964237213,
+        10.0,
+        4.0,
+        4.0
+      ],
+      "level": 24,
+      "mail": "",
+      "main": {
+        "birth_storage": "",
+        "cloth_ids": [
+          12994,
+          8846,
+          0,
+          0,
+          0,
+          98,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collect": {
+          "collect_all": true,
+          "delay": 200,
+          "enabled": false,
+          "essence": false,
+          "gem": false,
+          "path_check": false,
+          "range": 10
+        },
+        "console": {
+          "enabled": true,
+          "show_ts": true
+        },
+        "consume_id": 0,
+        "consume_interval": 1800.0,
+        "gem_limit": 1000000,
+        "hose_storage": "",
+        "log": {
+          "enabled": false,
+          "generic": false,
+          "http": false,
+          "incoming": true,
+          "limit": true,
+          "message": false,
+          "outgoing": false,
+          "track": false,
+          "update": false,
+          "variantlist": false
+        },
+        "max_reconnect_interval": 18,
+        "maximum_ping": 1800,
+        "maximum_warp": 10,
+        "min_reconnect_interval": 12,
+        "move_range": 6,
+        "move_x": 6,
+        "move_y": 2,
+        "obtained_gems": 1,
+        "obtained_packs": 0,
+        "preferences": 5243600,
+        "reconnect_interval": 12,
+        "rest_interval": 600,
+        "rest_time": 60,
+        "selected_pack": 0,
+        "wear_storage": "ZEZ9999|ZEROAJA1"
+      },
+      "name": "hecapuqu",
+      "pass": "",
+      "recovery": ""
+    },
+    {
+      "automations": {
+        "blarney": {
+          "active": false,
+          "lvl": 10,
+          "storage": ""
+        },
+        "build": {
+          "active": false,
+          "custom_id": "",
+          "door_id": 12,
+          "entrance_id": 224,
+          "insert_rotation": true,
+          "item_storage": "",
+          "name_length": 5,
+          "no_cave": true,
+          "no_lava": true,
+          "no_number": false,
+          "output_path": "farm.txt",
+          "platform_id": 102,
+          "soil_mode": false,
+          "soil_storage": "",
+          "use_fire": false,
+          "use_plat": false,
+          "use_water": false
+        },
+        "carnival": {
+          "active": false,
+          "buy": false,
+          "game": 0,
+          "reward": "",
+          "ticket": "",
+          "trash": false
+        },
+        "clear": {
+          "active": false,
+          "item_storage": "",
+          "keep_jammer": false,
+          "keep_lock": true,
+          "name_length": 5,
+          "no_number": false,
+          "output_path": "clear.txt",
+          "seed_storage": ""
+        },
+        "combine": {
+          "active": false,
+          "combine_world": "",
+          "id": 0,
+          "ingredient_storage": "",
+          "ingredients": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "output_world": ""
+        },
+        "crime": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "villains": "0000000000000000000"
+        },
+        "event": {
+          "active": false,
+          "storage": ""
+        },
+        "farm": {
+          "active": false,
+          "auto_break": true,
+          "auto_place": true,
+          "auto_retrieve": false,
+          "block_storage": "AFILFENCE2|NOWXX123",
+          "item": 8640,
+          "mag_x": -1,
+          "mag_y": -1,
+          "seed_storage": "CSHARDNY|NOWXX123",
+          "take_remote": false,
+          "tiles": 896
+        },
+        "fish": {
+          "active": false,
+          "auto_drill": false,
+          "auto_gemonade": false,
+          "auto_trash": false,
+          "auto_trawler": false,
+          "bait": 0,
+          "bait_storage": "",
+          "reward_storage": "",
+          "rod": 0,
+          "world": "",
+          "x": 0,
+          "y": 0
+        },
+        "fossil": {
+          "active": false,
+          "interval": 1.0,
+          "loop": false,
+          "reward": "",
+          "tool": "",
+          "use_rock": true
+        },
+        "geiger": {
+          "active": false,
+          "chocolate": false,
+          "insta_path": true,
+          "selected_storage": "",
+          "selected_world": ""
+        },
+        "harvest": {
+          "active": false,
+          "recycleMode": false,
+          "storage": "BIRUJEMBUT5|SUKILIAR9",
+          "useFuel": false
+        },
+        "malady": {
+          "active": false,
+          "auto_chicken_feet": false,
+          "auto_disconnect": false,
+          "auto_grumbleteeth": false,
+          "auto_refresh": true,
+          "auto_surgery_station": false,
+          "auto_vial": false,
+          "disconnect_interval": 10,
+          "storage": "",
+          "use_home": false,
+          "vial": 2
+        },
+        "message": {
+          "active": false,
+          "anti_exit": false,
+          "auto_sb": false,
+          "ignore": false,
+          "interval": 5.0,
+          "loop_mode": false,
+          "message": "",
+          "type": 3
+        },
+        "npc": {
+          "active": false,
+          "auto_spawner": false,
+          "auto_sucker": false,
+          "collect_mode": false,
+          "item": "",
+          "main": "",
+          "reward": "",
+          "spawner_limit": 100,
+          "sucker_limit": 5
+        },
+        "pack": {
+          "active": false,
+          "storage": ""
+        },
+        "parkour": {
+          "active": false,
+          "block": 0,
+          "game": 0,
+          "limit": 1,
+          "reward": "",
+          "ticket": ""
+        },
+        "plant": {
+          "active": false,
+          "storage": "MASLGRID969|ROSI456"
+        },
+        "rotation": {
+          "active": false,
+          "auto_exchange": false,
+          "auto_fill": false,
+          "auto_fossil": true,
+          "auto_jammer": true,
+          "auto_leave": false,
+          "auto_rest": false,
+          "break_tile": 896,
+          "break_x": 3,
+          "break_y": 1,
+          "clear_history": false,
+          "custom_position": false,
+          "detect_objects": true,
+          "harvest_roots": false,
+          "harvest_till_level": false,
+          "ignore_plant": false,
+          "item": 0,
+          "legacy_mode": false,
+          "pnb_in_home": true,
+          "pnb_world": "",
+          "primary": 0,
+          "secondary": 0,
+          "seed_amount": 100,
+          "suppress_pack_storage": false,
+          "suppress_seed_storage": false,
+          "webhook": false,
+          "webhook_interval": 300,
+          "webhook_link": ""
+        },
+        "setpos": {
+          "action_list": [
+            {
+              "data": "",
+              "type": 0,
+              "x": 89,
+              "y": 18
+            }
+          ],
+          "active": false,
+          "main": "KIFAFAKA",
+          "move_delay": 10,
+          "warp_delay": 30
+        },
+        "skin": {
+          "active": false,
+          "interval": 0.5
+        },
+        "spam": {
+          "active": false,
+          "color": false,
+          "emote": false,
+          "interval": 4.0,
+          "random_interval": false,
+          "randomizer": false,
+          "texts": []
+        },
+        "startopia": {
+          "active": false,
+          "auto_gemonade": false,
+          "auto_spice": false,
+          "blast": 2,
+          "mode": 0,
+          "primary": "",
+          "reward": "",
+          "secondary": "",
+          "sector": 3
+        },
+        "synth": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "x": 0,
+          "y": 0
+        },
+        "transfer": {
+          "active": false,
+          "auto_buy": false,
+          "auto_restock": false,
+          "drop_vertical": false,
+          "id": 0,
+          "input": "",
+          "item_price": 0,
+          "output": "",
+          "per_item": false
+        },
+        "tutorial": {
+          "auto_quest": true,
+          "clear_inventory": true,
+          "detect_tutorial": false,
+          "enabled": true,
+          "set_as_home": true,
+          "set_high_level": true,
+          "set_random_profile": true,
+          "set_random_skin": false
+        },
+        "zombie": {
+          "active": false,
+          "gvirus": "",
+          "infect_mode": false,
+          "limit": 5,
+          "main": "",
+          "punch_door": false,
+          "punch_mode": false,
+          "reward": ""
+        }
+      },
+      "credentials": {
+        "aat": 2,
+        "age": 18,
+        "aid": "",
+        "appleCookie": "",
+        "appleData": "",
+        "category": "_-5100",
+        "country": "",
+        "custom": true,
+        "display": "",
+        "gid": "0870aeef-06a4-eabd-078a-791c0135b8fd",
+        "guest": "",
+        "h-ua": "\"Not=A?Brand\";v=\"99\", \"Opera\";v=\"76\", \"Chromium\";v=\"90\"",
+        "hash": 515650325,
+        "ltoken": "BEMNEMJre8Q8syPw6oX7+7XydVegg7TSSWlt+15+kwkteXpOVMmle1jqK6utV5DkRpDv96+e3iivhG1IsBmBzBIhwtC+lYOi3Lgz09I5gLZsEKlyXFeMoSw1tizpY1X4zImaHnen83NNxlgbFDf7/j7WOVeIknlM6dJqKoJ97KzbErZPwSoHVgGHhTqzlc3sJS5Iirw7dV4zwjIxaL1H3aehEIB0HptU2w5MsOJhftlOJ/fWjVkoDKWSrRfN2RC4l84unb5rXTDkIcvjlCfdexlz0WgqLdD77k5cGbSePtYYRTWWYwpZHlqbuxh+CmnzelaP5eN2i79iRs3ir/yFjdH7UyM74JIXFfkVH8yvNJsLcTbsDXTbKDz7amMo10yYPgV3H5XhtkJWj2KRvyFQQM++/ZRs6aHxyF/Sy+7Rdx6/IQWlN1usiLnVJxQueY+yCHuyN5OPna9N+e6hMsgpmg==",
+        "ltokents": 1758621645,
+        "mac": "02:00:00:00:00:00",
+        "platform": 1,
+        "rid": "DEA0FB2CA86217EB218C301194DC4B08",
+        "secret": "",
+        "steam_login": "",
+        "steam_token": "",
+        "ua": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "vid": "",
+        "wk": "815BF60967C1F0C1A72BD384666AF33D"
+      },
+      "dialog": {
+        "display_image": false,
+        "show_store": true
+      },
+      "intervals": [
+        0.23499999940395355,
+        0.10000000149011612,
+        0.15000000596046448,
+        0.15000000596046448,
+        0.1599999964237213,
+        0.1599999964237213,
+        10.0,
+        4.0,
+        4.0
+      ],
+      "level": 24,
+      "mail": "",
+      "main": {
+        "birth_storage": "",
+        "cloth_ids": [
+          12994,
+          8846,
+          0,
+          0,
+          0,
+          98,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collect": {
+          "collect_all": true,
+          "delay": 200,
+          "enabled": false,
+          "essence": false,
+          "gem": false,
+          "path_check": false,
+          "range": 10
+        },
+        "console": {
+          "enabled": true,
+          "show_ts": true
+        },
+        "consume_id": 0,
+        "consume_interval": 1800.0,
+        "gem_limit": 1000000,
+        "hose_storage": "",
+        "log": {
+          "enabled": false,
+          "generic": false,
+          "http": false,
+          "incoming": true,
+          "limit": true,
+          "message": false,
+          "outgoing": false,
+          "track": false,
+          "update": false,
+          "variantlist": false
+        },
+        "max_reconnect_interval": 18,
+        "maximum_ping": 1800,
+        "maximum_warp": 10,
+        "min_reconnect_interval": 12,
+        "move_range": 6,
+        "move_x": 6,
+        "move_y": 2,
+        "obtained_gems": 3,
+        "obtained_packs": 0,
+        "preferences": 5243600,
+        "reconnect_interval": 13,
+        "rest_interval": 600,
+        "rest_time": 60,
+        "selected_pack": 0,
+        "wear_storage": "ZEZ9999|ZEROAJA1"
+      },
+      "name": "kifafaka",
+      "pass": "",
+      "recovery": ""
+    },
+    {
+      "automations": {
+        "blarney": {
+          "active": false,
+          "lvl": 10,
+          "storage": ""
+        },
+        "build": {
+          "active": false,
+          "custom_id": "",
+          "door_id": 12,
+          "entrance_id": 224,
+          "insert_rotation": true,
+          "item_storage": "",
+          "name_length": 5,
+          "no_cave": true,
+          "no_lava": true,
+          "no_number": false,
+          "output_path": "farm.txt",
+          "platform_id": 102,
+          "soil_mode": false,
+          "soil_storage": "",
+          "use_fire": false,
+          "use_plat": false,
+          "use_water": false
+        },
+        "carnival": {
+          "active": false,
+          "buy": false,
+          "game": 0,
+          "reward": "",
+          "ticket": "",
+          "trash": false
+        },
+        "clear": {
+          "active": false,
+          "item_storage": "",
+          "keep_jammer": false,
+          "keep_lock": true,
+          "name_length": 5,
+          "no_number": false,
+          "output_path": "clear.txt",
+          "seed_storage": ""
+        },
+        "combine": {
+          "active": false,
+          "combine_world": "",
+          "id": 0,
+          "ingredient_storage": "",
+          "ingredients": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "output_world": ""
+        },
+        "crime": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "villains": "0000000000000000000"
+        },
+        "event": {
+          "active": false,
+          "storage": ""
+        },
+        "farm": {
+          "active": false,
+          "auto_break": true,
+          "auto_place": true,
+          "auto_retrieve": false,
+          "block_storage": "AFILFENCE2|NOWXX123",
+          "item": 8640,
+          "mag_x": -1,
+          "mag_y": -1,
+          "seed_storage": "CSHARDNY|NOWXX123",
+          "take_remote": false,
+          "tiles": 896
+        },
+        "fish": {
+          "active": false,
+          "auto_drill": false,
+          "auto_gemonade": false,
+          "auto_trash": false,
+          "auto_trawler": false,
+          "bait": 0,
+          "bait_storage": "",
+          "reward_storage": "",
+          "rod": 0,
+          "world": "",
+          "x": 0,
+          "y": 0
+        },
+        "fossil": {
+          "active": false,
+          "interval": 1.0,
+          "loop": false,
+          "reward": "",
+          "tool": "",
+          "use_rock": true
+        },
+        "geiger": {
+          "active": false,
+          "chocolate": false,
+          "insta_path": true,
+          "selected_storage": "",
+          "selected_world": ""
+        },
+        "harvest": {
+          "active": false,
+          "recycleMode": false,
+          "storage": "BIRUJEMBUT5|SUKILIAR9",
+          "useFuel": false
+        },
+        "malady": {
+          "active": false,
+          "auto_chicken_feet": false,
+          "auto_disconnect": false,
+          "auto_grumbleteeth": false,
+          "auto_refresh": true,
+          "auto_surgery_station": false,
+          "auto_vial": false,
+          "disconnect_interval": 10,
+          "storage": "",
+          "use_home": false,
+          "vial": 2
+        },
+        "message": {
+          "active": false,
+          "anti_exit": false,
+          "auto_sb": false,
+          "ignore": false,
+          "interval": 5.0,
+          "loop_mode": false,
+          "message": "",
+          "type": 3
+        },
+        "npc": {
+          "active": false,
+          "auto_spawner": false,
+          "auto_sucker": false,
+          "collect_mode": false,
+          "item": "",
+          "main": "",
+          "reward": "",
+          "spawner_limit": 100,
+          "sucker_limit": 5
+        },
+        "pack": {
+          "active": false,
+          "storage": ""
+        },
+        "parkour": {
+          "active": false,
+          "block": 0,
+          "game": 0,
+          "limit": 1,
+          "reward": "",
+          "ticket": ""
+        },
+        "plant": {
+          "active": false,
+          "storage": "MASLGRID969|ROSI456"
+        },
+        "rotation": {
+          "active": false,
+          "auto_exchange": false,
+          "auto_fill": false,
+          "auto_fossil": true,
+          "auto_jammer": true,
+          "auto_leave": false,
+          "auto_rest": false,
+          "break_tile": 896,
+          "break_x": 3,
+          "break_y": 1,
+          "clear_history": false,
+          "custom_position": false,
+          "detect_objects": true,
+          "harvest_roots": false,
+          "harvest_till_level": false,
+          "ignore_plant": false,
+          "item": 0,
+          "legacy_mode": false,
+          "pnb_in_home": true,
+          "pnb_world": "",
+          "primary": 0,
+          "secondary": 0,
+          "seed_amount": 100,
+          "suppress_pack_storage": false,
+          "suppress_seed_storage": false,
+          "webhook": false,
+          "webhook_interval": 300,
+          "webhook_link": ""
+        },
+        "setpos": {
+          "action_list": [
+            {
+              "data": "",
+              "type": 0,
+              "x": 89,
+              "y": 18
+            }
+          ],
+          "active": false,
+          "main": "RASUWOLO",
+          "move_delay": 10,
+          "warp_delay": 30
+        },
+        "skin": {
+          "active": false,
+          "interval": 0.5
+        },
+        "spam": {
+          "active": false,
+          "color": false,
+          "emote": false,
+          "interval": 4.0,
+          "random_interval": false,
+          "randomizer": false,
+          "texts": []
+        },
+        "startopia": {
+          "active": false,
+          "auto_gemonade": false,
+          "auto_spice": false,
+          "blast": 2,
+          "mode": 0,
+          "primary": "",
+          "reward": "",
+          "secondary": "",
+          "sector": 3
+        },
+        "synth": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "x": 0,
+          "y": 0
+        },
+        "transfer": {
+          "active": false,
+          "auto_buy": false,
+          "auto_restock": false,
+          "drop_vertical": false,
+          "id": 0,
+          "input": "",
+          "item_price": 0,
+          "output": "",
+          "per_item": false
+        },
+        "tutorial": {
+          "auto_quest": true,
+          "clear_inventory": true,
+          "detect_tutorial": false,
+          "enabled": true,
+          "set_as_home": true,
+          "set_high_level": true,
+          "set_random_profile": true,
+          "set_random_skin": false
+        },
+        "zombie": {
+          "active": false,
+          "gvirus": "",
+          "infect_mode": false,
+          "limit": 5,
+          "main": "",
+          "punch_door": false,
+          "punch_mode": false,
+          "reward": ""
+        }
+      },
+      "credentials": {
+        "aat": 2,
+        "age": 20,
+        "aid": "",
+        "appleCookie": "",
+        "appleData": "",
+        "category": "_-5100",
+        "country": "",
+        "custom": true,
+        "display": "",
+        "gid": "0ae62076-0af2-053d-0138-44ab02cc9b14",
+        "guest": "",
+        "h-ua": "\"Not=A?Brand\";v=\"99\", \"Chromium\";v=\"90\", \"Microsoft Edge\";v=\"90\"",
+        "hash": -469940859,
+        "ltoken": "BEMNEMJre8Q8syPw6oX7++2Vipv2rlplvtKgkDy7ekcOwOXW/V8D+AqxauUyAbCIrDJvT6EX0tf4ZSdQqXc69xS/4+8Lrv4HTj8yO4jlMka+V8oL8P0Q/N3FOfcGGps7/UbHxkvlJJrqgXGPUixkmbbzGWxW0xF11j73RIu+llvRY0T9IDj+PtYgZ7VBkyBD8+kSoh99K27Te8yuxzEOdmQWVe9KZ2dyw2CYAV86zfHgf23k+iAR5KspPqvUPdxsVr8FOzzrD/DBC4MxG5zZJQq5qWh3I5To9ZFoT1HkyiSxgpSzC0BNp2eCmaiVXmo9Bz20slYcvwIA3GizzCU0WkP4e30TFIuIhaOxKmk5Z4ai2jCURmDyP61Sr4gIY0lS6K0Ju+MRZ1t5SJSARWCKw/8615uKBERGmMg5tNyYXqHBMCDbdatmZXnvNYRtIYSkL03NtdocIhpKUnq0Y+9vQA==",
+        "ltokents": 1758621648,
+        "mac": "02:00:00:00:00:00",
+        "platform": 1,
+        "rid": "87DF79A4BC2CC6675AB93BCA8343DF8A",
+        "secret": "",
+        "steam_login": "",
+        "steam_token": "",
+        "ua": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "vid": "",
+        "wk": "75906FD2D0612C1F079B339469E41158"
+      },
+      "dialog": {
+        "display_image": false,
+        "show_store": true
+      },
+      "intervals": [
+        0.23499999940395355,
+        0.10000000149011612,
+        0.15000000596046448,
+        0.15000000596046448,
+        0.1599999964237213,
+        0.1599999964237213,
+        10.0,
+        4.0,
+        4.0
+      ],
+      "level": 24,
+      "mail": "",
+      "main": {
+        "birth_storage": "",
+        "cloth_ids": [
+          12994,
+          8846,
+          0,
+          0,
+          0,
+          98,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collect": {
+          "collect_all": true,
+          "delay": 200,
+          "enabled": false,
+          "essence": false,
+          "gem": false,
+          "path_check": false,
+          "range": 10
+        },
+        "console": {
+          "enabled": true,
+          "show_ts": true
+        },
+        "consume_id": 0,
+        "consume_interval": 1800.0,
+        "gem_limit": 1000000,
+        "hose_storage": "",
+        "log": {
+          "enabled": false,
+          "generic": false,
+          "http": false,
+          "incoming": true,
+          "limit": true,
+          "message": false,
+          "outgoing": false,
+          "track": false,
+          "update": false,
+          "variantlist": false
+        },
+        "max_reconnect_interval": 18,
+        "maximum_ping": 1800,
+        "maximum_warp": 10,
+        "min_reconnect_interval": 12,
+        "move_range": 6,
+        "move_x": 6,
+        "move_y": 2,
+        "obtained_gems": 5,
+        "obtained_packs": 0,
+        "preferences": 5243600,
+        "reconnect_interval": 15,
+        "rest_interval": 600,
+        "rest_time": 60,
+        "selected_pack": 0,
+        "wear_storage": "ZEZ9999|ZEROAJA1"
+      },
+      "name": "rasuwolo",
+      "pass": "",
+      "recovery": ""
+    },
+    {
+      "automations": {
+        "blarney": {
+          "active": false,
+          "lvl": 10,
+          "storage": ""
+        },
+        "build": {
+          "active": false,
+          "custom_id": "",
+          "door_id": 12,
+          "entrance_id": 224,
+          "insert_rotation": true,
+          "item_storage": "",
+          "name_length": 5,
+          "no_cave": true,
+          "no_lava": true,
+          "no_number": false,
+          "output_path": "farm.txt",
+          "platform_id": 102,
+          "soil_mode": false,
+          "soil_storage": "",
+          "use_fire": false,
+          "use_plat": false,
+          "use_water": false
+        },
+        "carnival": {
+          "active": false,
+          "buy": false,
+          "game": 0,
+          "reward": "",
+          "ticket": "",
+          "trash": false
+        },
+        "clear": {
+          "active": false,
+          "item_storage": "",
+          "keep_jammer": false,
+          "keep_lock": true,
+          "name_length": 5,
+          "no_number": false,
+          "output_path": "clear.txt",
+          "seed_storage": ""
+        },
+        "combine": {
+          "active": false,
+          "combine_world": "",
+          "id": 0,
+          "ingredient_storage": "",
+          "ingredients": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "output_world": ""
+        },
+        "crime": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "villains": "0000000000000000000"
+        },
+        "event": {
+          "active": false,
+          "storage": ""
+        },
+        "farm": {
+          "active": false,
+          "auto_break": true,
+          "auto_place": true,
+          "auto_retrieve": false,
+          "block_storage": "AFILFENCE2|NOWXX123",
+          "item": 8640,
+          "mag_x": -1,
+          "mag_y": -1,
+          "seed_storage": "CSHARDNY|NOWXX123",
+          "take_remote": false,
+          "tiles": 896
+        },
+        "fish": {
+          "active": false,
+          "auto_drill": false,
+          "auto_gemonade": false,
+          "auto_trash": false,
+          "auto_trawler": false,
+          "bait": 0,
+          "bait_storage": "",
+          "reward_storage": "",
+          "rod": 0,
+          "world": "",
+          "x": 0,
+          "y": 0
+        },
+        "fossil": {
+          "active": false,
+          "interval": 1.0,
+          "loop": false,
+          "reward": "",
+          "tool": "",
+          "use_rock": true
+        },
+        "geiger": {
+          "active": false,
+          "chocolate": false,
+          "insta_path": true,
+          "selected_storage": "",
+          "selected_world": ""
+        },
+        "harvest": {
+          "active": false,
+          "recycleMode": false,
+          "storage": "BIRUJEMBUT5|SUKILIAR9",
+          "useFuel": false
+        },
+        "malady": {
+          "active": false,
+          "auto_chicken_feet": false,
+          "auto_disconnect": false,
+          "auto_grumbleteeth": false,
+          "auto_refresh": true,
+          "auto_surgery_station": false,
+          "auto_vial": false,
+          "disconnect_interval": 10,
+          "storage": "",
+          "use_home": false,
+          "vial": 2
+        },
+        "message": {
+          "active": false,
+          "anti_exit": false,
+          "auto_sb": false,
+          "ignore": false,
+          "interval": 5.0,
+          "loop_mode": false,
+          "message": "",
+          "type": 3
+        },
+        "npc": {
+          "active": false,
+          "auto_spawner": false,
+          "auto_sucker": false,
+          "collect_mode": false,
+          "item": "",
+          "main": "",
+          "reward": "",
+          "spawner_limit": 100,
+          "sucker_limit": 5
+        },
+        "pack": {
+          "active": false,
+          "storage": ""
+        },
+        "parkour": {
+          "active": false,
+          "block": 0,
+          "game": 0,
+          "limit": 1,
+          "reward": "",
+          "ticket": ""
+        },
+        "plant": {
+          "active": false,
+          "storage": "MASLGRID969|ROSI456"
+        },
+        "rotation": {
+          "active": false,
+          "auto_exchange": false,
+          "auto_fill": false,
+          "auto_fossil": true,
+          "auto_jammer": true,
+          "auto_leave": false,
+          "auto_rest": false,
+          "break_tile": 896,
+          "break_x": 3,
+          "break_y": 1,
+          "clear_history": false,
+          "custom_position": false,
+          "detect_objects": true,
+          "harvest_roots": false,
+          "harvest_till_level": false,
+          "ignore_plant": false,
+          "item": 0,
+          "legacy_mode": false,
+          "pnb_in_home": true,
+          "pnb_world": "",
+          "primary": 0,
+          "secondary": 0,
+          "seed_amount": 100,
+          "suppress_pack_storage": false,
+          "suppress_seed_storage": false,
+          "webhook": false,
+          "webhook_interval": 300,
+          "webhook_link": ""
+        },
+        "setpos": {
+          "action_list": [
+            {
+              "data": "",
+              "type": 0,
+              "x": 89,
+              "y": 18
+            }
+          ],
+          "active": false,
+          "main": "SOMECEZA",
+          "move_delay": 10,
+          "warp_delay": 30
+        },
+        "skin": {
+          "active": false,
+          "interval": 0.5
+        },
+        "spam": {
+          "active": false,
+          "color": false,
+          "emote": false,
+          "interval": 4.0,
+          "random_interval": false,
+          "randomizer": false,
+          "texts": []
+        },
+        "startopia": {
+          "active": false,
+          "auto_gemonade": false,
+          "auto_spice": false,
+          "blast": 2,
+          "mode": 0,
+          "primary": "",
+          "reward": "",
+          "secondary": "",
+          "sector": 3
+        },
+        "synth": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "x": 0,
+          "y": 0
+        },
+        "transfer": {
+          "active": false,
+          "auto_buy": false,
+          "auto_restock": false,
+          "drop_vertical": false,
+          "id": 0,
+          "input": "",
+          "item_price": 0,
+          "output": "",
+          "per_item": false
+        },
+        "tutorial": {
+          "auto_quest": true,
+          "clear_inventory": true,
+          "detect_tutorial": false,
+          "enabled": true,
+          "set_as_home": true,
+          "set_high_level": true,
+          "set_random_profile": true,
+          "set_random_skin": false
+        },
+        "zombie": {
+          "active": false,
+          "gvirus": "",
+          "infect_mode": false,
+          "limit": 5,
+          "main": "",
+          "punch_door": false,
+          "punch_mode": false,
+          "reward": ""
+        }
+      },
+      "credentials": {
+        "aat": 2,
+        "age": 22,
+        "aid": "",
+        "appleCookie": "",
+        "appleData": "",
+        "category": "_-5100",
+        "country": "",
+        "custom": true,
+        "display": "",
+        "gid": "0acd919e-00a9-29fe-019f-05d0038db74d",
+        "guest": "",
+        "h-ua": "\"Microsoft Edge\";v=\"90\", \"Microsoft Edge\";v=\"90\", \"Microsoft Edge\";v=\"90\"",
+        "hash": 446674443,
+        "ltoken": "BEMNEMJre8Q8syPw6oX7+71v57XzEY4QOIDtUJwMtFNdHlvbZeHcsdhEqbqBe2H+L+/MWNwWb8MF8ZNCcaJaM+QTjcPCh10TnRU4e21cXho4yBrnA/4jgXISaBnyzsoHgMxWuF+vBSu4kDXT2CDBn5HjbHXJy5Ptigp3+LC3jK/LkbkNEft7W48ylLq/YVXGojw5rWHUaZ/G0rkR6+gel0vj9izruEXcbm3LFDtRRRxLppJaSVwATC8hEieMjNnNjflRbRqLJdUEo3oIKLnYMH6Q1hjAemjj8pUyGJTGtXA0DHvYGWRhwj7b9P3erHuKUZb5xM8GxzlFD4PC34b8Bw393G/MhNQpm2TAhzJnPkRQ9OuruAHsaANxZQGGcP/sYdJHohgZC7d9PiXYZKS1MHK4sm2OvwjkFPHxCLQSczrWUcDcARffQrIWUh61kvGvDJ435qmlL19hp74L+M3t7g==",
+        "ltokents": 1758621657,
+        "mac": "02:00:00:00:00:00",
+        "platform": 1,
+        "rid": "AFB3C9D2C4646F4DE377F85065E0A586",
+        "secret": "",
+        "steam_login": "",
+        "steam_token": "",
+        "ua": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "vid": "",
+        "wk": "458BFDF9F41535C30C9948127E57F10C"
+      },
+      "dialog": {
+        "display_image": false,
+        "show_store": true
+      },
+      "intervals": [
+        0.23499999940395355,
+        0.10000000149011612,
+        0.15000000596046448,
+        0.15000000596046448,
+        0.1599999964237213,
+        0.1599999964237213,
+        10.0,
+        4.0,
+        4.0
+      ],
+      "level": 24,
+      "mail": "",
+      "main": {
+        "birth_storage": "",
+        "cloth_ids": [
+          12994,
+          8846,
+          0,
+          0,
+          0,
+          98,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collect": {
+          "collect_all": true,
+          "delay": 200,
+          "enabled": false,
+          "essence": false,
+          "gem": false,
+          "path_check": false,
+          "range": 10
+        },
+        "console": {
+          "enabled": true,
+          "show_ts": true
+        },
+        "consume_id": 0,
+        "consume_interval": 1800.0,
+        "gem_limit": 1000000,
+        "hose_storage": "",
+        "log": {
+          "enabled": false,
+          "generic": false,
+          "http": false,
+          "incoming": true,
+          "limit": true,
+          "message": false,
+          "outgoing": false,
+          "track": false,
+          "update": false,
+          "variantlist": false
+        },
+        "max_reconnect_interval": 18,
+        "maximum_ping": 1800,
+        "maximum_warp": 10,
+        "min_reconnect_interval": 12,
+        "move_range": 6,
+        "move_x": 6,
+        "move_y": 2,
+        "obtained_gems": 1,
+        "obtained_packs": 0,
+        "preferences": 5243600,
+        "reconnect_interval": 13,
+        "rest_interval": 600,
+        "rest_time": 60,
+        "selected_pack": 0,
+        "wear_storage": "ZEZ9999|ZEROAJA1"
+      },
+      "name": "someceza",
+      "pass": "",
+      "recovery": ""
+    },
+    {
+      "automations": {
+        "blarney": {
+          "active": false,
+          "lvl": 10,
+          "storage": ""
+        },
+        "build": {
+          "active": false,
+          "custom_id": "",
+          "door_id": 12,
+          "entrance_id": 224,
+          "insert_rotation": true,
+          "item_storage": "",
+          "name_length": 5,
+          "no_cave": true,
+          "no_lava": true,
+          "no_number": false,
+          "output_path": "farm.txt",
+          "platform_id": 102,
+          "soil_mode": false,
+          "soil_storage": "",
+          "use_fire": false,
+          "use_plat": false,
+          "use_water": false
+        },
+        "carnival": {
+          "active": false,
+          "buy": false,
+          "game": 0,
+          "reward": "",
+          "ticket": "",
+          "trash": false
+        },
+        "clear": {
+          "active": false,
+          "item_storage": "",
+          "keep_jammer": false,
+          "keep_lock": true,
+          "name_length": 5,
+          "no_number": false,
+          "output_path": "clear.txt",
+          "seed_storage": ""
+        },
+        "combine": {
+          "active": false,
+          "combine_world": "",
+          "id": 0,
+          "ingredient_storage": "",
+          "ingredients": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "output_world": ""
+        },
+        "crime": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "villains": "0000000000000000000"
+        },
+        "event": {
+          "active": false,
+          "storage": ""
+        },
+        "farm": {
+          "active": false,
+          "auto_break": true,
+          "auto_place": true,
+          "auto_retrieve": false,
+          "block_storage": "AFILFENCE2|NOWXX123",
+          "item": 8640,
+          "mag_x": -1,
+          "mag_y": -1,
+          "seed_storage": "CSHARDNY|NOWXX123",
+          "take_remote": false,
+          "tiles": 896
+        },
+        "fish": {
+          "active": false,
+          "auto_drill": false,
+          "auto_gemonade": false,
+          "auto_trash": false,
+          "auto_trawler": false,
+          "bait": 0,
+          "bait_storage": "",
+          "reward_storage": "",
+          "rod": 0,
+          "world": "",
+          "x": 0,
+          "y": 0
+        },
+        "fossil": {
+          "active": false,
+          "interval": 1.0,
+          "loop": false,
+          "reward": "",
+          "tool": "",
+          "use_rock": true
+        },
+        "geiger": {
+          "active": false,
+          "chocolate": false,
+          "insta_path": true,
+          "selected_storage": "",
+          "selected_world": ""
+        },
+        "harvest": {
+          "active": false,
+          "recycleMode": false,
+          "storage": "BIRUJEMBUT5|SUKILIAR9",
+          "useFuel": false
+        },
+        "malady": {
+          "active": false,
+          "auto_chicken_feet": false,
+          "auto_disconnect": false,
+          "auto_grumbleteeth": false,
+          "auto_refresh": true,
+          "auto_surgery_station": false,
+          "auto_vial": false,
+          "disconnect_interval": 10,
+          "storage": "",
+          "use_home": false,
+          "vial": 2
+        },
+        "message": {
+          "active": false,
+          "anti_exit": false,
+          "auto_sb": false,
+          "ignore": false,
+          "interval": 5.0,
+          "loop_mode": false,
+          "message": "",
+          "type": 3
+        },
+        "npc": {
+          "active": false,
+          "auto_spawner": false,
+          "auto_sucker": false,
+          "collect_mode": false,
+          "item": "",
+          "main": "",
+          "reward": "",
+          "spawner_limit": 100,
+          "sucker_limit": 5
+        },
+        "pack": {
+          "active": false,
+          "storage": ""
+        },
+        "parkour": {
+          "active": false,
+          "block": 0,
+          "game": 0,
+          "limit": 1,
+          "reward": "",
+          "ticket": ""
+        },
+        "plant": {
+          "active": false,
+          "storage": "MASLGRID969|ROSI456"
+        },
+        "rotation": {
+          "active": false,
+          "auto_exchange": false,
+          "auto_fill": false,
+          "auto_fossil": true,
+          "auto_jammer": true,
+          "auto_leave": false,
+          "auto_rest": false,
+          "break_tile": 896,
+          "break_x": 3,
+          "break_y": 1,
+          "clear_history": false,
+          "custom_position": false,
+          "detect_objects": true,
+          "harvest_roots": false,
+          "harvest_till_level": false,
+          "ignore_plant": false,
+          "item": 0,
+          "legacy_mode": false,
+          "pnb_in_home": true,
+          "pnb_world": "",
+          "primary": 0,
+          "secondary": 0,
+          "seed_amount": 100,
+          "suppress_pack_storage": false,
+          "suppress_seed_storage": false,
+          "webhook": false,
+          "webhook_interval": 300,
+          "webhook_link": ""
+        },
+        "setpos": {
+          "action_list": [
+            {
+              "data": "",
+              "type": 0,
+              "x": 89,
+              "y": 18
+            }
+          ],
+          "active": false,
+          "main": "CEQUQOXE",
+          "move_delay": 10,
+          "warp_delay": 30
+        },
+        "skin": {
+          "active": false,
+          "interval": 0.5
+        },
+        "spam": {
+          "active": false,
+          "color": false,
+          "emote": false,
+          "interval": 4.0,
+          "random_interval": false,
+          "randomizer": false,
+          "texts": []
+        },
+        "startopia": {
+          "active": false,
+          "auto_gemonade": false,
+          "auto_spice": false,
+          "blast": 2,
+          "mode": 0,
+          "primary": "",
+          "reward": "",
+          "secondary": "",
+          "sector": 3
+        },
+        "synth": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "x": 0,
+          "y": 0
+        },
+        "transfer": {
+          "active": false,
+          "auto_buy": false,
+          "auto_restock": false,
+          "drop_vertical": false,
+          "id": 0,
+          "input": "",
+          "item_price": 0,
+          "output": "",
+          "per_item": false
+        },
+        "tutorial": {
+          "auto_quest": true,
+          "clear_inventory": true,
+          "detect_tutorial": false,
+          "enabled": true,
+          "set_as_home": true,
+          "set_high_level": true,
+          "set_random_profile": true,
+          "set_random_skin": false
+        },
+        "zombie": {
+          "active": false,
+          "gvirus": "",
+          "infect_mode": false,
+          "limit": 5,
+          "main": "",
+          "punch_door": false,
+          "punch_mode": false,
+          "reward": ""
+        }
+      },
+      "credentials": {
+        "aat": 2,
+        "age": 23,
+        "aid": "",
+        "appleCookie": "",
+        "appleData": "",
+        "category": "_-5100",
+        "country": "",
+        "custom": true,
+        "display": "",
+        "gid": "003328b4-06f5-f3f2-0859-002209d63658",
+        "guest": "",
+        "h-ua": "\"Chromium\";v=\"90\", \"Opera\";v=\"76\", \"Microsoft Edge\";v=\"90\"",
+        "hash": 1652298654,
+        "ltoken": "BEMNEMJre8Q8syPw6oX7+2LchY4T3KqfGP4qIKUjS8ao/mR8NfCJOejOS7qy2BRchc532noSFEp2wKqzrTT0RFbKUfHQEGqzdxoW5Rw/S1MUuyxgrDcAh3OV9MSQ2uMnSG15f6xUiX5R2kwF2nP4CCtjFfxlhNjX76Sh8jlqDhu6SUb9XeM6AoLfNGkuFAXsmGMN58fHoqOhZvwJap4oT6gGmuiVAPZy1w79YZC37Wq0HwTHNNV/x4QgnrQz8bNWs6iCEcxksjX1pJ/+IyyhwKlLbJEknA/DmwJY3Z6UxZYUKeByYAbjmYpLmLpnjIS20qCAOTEAIOycAgYnjyjY6tniq3PhHywhFONHfER6LF+xtTdnjQhUqaeHTj2og83Mn/b5qzFsT8nd2cn7pHhHiX1yiqDHSKtEBVL1pF1FDTcrA6UFVnA+t0d77m+L1Cp9MA7WUI+g2kmm0YnXGjSIuA==",
+        "ltokents": 1758621660,
+        "mac": "02:00:00:00:00:00",
+        "platform": 1,
+        "rid": "DF44D9790A49D5FF2D333A8745BD05BD",
+        "secret": "",
+        "steam_login": "",
+        "steam_token": "",
+        "ua": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "vid": "",
+        "wk": "9FFC68F2C7242F42EF09BC66922BD6EB"
+      },
+      "dialog": {
+        "display_image": false,
+        "show_store": true
+      },
+      "intervals": [
+        0.23499999940395355,
+        0.10000000149011612,
+        0.15000000596046448,
+        0.15000000596046448,
+        0.1599999964237213,
+        0.1599999964237213,
+        10.0,
+        4.0,
+        4.0
+      ],
+      "level": 24,
+      "mail": "",
+      "main": {
+        "birth_storage": "",
+        "cloth_ids": [
+          12994,
+          8846,
+          0,
+          0,
+          0,
+          98,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collect": {
+          "collect_all": true,
+          "delay": 200,
+          "enabled": false,
+          "essence": false,
+          "gem": false,
+          "path_check": false,
+          "range": 10
+        },
+        "console": {
+          "enabled": true,
+          "show_ts": true
+        },
+        "consume_id": 0,
+        "consume_interval": 1800.0,
+        "gem_limit": 1000000,
+        "hose_storage": "",
+        "log": {
+          "enabled": false,
+          "generic": false,
+          "http": false,
+          "incoming": true,
+          "limit": true,
+          "message": false,
+          "outgoing": false,
+          "track": false,
+          "update": false,
+          "variantlist": false
+        },
+        "max_reconnect_interval": 18,
+        "maximum_ping": 1800,
+        "maximum_warp": 10,
+        "min_reconnect_interval": 12,
+        "move_range": 6,
+        "move_x": 6,
+        "move_y": 2,
+        "obtained_gems": 3,
+        "obtained_packs": 0,
+        "preferences": 5243600,
+        "reconnect_interval": 16,
+        "rest_interval": 600,
+        "rest_time": 60,
+        "selected_pack": 0,
+        "wear_storage": "ZEZ9999|ZEROAJA1"
+      },
+      "name": "cequqoxe",
+      "pass": "",
+      "recovery": ""
+    },
+    {
+      "automations": {
+        "blarney": {
+          "active": false,
+          "lvl": 10,
+          "storage": ""
+        },
+        "build": {
+          "active": false,
+          "custom_id": "",
+          "door_id": 12,
+          "entrance_id": 224,
+          "insert_rotation": true,
+          "item_storage": "",
+          "name_length": 5,
+          "no_cave": true,
+          "no_lava": true,
+          "no_number": false,
+          "output_path": "farm.txt",
+          "platform_id": 102,
+          "soil_mode": false,
+          "soil_storage": "",
+          "use_fire": false,
+          "use_plat": false,
+          "use_water": false
+        },
+        "carnival": {
+          "active": false,
+          "buy": false,
+          "game": 0,
+          "reward": "",
+          "ticket": "",
+          "trash": false
+        },
+        "clear": {
+          "active": false,
+          "item_storage": "",
+          "keep_jammer": false,
+          "keep_lock": true,
+          "name_length": 5,
+          "no_number": false,
+          "output_path": "clear.txt",
+          "seed_storage": ""
+        },
+        "combine": {
+          "active": false,
+          "combine_world": "",
+          "id": 0,
+          "ingredient_storage": "",
+          "ingredients": [
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "output_world": ""
+        },
+        "crime": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "villains": "0000000000000000000"
+        },
+        "event": {
+          "active": false,
+          "storage": ""
+        },
+        "farm": {
+          "active": false,
+          "auto_break": true,
+          "auto_place": true,
+          "auto_retrieve": false,
+          "block_storage": "",
+          "item": 0,
+          "mag_x": -1,
+          "mag_y": -1,
+          "seed_storage": "",
+          "take_remote": false,
+          "tiles": 0
+        },
+        "fish": {
+          "active": false,
+          "auto_drill": false,
+          "auto_gemonade": false,
+          "auto_trash": false,
+          "auto_trawler": false,
+          "bait": 0,
+          "bait_storage": "",
+          "reward_storage": "",
+          "rod": 0,
+          "world": "",
+          "x": 0,
+          "y": 0
+        },
+        "fossil": {
+          "active": false,
+          "interval": 1.0,
+          "loop": false,
+          "reward": "",
+          "tool": "",
+          "use_rock": true
+        },
+        "geiger": {
+          "active": false,
+          "chocolate": false,
+          "insta_path": true,
+          "selected_storage": "",
+          "selected_world": ""
+        },
+        "harvest": {
+          "active": true,
+          "recycleMode": false,
+          "storage": "JEEFENCE1|ROSI456",
+          "useFuel": false
+        },
+        "malady": {
+          "active": false,
+          "auto_chicken_feet": false,
+          "auto_disconnect": false,
+          "auto_grumbleteeth": false,
+          "auto_refresh": true,
+          "auto_surgery_station": false,
+          "auto_vial": false,
+          "disconnect_interval": 10,
+          "storage": "",
+          "use_home": false,
+          "vial": 2
+        },
+        "message": {
+          "active": false,
+          "anti_exit": false,
+          "auto_sb": false,
+          "ignore": false,
+          "interval": 5.0,
+          "loop_mode": false,
+          "message": "",
+          "type": 3
+        },
+        "npc": {
+          "active": false,
+          "auto_spawner": false,
+          "auto_sucker": false,
+          "collect_mode": false,
+          "item": "",
+          "main": "",
+          "reward": "",
+          "spawner_limit": 100,
+          "sucker_limit": 5
+        },
+        "pack": {
+          "active": false,
+          "storage": ""
+        },
+        "parkour": {
+          "active": false,
+          "block": 0,
+          "game": 0,
+          "limit": 1,
+          "reward": "",
+          "ticket": ""
+        },
+        "plant": {
+          "active": false,
+          "storage": ""
+        },
+        "rotation": {
+          "active": false,
+          "auto_exchange": false,
+          "auto_fill": false,
+          "auto_fossil": true,
+          "auto_jammer": true,
+          "auto_leave": false,
+          "auto_rest": false,
+          "break_tile": 896,
+          "break_x": 3,
+          "break_y": 1,
+          "clear_history": false,
+          "custom_position": false,
+          "detect_objects": true,
+          "harvest_roots": false,
+          "harvest_till_level": false,
+          "ignore_plant": false,
+          "item": 0,
+          "legacy_mode": false,
+          "pnb_in_home": true,
+          "pnb_world": "",
+          "primary": 0,
+          "secondary": 0,
+          "seed_amount": 100,
+          "suppress_pack_storage": false,
+          "suppress_seed_storage": false,
+          "webhook": false,
+          "webhook_interval": 300,
+          "webhook_link": ""
+        },
+        "setpos": {
+          "action_list": null,
+          "active": false,
+          "main": "",
+          "move_delay": 10,
+          "warp_delay": 30
+        },
+        "skin": {
+          "active": false,
+          "interval": 0.5
+        },
+        "spam": {
+          "active": false,
+          "color": false,
+          "emote": false,
+          "interval": 4.0,
+          "random_interval": false,
+          "randomizer": false,
+          "texts": []
+        },
+        "startopia": {
+          "active": false,
+          "auto_gemonade": false,
+          "auto_spice": false,
+          "blast": 2,
+          "mode": 0,
+          "primary": "",
+          "reward": "",
+          "secondary": "",
+          "sector": 3
+        },
+        "synth": {
+          "active": false,
+          "main": "",
+          "reward": "",
+          "tool": "",
+          "x": 0,
+          "y": 0
+        },
+        "transfer": {
+          "active": false,
+          "auto_buy": false,
+          "auto_restock": false,
+          "drop_vertical": false,
+          "id": 0,
+          "input": "",
+          "item_price": 0,
+          "output": "",
+          "per_item": false
+        },
+        "tutorial": {
+          "auto_quest": true,
+          "clear_inventory": true,
+          "detect_tutorial": false,
+          "enabled": true,
+          "set_as_home": true,
+          "set_high_level": true,
+          "set_random_profile": true,
+          "set_random_skin": true
+        },
+        "zombie": {
+          "active": false,
+          "gvirus": "",
+          "infect_mode": false,
+          "limit": 5,
+          "main": "",
+          "punch_door": false,
+          "punch_mode": false,
+          "reward": ""
+        }
+      },
+      "credentials": {
+        "aat": 2,
+        "age": 22,
+        "aid": "",
+        "appleCookie": "",
+        "appleData": "",
+        "category": "_-5100",
+        "country": "",
+        "custom": true,
+        "display": "",
+        "gid": "00244d7a-0072-0568-0064-dcc308d336aa",
+        "guest": "",
+        "h-ua": "\"Google Chrome\";v=\"90\", \"Chromium\";v=\"90\", \"Microsoft Edge\";v=\"90\"",
+        "hash": -776362577,
+        "ltoken": "pUBUvziWqhNVU1gy9Cv8FjHFcfkAGhgyNvwvS2/MVNLtiwWjLCAgeAoLIkOjUYynt1FeXs+lkxA9RDTkadBjveYEXUjMrv+UoArgn43vwY+DMDroTtm13mJbpeFoRCh9UENPaWndL8RjZRwmX75CttttyVtBMq1FQ7B7hLJPKX3fw21ysr3OD439GUYNL72AjSxFMXsmkiIbakT/EFP0VJY1UUoWv77MENlsTSQV3ah1eOMofdTJEUqO1p9Ugc18e2LWJO3s2mAm+UZLUhXRBk1V7jAo8jlR4tSOrAYspLxeWQyRB6fa/j7lkIeq0uY9qsUIBt+3aIKGbIKwYBF5cQWwA1zlVVa5WFxx4kEBPiDZJM6f5KlCPjfCccagbHxXV2l7A2HWeRYqBED9GFWE9Kw6pq/eej9UsoHMvSiq+krvoX1DkA7dGyg7FutiyEczCvFrQqod6ShD8VwtToR27Q==",
+        "ltokents": 1758606213,
+        "mac": "9C:EC:0C:D3:53:0C",
+        "platform": 0,
+        "rid": "B0279F18A49C73EB086B338E0B20FE78",
+        "secret": "assasin011105@gmail.com",
+        "steam_login": "",
+        "steam_token": "",
+        "ua": "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "vid": "",
+        "wk": "F0AA9217FFE0434BD121287039E700E6"
+      },
+      "dialog": {
+        "display_image": false,
+        "show_store": true
+      },
+      "intervals": [
+        0.23499999940395355,
+        0.10000000149011612,
+        0.15000000596046448,
+        0.15000000596046448,
+        0.1599999964237213,
+        0.1599999964237213,
+        10.0,
+        4.0,
+        4.0
+      ],
+      "level": 20,
+      "mail": "",
+      "main": {
+        "birth_storage": "",
+        "cloth_ids": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          98,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collect": {
+          "collect_all": true,
+          "delay": 200,
+          "enabled": true,
+          "essence": false,
+          "gem": true,
+          "path_check": false,
+          "range": 3
+        },
+        "console": {
+          "enabled": true,
+          "show_ts": true
+        },
+        "consume_id": 0,
+        "consume_interval": 1800.0,
+        "gem_limit": 1000000,
+        "hose_storage": "",
+        "log": {
+          "enabled": false,
+          "generic": false,
+          "http": false,
+          "incoming": true,
+          "limit": true,
+          "message": false,
+          "outgoing": false,
+          "track": false,
+          "update": false,
+          "variantlist": false
+        },
+        "max_reconnect_interval": 18,
+        "maximum_ping": 1800,
+        "maximum_warp": 10,
+        "min_reconnect_interval": 12,
+        "move_range": 6,
+        "move_x": 6,
+        "move_y": 2,
+        "obtained_gems": 8,
+        "obtained_packs": 0,
+        "preferences": 5243601,
+        "reconnect_interval": 12,
+        "rest_interval": 600,
+        "rest_time": 60,
+        "selected_pack": 0,
+        "wear_storage": "ZEZ9999|ZEROAJA1"
+      },
+      "name": "BiruGalaxy",
+      "pass": "",
+      "recovery": ""
+    }
+  ],
+  "fish": {
+    "webhook": ""
+  },
+  "geiger": {
+    "scan_worlds": [],
+    "storage_worlds": [],
+    "webhook": ""
+  },
+  "harvest": {
+    "list": "XB7E7:ROSI456:8641\nPGJIB:ROSI456:8641\nGRGDS:ROSI456:8641\nCJOKW:ROSI456:8641\nQQJSB:ROSI456:8641\n",
+    "loop": false
+  },
+  "hospitals": [],
+  "parkour": {
+    "webhook": ""
+  },
+  "plant": {
+    "list": "",
+    "loop": false
+  },
+  "proxy_tab": {
+    "auto_check": false,
+    "auto_switch": false,
+    "bots_per_proxy": 3,
+    "bypass_cooldown": 15,
+    "bypass_http": null,
+    "bypass_socks5": null,
+    "cooldown": 1800,
+    "max_http_timeout": 8,
+    "proxies": [],
+    "refresh_cooldown": 1,
+    "spread_proxies": true,
+    "switch_on_ban": false,
+    "switch_on_shadow": false
+  },
+  "rotation": {
+    "farms": [],
+    "interval": 300,
+    "max_seed_ratio": 90.0,
+    "min_seed_ratio": 0.0,
+    "send_webhook": false,
+    "storages": [],
+    "webhook": ""
+  },
+  "settings": {
+    "disconnect_all_on_ban": false,
+    "disconnect_all_on_mod": false,
+    "theme": 5,
+    "trash_limit": 100,
+    "trash_list": [
+      5024,
+      5026,
+      5028,
+      5032,
+      5034,
+      5036,
+      5038,
+      5040,
+      5042,
+      5044,
+      7162,
+      7164
+    ]
+  },
+  "switch": {
+    "accounts": [],
+    "auto_switch": false,
+    "drop_on_switch": false,
+    "force_tutorial": false,
+    "force_wear": false,
+    "items": [],
+    "loop_mode": false,
+    "max_level": 125,
+    "max_playtime": 2592000,
+    "max_runtime": 2592000,
+    "on_aap": false,
+    "on_ban": false,
+    "on_captcha": false,
+    "on_challenge": false,
+    "on_immune": false,
+    "on_irradiated": false,
+    "on_level": false,
+    "on_playtime": false,
+    "on_runtime": false,
+    "on_zombie": false,
+    "rest": false,
+    "rest_time": 60,
+    "storage": ""
+  }
+}
