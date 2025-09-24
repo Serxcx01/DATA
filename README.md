@@ -1,68 +1,69 @@
--- SC WIR WINDOWS
---- SC WIR
+---- SC LOGIN JOEY STORE
 
-local input_text = [[
-wir_tn4urq0jyycgq228@gmail.com|8hS/97tatupWgxesdnM6VictdXuBsPmrJhoNu4wQ4NAwOXIB3ixgqHuDWKIwuAzdaGdX18EkwY8ctQtZEwQFprOrINwtAB2BA5SUYQmLI25F8yRYQlYdBFZcw/QiubBRrRn51cTInPn3X435b9gPulMbDFsHdQRTPEJEMEZNEUlDAd4JKcZNweEO0bDpvtJWSv2rV/0kNAu9TftKqrjnGL00mKKL3k/bjiSZZmF+nrbXJ8NOltHpeiSrRbArUIMx5CwCijew22UTIMHalqeMzdxKRzQfuqJk0mLhADURab2tjb/bG3ks57tWUGG5e7y5WtmnhYRW7B7lKJOsG5BpK2fEB9s7dsmlRx4lHEBYMku/vK9AdD1Anq1wpuE0GidxNULDZFiVIKrbtcokPocwtfHaz2jO5qonosP4AiqIJbXnB4doKvwBuh6/KzQVOLLesXCLcI0s9c5X6H5OPD2X7tchh6E5qypKQCi7qvY8+CoftW0pCrEHxG9nz8h/6Ee0|XA7UAT852OTZPAY91JNFHY0CKJNGFG0C
-wir_shkbpbylwjfkzl0g@gmail.com|8hS/97tatupWgxesdnM6VkVnzg1KgDj19O2VZxoTZXlRoJ/M7KiE4OdbG55BsjFvN5XQ1P1xCbt2z9QNK82iAN/Gadqeu2yfoQkHXFF1AhW1nuafnWXN5AadhvHDWaumyTcFCXg3wT0wXLt2iTA5gqOuWo1IvxzZis3G6f1J1iUjMysHGKn8umEiUopHN5W6Su4zr2OlL6Z0069gWafRrNOyB1e2mwKTAxGTIrS5W8P/wjOvyA5Stxzt95E8HDmnJSUekJn+1LrMMNa5minvFmNiDqZ7eaFBO+7tpxmUFwLU70MHLiQn7w1triUHT010xBbz3PWoGOe+37f6GSV2U53eHB6EaALoTe1fsd5LHAXuLtNGvwOdpB6L4PwJ/6PzQplOyieczGoYht2X7xdscodr3JfcKU+ChBa3koJx/W9Rtp0r71dHoXucFpGV1kgnfG4A8CzzGycb1mm6K0lFipCGrzXD8bzhudtSuHNEF1oWnbgRIzp/nT0HK1sSV60l|N7XUJS1679I26HKV3EKPW81T1G7MAPU5
-wir_x2s8qjkj5nq1s3pt@gmail.com|8hS/97tatupWgxesdnM6Vnn7Kqd6tcg/6h+fnUg1cXWyI/yZ5DinLUslr/Vn6CKM5x9qVye6e4oIdaZW8Bj2aS19p9aE1JbjiPDhtjLTGtV5N7S9qriO3hsImQTwGJvkIUDMuY7FRQ1wSGD3qQkRxjKomTS+yK3I4I75xW0Y2vo+SIw0WazSyDVBaXOtSamuUwG/BLHKEDtstE59bMpVl34S6I7svkx/1+Ycc3SMhYwm4pvDtAmpZShrsMBIiySAFRTmCsjoXmk5gy5pFPYOvgrNTH7bzab99+Odcg5vqn52g+ekeUP7NWhYcPohoHifZxyZZLISvfP3TFSLag7h8OmUhQtQWDij+4e+te9tk5OYXRewWg6t0bUoD3oS3aveE6TrptQAmkY9bsorO7UVrK3Auo6L+ESVtRrsj4CyJTjA4CFEKv4YQ/jJG/2UBV1p1zTobtQvgWYUwTNaUKcppTFbfOLwD3d3xA+Va99crDgDnEkCOFWna+axn1Xbck/c|9SSICDXLL35VRF8L5UAN14ZNFZZQ88QV
-wir_rec68uehruag1hoi@gmail.com|8hS/97tatupWgxesdnM6VmejY6gVHu8Y6r8OhvdM/nddlSQkYZqO/BtUMiJHxVaxnMNeRGmWuFoo8doVaZG3fZjirY39/y3YQ3j6CSZ8gNm6/1suw+7b7qhq81x1Iz90Y7CxPfYfnTlOPrsob9Y2pCR2Fd/Ic0NJvoqi6PcmmnP8Dg330w16Pvi4fyoho19XpK9/T7Y4qUO6eoADJDN1R2ZJiw6flZWroswGbhVaVvyGUJXlyjG9ywm8n4YeWCBvXzk+RfCNhhC9w0n9tbKuah8v09rJVpvWepSNLfmLGSt5MSqZK7OiU/NkrTT+NYXvgH88XkP6Z1/adAnk83wXdlCqc7edRkir9Pg5vDnPr5sfirXq3Agsi/hlRmG7WcepT9UowKpywhp8TkSp2J1qdFRdl8Fvxqzc3c7e7KV3dCDLGv2SX0X6OqZWtPrLK8bTspWFY+QwUZlU9mP8YXdUlgkKYpQaC2PvdO6pKD9QkWsy6enAhXfwYeuJVvzKnCs0|6Z9G7UUHQYFPB8X95HPF90U20DO5ZIJC
+local accounts = [[
+quancamyen2807@gmail.com|f5:66:56:87:70:8c:bc5473abaab6d18aaf0345a3518cf9de:402D4DAB2EE5C3D4E1EC013BA8D6B8EE:HEowg3X2sGI/3O7eZRXwOGuH7EYhZlkoldYH7ktdNeUTrGiK4dTZ3lgqqZLPla0cvKMiGTpNu/8beMzs8oNvi9L6N79ZXqPqNYLXkI3d6OVy8nf1A+BQxURoI90cbAIAAl77z+X+ln0tHAHpsOaF48/amcPXRl5rl6DpzbIe5iKRM2UCC3vZUrLBuyUG/Rs76q7gI35V7Q9X9CoGHZUJ7XKIEvoRw6bE+BY5hevBvHxM+WyDhhwI7Bk2NB/gs8wbl0jl+mM6nlEqeOiRqEIHlpw+pr40gjuwnv/A/6pu4iXNbypd6D8bhbY42MGKAMpdL6NV5FyorUbOGWcyBLyt2DvPw1oTCPE1IMa6rGS7iK6Dtt/qiIiFSPgmgIhkhdVh19+AWDA1TwfG1nuSWku5eZ7M+4ea+R+JOER3RtqBq8Ii2w9cwBKwI+URcr7xSWJNSQcnl571xLtXJ5mP7nCKlA==
+takieuoanh4371@gmail.com|83:67:89:e0:c2:2e:62d8c59cb0ade3f94b49a0f22573a47e:8D3BC512E6CCDB9653C6DD80EC6AFB9D:uDfwPsjwqFPHSjsILVho0Jt0IzgUNl7TDAvQ2ldeaB4/l92v0AS/MoF3Pb0ualAWRrBobx+/UGcyYVkn7cbYG11Qzxd1KjuVLpw+cuNvQ9l9bS8eLW86zbAAx7cu7fRd5/HHwxcjEOYH5pnZJeRo7DVxI3xhoRrhHJQFkGym8ZU9K671m+aM2EoRv/vMZ/1J9LtPdZU/8xFE7SXk8yB01u5ACLM2M3CaPFBmhYnevf1EeH7K95ypOqpp7hyhmp3y1HRiB/kuN59k1qQsZhUkwXbE+WF3UiJLGEeRBV+v5r2UGU0285xqnRdGvFKeCA/tYr8/nDiX3Cdbdr6LMrr/Uih4hxSL440AXIrZcCjtIHjASnO7RgFZbb1pOvhQL/KOuBZ6KE9PeRPSBNc5FDK4+sN5U/JTfPbw2/5jAgiMVV6SwSCMqBA1rIMrecnEfAsa6Jyg3zzs/grD/uPVo4IHmw==
+qp6142645@gmail.com|50:fa:33:97:4c:59:55982b87e9382793acf89d530c7e4f90:DB0BCB6E52CB68D8BBEB00B74A317FB6:HEowg3X2sGI/3O7eZRXwOPxALGuM1GrNkUUQL+d6xnBNslP6CWmTuLpJyG4XmGHUht+wUdtGXPGW7pnM4O6lDQUcEZnfz3NweRFoWfsPsqKZW7f4GoBGlU6Hw3mqZqs5x6ZuAWFdEN3HtVm7STbnbsFBsa4Wr5tUNiDPp0ycykgAyUHmiuJN779KB7N46hOTQrUeNudlHzu73budD/712pihi5l+id5NGUV7hGkW0quXU1FfS44jy7io1xo/8hlcA+e7L+X+6CmMaEMtzeAXR7mEqI71+Y/AtfspgoOyYyIHUnLxH9B60j1lhxFlyipb4iSxX5TR8gtMg8KJUlMFlYw9S7toC34uGEYUEkUfVBRgYpyVyaA473XutY/w+B6k//ZzPviZDb8G4avk1GZJaX4dLtvlxvm0ZhWn+df/CxOGcnNEK4EFflAXIQlZ4MfwACgW9T8s2qYEyBV6VF5rJw==
+taduyhung3853@gmail.com|e6:ce:f2:60:4e:57:2fc309250649d3b5caf6ffd2659303a6:ED90AA48A34FB808A7D930B3D3B6ADEB:uDfwPsjwqFPHSjsILVho0BxrL9gGXwLe0U5dyLHbA/FSFzgA1gRYsjeF8xRQ4QeW64BB1xSSSkYo9rgkYDA/IFv37Y2k+w67tjw/iexX+EyUUQTT15K6s7R20Lf5Dy/C6xNw1H7luauf96QQwHbUWLE3ZReCw3VwWhNB8t5rVSc34LFHbQdgiXy1niW/Tr90vLEajaaj+G0+GTw3nV3H5vSpEkA5gmsarAzJNQajwwRheUGzjlaSJdHhxsjStSJNJmSAFKlxVUDkr/LO36j5GEKWO2qqgusuh+bp7pJqjS6c14cYBgF2oanGegMxwokZSL/MwieQpOXPUvqSH7MXI1/c3HdSNquoiq/HKsCmWtYaZkP7VN69OiKD2YsSsCxNzKmSWQO9z7CxKF2DeQTO2aEHEtbNTtIeCCRbLvj9xz+kQvPvUckTK0FgqZk+UNsGzFI4GdFrhYzx1eYJmDjiXw==
+quanthienminh5450@gmail.com|6c:dc:3d:e7:62:3d:3f05a585971229493a61ce36e0f8a0f3:48C66727DBC6D3FF2B99395CC6543B91:uDfwPsjwqFPHSjsILVho0Bgwms12446FTMV/m4E6HiceH+ixMOEcmjgBjNCXkmfZdfsS3L4HyNgz9ilOTMwrWipk4mK6Ud+UHNVItCWGsqy/wPhU2W5IyPII5qLBh6AzNvGznkefZ4bFvS9tFAL4Vz9xuGQJpR2zhWcI9ODWK+m3aYUI5+WcOdbtcFaZhIOKfmKp1BM39dmX0Oc5/xJhOHNzgSjGm53oKOeuUI9Zggelw0RLaRBigWikd82HpAV8Cp7IDdiJ/JnS/Hp5raud/G0JaQCB2Bbu5ZkNDdHdtCptfno2aUUPtFUXFWuPwmekg7K4OwLRybs5T8wYHA5euIY4fipSr0jhEfZXebTaTgom7R1QHwn3kOLmral9RR2H+mYzXKjM3waJqbHj6y2gJPA0bwHFA1Q4gxH+2qLPzYJIPb28a2rOfOGlbCHH8vEmOmyq0hgTRcXplIv9TbPKAA==
+quanbaothuan8049@gmail.com|5d:3d:59:6b:4b:9f:83b3e13fb768c17d3cfedecf1b6cc133:84CC40EE1D1B1F8EA860CE5DD8C30103:HEowg3X2sGI/3O7eZRXwOPDwgrsvxpqUT9Ig3Ca65WqV6+h8CVB7UG44BIbAIa9HTkBmEczpwrf7qKHIxXdCB4MWNF+7ooufH25lYb0HTqzT5Exfr3Ke3K/MRynH42p3wk0BaSwf6/pCEAwohLk02VHhNbQ5bW7T1kAO9JGHE6H02CWobqs0jwdiqo9a8nmpYoVJx0bdXh/kdoDQSA89+VPy02DDekA0HHvAWdpeMnLmL4KFKgNdlq21pC8mwxvBdF5pPDEBoPp5wQDGA2S5dOB5VRSktkAs0lp0AbOi7fJ9Mpv9JUE4ovhc8u2viOJcH++vnjOLjZeI4eo521lMKdpGZz0p0wjQhlb6fy9cZvpFq0XI2BGu/1+xJ/HyfuQqYfEt7Dfwf56eIKsV99+ErS0FBy7USKnmBK0AB58mCiYaTnKFeeaOmcRdyvURYrY2NfI/yk/4LCvWGjbAiHmQzA==
 
 ]]
 
+use_bypass =  false
+for account in accounts:gmatch("[^\n]+") do
+    local email, sisa = account:match("([^|]+)|(.+)")
 
-
-for line in string.gmatch(input_text, "([^\r\n]+)") do
-    local email, token, rid = line:match("([^|]+)|([^|]+)|([^|]+)")
-    local information = {
-        ["display"] = email,
-        ["secret"] = email,
-        ["name"] = token,
-        ["rid"] = rid,
-        ["mac"] = "02:00:00:00:00:00",
-        ["wk"] = "NONE0",
-        ["platform"] = 1,
-    }
-
-    local bot = addBot(information)
-    local tutorial = bot.auto_tutorial
-    bot:getConsole().enabled = true
-    if bot_bypass then
-        bot.bypass_logon = true
+    if email and sisa then
+        local mac, rid, wk, ltoken = sisa:match("([^|]+):([^|]+):([^|]+):(.+)")
+        if mac and rid and wk and ltoken then
+            print(mac,rid,wk,ltoken)
+            local details = {
+                ["name"] = ltoken,
+                ["rid"] = rid,
+                ["mac"] = mac,
+                ["wk"] = wk,
+                ["platform"] = 0,
+            }
+            local bot = addBot(details)
+            bot:getConsole().enabled = true
+            bot.bypass_logon = use_bypass
+            bot.auto_ban = true
+        
+            local tutorial = bot.auto_tutorial
+            tutorial.enabled = true
+            tutorial.auto_quest = true
+            tutorial.set_as_home = true
+            tutorial.set_high_level = true
+            tutorial.set_random_skin = false
+            tutorial.set_random_profile = false
+        
+            sleep(3)
+        end
+    else
+        local mac, rid, wk, ltoken = sisa:match("([^|]+):([^|]+):([^|]+):(.+)")
+        if mac and rid and wk and ltoken then
+            local details = {
+                ["name"] = ltoken,
+                ["rid"] = rid,
+                ["mac"] = mac,
+                ["wk"] = wk,
+                ["platform"] = 0,
+            }
+            local bot = addBot(details)
+            bot:getConsole().enabled = true
+            bot.bypass_logon = use_bypass
+            bot.auto_ban = true
+        
+            local tutorial = bot.auto_tutorial
+            tutorial.enabled = true
+            tutorial.auto_quest = true
+            tutorial.set_as_home = true
+            tutorial.set_high_level = true
+            tutorial.set_random_skin = false
+            tutorial.set_random_profile = false
+        
+            sleep(3)
+        end
     end
-    tutorial.enabled = true
-    tutorial.auto_quest = true
-    tutorial.set_as_home = true
-    tutorial.set_high_level = true
-    tutorial.set_random_skin = false
-    tutorial.set_random_profile = true
-    bot.dynamic_delay = true
 end
-
-
--- for line in string.gmatch(input_text, "([^\r\n]+)") do
---     local email, token, rid = line:match("([^|]+)|([^|]+)|([^|]+)")
---     local information = {
---         ["display"] = email,
---         ["secret"] = email,
---         ["name"] = token,
---         ["rid"] = rid,
---         ["mac"] = "02:00:00:00:00:00",
---         ["wk"] = "NONE0",
---         ["platform"] = 1,
---     }
-
---     local bot = addBot(information)
---     local tutorial = bot.auto_tutorial
---     bot:getConsole().enabled = true
---     if bot_bypass then
---         bot.bypass_logon = true
---     end
---     tutorial.enabled = true
---     tutorial.auto_quest = true
---     tutorial.set_as_home = true
---     tutorial.set_high_level = true
---     tutorial.set_random_skin = false
---     tutorial.set_random_profile = true
---     bot.dynamic_delay = true
--- end
-
