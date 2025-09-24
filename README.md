@@ -1,69 +1,146 @@
----- SC LOGIN JOEY STORE
+--- SC LOGIN ANDRE
 
 local accounts = [[
-quancamyen2807@gmail.com|f5:66:56:87:70:8c:bc5473abaab6d18aaf0345a3518cf9de:402D4DAB2EE5C3D4E1EC013BA8D6B8EE:HEowg3X2sGI/3O7eZRXwOGuH7EYhZlkoldYH7ktdNeUTrGiK4dTZ3lgqqZLPla0cvKMiGTpNu/8beMzs8oNvi9L6N79ZXqPqNYLXkI3d6OVy8nf1A+BQxURoI90cbAIAAl77z+X+ln0tHAHpsOaF48/amcPXRl5rl6DpzbIe5iKRM2UCC3vZUrLBuyUG/Rs76q7gI35V7Q9X9CoGHZUJ7XKIEvoRw6bE+BY5hevBvHxM+WyDhhwI7Bk2NB/gs8wbl0jl+mM6nlEqeOiRqEIHlpw+pr40gjuwnv/A/6pu4iXNbypd6D8bhbY42MGKAMpdL6NV5FyorUbOGWcyBLyt2DvPw1oTCPE1IMa6rGS7iK6Dtt/qiIiFSPgmgIhkhdVh19+AWDA1TwfG1nuSWku5eZ7M+4ea+R+JOER3RtqBq8Ii2w9cwBKwI+URcr7xSWJNSQcnl571xLtXJ5mP7nCKlA==
-takieuoanh4371@gmail.com|83:67:89:e0:c2:2e:62d8c59cb0ade3f94b49a0f22573a47e:8D3BC512E6CCDB9653C6DD80EC6AFB9D:uDfwPsjwqFPHSjsILVho0Jt0IzgUNl7TDAvQ2ldeaB4/l92v0AS/MoF3Pb0ualAWRrBobx+/UGcyYVkn7cbYG11Qzxd1KjuVLpw+cuNvQ9l9bS8eLW86zbAAx7cu7fRd5/HHwxcjEOYH5pnZJeRo7DVxI3xhoRrhHJQFkGym8ZU9K671m+aM2EoRv/vMZ/1J9LtPdZU/8xFE7SXk8yB01u5ACLM2M3CaPFBmhYnevf1EeH7K95ypOqpp7hyhmp3y1HRiB/kuN59k1qQsZhUkwXbE+WF3UiJLGEeRBV+v5r2UGU0285xqnRdGvFKeCA/tYr8/nDiX3Cdbdr6LMrr/Uih4hxSL440AXIrZcCjtIHjASnO7RgFZbb1pOvhQL/KOuBZ6KE9PeRPSBNc5FDK4+sN5U/JTfPbw2/5jAgiMVV6SwSCMqBA1rIMrecnEfAsa6Jyg3zzs/grD/uPVo4IHmw==
-qp6142645@gmail.com|50:fa:33:97:4c:59:55982b87e9382793acf89d530c7e4f90:DB0BCB6E52CB68D8BBEB00B74A317FB6:HEowg3X2sGI/3O7eZRXwOPxALGuM1GrNkUUQL+d6xnBNslP6CWmTuLpJyG4XmGHUht+wUdtGXPGW7pnM4O6lDQUcEZnfz3NweRFoWfsPsqKZW7f4GoBGlU6Hw3mqZqs5x6ZuAWFdEN3HtVm7STbnbsFBsa4Wr5tUNiDPp0ycykgAyUHmiuJN779KB7N46hOTQrUeNudlHzu73budD/712pihi5l+id5NGUV7hGkW0quXU1FfS44jy7io1xo/8hlcA+e7L+X+6CmMaEMtzeAXR7mEqI71+Y/AtfspgoOyYyIHUnLxH9B60j1lhxFlyipb4iSxX5TR8gtMg8KJUlMFlYw9S7toC34uGEYUEkUfVBRgYpyVyaA473XutY/w+B6k//ZzPviZDb8G4avk1GZJaX4dLtvlxvm0ZhWn+df/CxOGcnNEK4EFflAXIQlZ4MfwACgW9T8s2qYEyBV6VF5rJw==
-taduyhung3853@gmail.com|e6:ce:f2:60:4e:57:2fc309250649d3b5caf6ffd2659303a6:ED90AA48A34FB808A7D930B3D3B6ADEB:uDfwPsjwqFPHSjsILVho0BxrL9gGXwLe0U5dyLHbA/FSFzgA1gRYsjeF8xRQ4QeW64BB1xSSSkYo9rgkYDA/IFv37Y2k+w67tjw/iexX+EyUUQTT15K6s7R20Lf5Dy/C6xNw1H7luauf96QQwHbUWLE3ZReCw3VwWhNB8t5rVSc34LFHbQdgiXy1niW/Tr90vLEajaaj+G0+GTw3nV3H5vSpEkA5gmsarAzJNQajwwRheUGzjlaSJdHhxsjStSJNJmSAFKlxVUDkr/LO36j5GEKWO2qqgusuh+bp7pJqjS6c14cYBgF2oanGegMxwokZSL/MwieQpOXPUvqSH7MXI1/c3HdSNquoiq/HKsCmWtYaZkP7VN69OiKD2YsSsCxNzKmSWQO9z7CxKF2DeQTO2aEHEtbNTtIeCCRbLvj9xz+kQvPvUckTK0FgqZk+UNsGzFI4GdFrhYzx1eYJmDjiXw==
-quanthienminh5450@gmail.com|6c:dc:3d:e7:62:3d:3f05a585971229493a61ce36e0f8a0f3:48C66727DBC6D3FF2B99395CC6543B91:uDfwPsjwqFPHSjsILVho0Bgwms12446FTMV/m4E6HiceH+ixMOEcmjgBjNCXkmfZdfsS3L4HyNgz9ilOTMwrWipk4mK6Ud+UHNVItCWGsqy/wPhU2W5IyPII5qLBh6AzNvGznkefZ4bFvS9tFAL4Vz9xuGQJpR2zhWcI9ODWK+m3aYUI5+WcOdbtcFaZhIOKfmKp1BM39dmX0Oc5/xJhOHNzgSjGm53oKOeuUI9Zggelw0RLaRBigWikd82HpAV8Cp7IDdiJ/JnS/Hp5raud/G0JaQCB2Bbu5ZkNDdHdtCptfno2aUUPtFUXFWuPwmekg7K4OwLRybs5T8wYHA5euIY4fipSr0jhEfZXebTaTgom7R1QHwn3kOLmral9RR2H+mYzXKjM3waJqbHj6y2gJPA0bwHFA1Q4gxH+2qLPzYJIPb28a2rOfOGlbCHH8vEmOmyq0hgTRcXplIv9TbPKAA==
-quanbaothuan8049@gmail.com|5d:3d:59:6b:4b:9f:83b3e13fb768c17d3cfedecf1b6cc133:84CC40EE1D1B1F8EA860CE5DD8C30103:HEowg3X2sGI/3O7eZRXwOPDwgrsvxpqUT9Ig3Ca65WqV6+h8CVB7UG44BIbAIa9HTkBmEczpwrf7qKHIxXdCB4MWNF+7ooufH25lYb0HTqzT5Exfr3Ke3K/MRynH42p3wk0BaSwf6/pCEAwohLk02VHhNbQ5bW7T1kAO9JGHE6H02CWobqs0jwdiqo9a8nmpYoVJx0bdXh/kdoDQSA89+VPy02DDekA0HHvAWdpeMnLmL4KFKgNdlq21pC8mwxvBdF5pPDEBoPp5wQDGA2S5dOB5VRSktkAs0lp0AbOi7fJ9Mpv9JUE4ovhc8u2viOJcH++vnjOLjZeI4eo521lMKdpGZz0p0wjQhlb6fy9cZvpFq0XI2BGu/1+xJ/HyfuQqYfEt7Dfwf56eIKsV99+ErS0FBy7USKnmBK0AB58mCiYaTnKFeeaOmcRdyvURYrY2NfI/yk/4LCvWGjbAiHmQzA==
+omenmax23@gmail.com|17:C9:BD:9D:C1:BD:38CB5AF5D946F3D9C8753B3E7E358063:DFCA16972457EE4B36BA9125728944DB:2CmbaZ4rgUqlYAEgBWSfsuJp6Z7K3moUyilZoe2sEO8D01MvMG2RWyshb49C1Y\/H88MgZlWcrCr\/VhrmV90rBxsIyfL0n4n2go4SacZ8RRqEwmj4G8cANiETmlf5L4MzUEjf\/K39lvO7k0D4tLyNhXcwwRRE19kLFG2rz4CPiMbpWzIya79hUiGe\/\/FOfuc4tHjVcPp3P45dH2szTSzIMEzRfk7Vp7Cd055Tc3FLIouqYhH5sI8JQoR\/rqKX6IHuy6JmfuWZ2qi0F7FzvZKBwK6CS418R9egIad4bNeHtY3v+R8W3bI8DQ8YcgO94FzARBz4oq93T\/UT6xY8vSN0XeEjmAIG1rKdleJb5t5SsRQPGe1SzYCNpJZpw9MiBxnfQbZHzHCGESGbhfnNjJmoDhjUXQouIAdQeFVzwAUCuSsUPn1K74YKMpaGq1Z\/D8tDLTGJq6fxOUvrRPUhqtJCng==
+
 
 ]]
+-- lidarui341@gmail.com|95:90:7D:69:3A:9E:FE95BB0A92FE871C300C70C8723B8AA1:32AAFFAF9431C48CA92BA31664B088A6:WgVhUkRg0qNhT6pY1HrfmxCdSoH4p4xuoCTo31i3TFkdGomdNgJcldClC2TT4OxS4C2bNcgLA7C\/HHPKccTNTxrpeBV2bDYXaZ96QWv11XGWWjE2dCbUoHarp6B2WKJgDPwRsA7N7BOkoFsHQJqojGamflHO9iceQo\/eJDb4S5YIEhNxZGxwS9po7ZYa1X50I+SRllt9JzEYJnQET38RNVcdj3Q0ZtYlwWPjpAfD++\/Llckw411\/8MSm9XztOuqL7ZtlXDcztcY0QzebQ\/UV6mO38KQnlACeTs4KkeTlxwT0\/obV2\/Y1lVmBnbIkegjHXuPo4UCmS0c5lblLj\/4P4ZwVm8mjFzDU3p9Oss9qHRmNH4uMRu8RdiojYRO9rjQgoXCk1Co8SIFVBZFtRZ\/r1gRy7+zI6rJjxgViUnwO3CLem3ZhFG3c6lVgOOLcH1Rz3rJVbnTxD0oU++QcrRtOIg==
 
-use_bypass =  false
+-- lidarui341@gmail.com|0B:03:98:B1:AF:E4:8E6A5B8347E27B4609D3D931CF0453A5:ACC10FCC54991C73AEAC6462BC9F71B0:WgVhUkRg0qNhT6pY1HrfmxCdSoH4p4xuoCTo31i3TFn66QJdYB7i26Fo9Sm9L0l6kgz1P1eGlEFoMFNo3bGhBiZk7cUQ3m7Sjvmn0LeVWZ4CifetuxELDzhi7KS1vPvK8uTep11NfE3xnIsdT4FSvT4nGvfrt7Gb1cKuaIQ9i82EM/U1rsdFaplcuYvcpwKYXRbnjKGj5fz0MJEiSwDQPenHD5dJOshw102YcBrEabJaxZASMSklyYOh0uwTY5Nz4B3ohP0l0gFJe8sce7i+ZyXeZ69KkMUaWlMn3rDnioKg/YiO4UDA5wh52LloGzzh51LRYZPrPczte2THK0I5HFSjk+cTzO6iwmODZXxzU1gMa9YZH80OP6j2dhML/DsF9djlBTXDurohbWuDyChj6DxoC30OkZ0GkAgFsQygtXMd3V06b/r1H6CDtl7Fq5B2eJx2n+lasmddZwq3b1AfuQ==
+-- local email, mac, rid, wk, ltoken = account:match("([^|]+)|([^|]+):([^|]+):([^|]+):(.+)")
+
+
+-- andresaputra011105@gmail.com|1D:34:B4:69:87:DC:AD2AAD5D775861EE8D75E8D7E4BBC296:F0790D608BBDEBD2F0FCDF92FC1FEA99:P19SRdj1keCwEZTRAWRWFGRK2ukec65oBAu1oem\/tfrHonfqB+sZFNWXt\/REu3qBbdwC8vytfd0OzHzxnJpYPmxu85v6Fv2EzVscjiWaiztkqQLEMCYjAfwlQ3YCNDvux\/xfcgOQr85PF8lbsbE2yy2ab3+L4WjiN69BbHBapizhS++o2UI4vLojftkCB\/s6Pxqe0+MYzocfGKdFXBZvv94shwl\/\/QUmHA3pt0jpA5TOhtrx6yoplczapTggwgJsNjKyJSZD1+4r3DiNy7z6zmGQ\/Mrn+djM7BXpSGItu4V2ME\/cg6BFJOWaX+uTQLyLjOQmhS0HzD3X+diz1CD2PwwEkKgVolqB+7Weo0wFTF7zdEWtBod\/81PardAoBxIWh2pYwBd5fONyUGMnssIigzCHAIayK0tkWjaICjshAgxTQqgaBe2o\/XYZdG6eH\/huemODSLMUHVVKXeB8HWwcRA==
+
+
+
+
+
+
+
+
+worldBFG = "YXIS"
+bot_bypass = false
+
+
+function zeeBot(bot)
+    -- local bot = getBot()  -- Mengambil getBot() satu kali untuk menghindari pemanggilan berulang
+    local Status
+    if bot.status == BotStatus.online and bot.status == 1 then
+        Status = "online"
+    elseif bot.status == BotStatus.offline and bot.status ~= 1 then
+        Status = "offline"
+    elseif bot.status == BotStatus.wrong_password then
+        Status = "Wrong Password"
+    elseif bot.status == BotStatus.account_banned then
+        Status = "Banned"
+    elseif bot.status == BotStatus.location_banned then
+        Status = "Location Banned"
+    elseif bot.status == BotStatus.version_update then
+        Status = "Version Update"
+    elseif bot.status == BotStatus.advanced_account_protection then
+        Status = "Advanced Account Protection"
+    elseif bot.status == BotStatus.server_overload then
+        Status = "Server Overload"
+    elseif bot.status == BotStatus.too_many_login then
+        Status = "Too Many Login"
+    elseif bot.status == BotStatus.maintenance then
+        Status = "Maintenance"
+    elseif bot.status == BotStatus.http_block then
+        Status = "Http Block"
+    elseif bot.status == BotStatus.captcha_requested then
+        Status = "Captcha Requested"
+    elseif bot.status == BotStatus.error_connecting then
+        Status = "Error Connecting"
+    end
+
+    return {
+        world = bot:getWorld().name,
+        name = bot.name,
+        level = bot.level,
+        status = Status,
+        gems = bot.gem_count,
+        slots = bot:getInventory().slotcount,
+        getdoor = getTile(bot.x, bot.y).fg == 6,
+    }
+end
+
+function warpnow(world, bot)
+    warp_time = 0
+    while bot:getWorld().name ~= world do
+        while bot.status ~= BotStatus.online and bot.status ~= 1 do
+            bot:connect()
+            sleep(10000)
+        end
+        bot:warp(string.upper(world))
+        sleep(7000)
+        warp_time = warp_time + 1
+        if warp_time >= 5 then
+            sleep(8000)
+        end
+    end
+end
+
+function take_remote(bot)
+    ex = math.floor(bot:getWorld():getLocal().posx/32) + 0
+    ye = math.floor(bot:getWorld():getLocal().posy/32) - 1
+    bot:wrench(ex,ye)
+    sleep(3000)
+    bot:sendPacket(2,"action|dialog_return\ndialog_name|itemsucker\ntilex|"..(ex).."|\ntiley|"..(ye).."|\nbuttonClicked|getplantationdevice")
+    sleep(3000)
+end
+
+
+
 for account in accounts:gmatch("[^\n]+") do
-    local email, sisa = account:match("([^|]+)|(.+)")
+    local email, mac, rid, wk, ltoken = account:match("([^|]+)|([^|]+):([^|]+):([^|]+):(.+)")
+    if mac and rid and wk and ltoken then
+        local details = {
+            ["display"] = email,
+            ["secret"] = email,
+            ["name"] = ltoken, 
+            ["rid"] = rid,
+            ["mac"] = mac,
+            ["wk"] = wk,
+            ["platform"] = 0,
+        }
 
-    if email and sisa then
-        local mac, rid, wk, ltoken = sisa:match("([^|]+):([^|]+):([^|]+):(.+)")
-        if mac and rid and wk and ltoken then
-            print(mac,rid,wk,ltoken)
-            local details = {
-                ["name"] = ltoken,
-                ["rid"] = rid,
-                ["mac"] = mac,
-                ["wk"] = wk,
-                ["platform"] = 0,
-            }
-            local bot = addBot(details)
-            bot:getConsole().enabled = true
-            bot.bypass_logon = use_bypass
-            bot.auto_ban = true
-        
-            local tutorial = bot.auto_tutorial
-            tutorial.enabled = true
-            tutorial.auto_quest = true
-            tutorial.set_as_home = true
-            tutorial.set_high_level = true
-            tutorial.set_random_skin = false
-            tutorial.set_random_profile = false
-        
-            sleep(3)
+        local bot = addBot(details)
+        sleep(100)
+        -- local bot = addBot(details, "", "", "", Platform.android)
+        local tutorial = bot.auto_tutorial
+        bot:getConsole().enabled = true
+        if bot_bypass then
+            bot.bypass_logon = true
         end
-    else
-        local mac, rid, wk, ltoken = sisa:match("([^|]+):([^|]+):([^|]+):(.+)")
-        if mac and rid and wk and ltoken then
-            local details = {
-                ["name"] = ltoken,
-                ["rid"] = rid,
-                ["mac"] = mac,
-                ["wk"] = wk,
-                ["platform"] = 0,
-            }
-            local bot = addBot(details)
-            bot:getConsole().enabled = true
-            bot.bypass_logon = use_bypass
-            bot.auto_ban = true
-        
-            local tutorial = bot.auto_tutorial
-            tutorial.enabled = true
-            tutorial.auto_quest = true
-            tutorial.set_as_home = true
-            tutorial.set_high_level = true
-            tutorial.set_random_skin = false
-            tutorial.set_random_profile = false
-        
-            sleep(3)
-        end
+        tutorial.enabled = true
+        tutorial.auto_quest = true
+        tutorial.set_as_home = true
+        tutorial.set_high_level = true
+        tutorial.set_random_skin = true
+        tutorial.set_random_profile = true
+        bot.dynamic_delay = true
+        -- sleep(3)
+        -- while true do
+        --     if bot.level >= 6 then
+        --         warpnow(worldBFG, bot)
+        --         tile_skip = 0
+        --         get_tile_world = bot:getWorld()
+        --         for _,tile in pairs(get_tile_world:getTilesSafe()) do
+        --             tile_skip = tile_skip + 1
+        --             if tile_skip >= 4 then
+        --                 if bot:getWorld():getTile(tile.x, tile.y).fg == 5638 then
+        --                     bot:findPath(tile.x,tile.y + 1)
+        --                     sleep(1000)
+        --                     take_remote(bot)
+        --                     sleep(100)
+        --                 end
+        --             end
+        --         end
+        --         bot:leaveWorld()
+        --         break
+        --     end
+        -- end
     end
 end
