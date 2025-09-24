@@ -1,146 +1,72 @@
---- SC LOGIN ANDRE
+--- SC WIR
 
-local accounts = [[
-lidarui341@gmail.com|47:AA:83:A4:7B:1C:0986D0B37FCA8936C64A96FC80D081D5:344A1CD1A022FFC4C353710847905229:HKwlXYN449mKtfRcvfcobz0zpBuLTWjZhod08KJIovwiIo83VIVhswOameBFgtQE4Fa+kF5pm+QJK+l3U+dIMFWgoWTPC1LT2T7cPFgabScvgBhLLGQMUk0VyVl96SfCP0SVNNW1FasvM1ggGxSmbY2icJQb9IF1KNuyhWHun9i15M7sL94740NdtDm6AIzCF02kVVLoWUPrs2\/hbZO0TDoG4CW5fJP2r16g1qOCRr0n8OBST4bvVVhro6GJog\/Gv8xK+ncOHqx26qzC8fWs0CD2+FwYrbsj\/Sveayarh5ysdqw1vXSV8orF4q0g7v7h3kff5S5D92YHmtM0zl5tLbLKj8EV9m\/zaDbeUKp0oqjam+3QB8RNHa\/lNOMjIoO\/1sQK49Pmrf\/b+R3VsOk2z93oeNIOsV1KOZaCVA9iysdJIjiqNE5PcUWBNDncuzxA1JIXoUXKCwsI8cq5\/\/Uv7g==
-
+local input_text = [[
+wir_tua6e641fld4ybio@gmail.com|B7eKq2nS08Tw9vhjr7hDjgx/LmACI6aEX+Ir79wRj13HshsTzEHS/ZIKhEeQwOh8j3fQv4akxlWttv0t3K0Oc6PdOxn7wNCDgHUtbsFy54pBG2CS4veSi2DoH1OjQEkGyEAcQjmosA8ZT1EChIhIiT44D38xVzdULF6GLozUOy/OOjC9GBBjQ+uYyjT+y3SD3qS8XeDMjouRcCjuVOBQbh1ZKoJDerxD3V/BgNjUsktDvhXYCD0OE4o9JYywEgfGIG6hs/2No+GsaKA0DTaJVh9mSmyDO5BwZ9l3V28+w1Y6ZN9UO6r9BdqEGPpijnlvOb9hP0OcfbHBW2uj0CnZ9PCPWKGeLTbYQ0DqDRLnI/NMRGk/qDsttZItAIipRSND/xKJ1S8Q32mbaPW2I8tyh1tyQsKFE6SCwcXDhOA6oQhGigPBI+Gx2uZPQ1nVhc//sS0pekCKUxrFl+oWc5E9jbTsbhT3M3iOLWeJGqSz65x/0io/oFm9aQgZVQyahrk9|MZL56CAYX29X13Z26FQXXF8I519P4EDD
+wir_rxw4rr2m6qqsloxe@gmail.com|B7eKq2nS08Tw9vhjr7hDjsZPMuuPJSeWmhOPDq2m+IugD7Iuzt3an2jmrjjDddeSFqor6JVHSaeu6ntoQ3AzQmeongGn6gI2yRSCX2C+JW5ElV5nO31OFunhOcKf/kWuPFaVnTcEYXqxdYR7rNcFivzC8dyc1uwF2iDqs/Nfz6dRJdPne+YBCa8WHwQdt3ypRwWj5jk0ZvnQKYq+TKTCI5IBE2CblLGfvb2WTcJ4bppkzSjvYmCyBlKu+1VA4UTYZuFlFsZ+KMAs+YTY7tlkNXDeJuvQI0DaSzoUBGNXtZC146VsJTl5Ai9K9PWkzC/9YDUxvK8sUJCMYOx/4E1x2zidFYJRZoqdX2su+lrl27HprXe4Y5OIh4ou+7LhwYIZ1cUZzpWInKc2mDB8dxTFqt9q8SXwwcfPa5v/oz6TYpWTcfbwJT5DQikWKi7bVYJCXSxGpF+dQimEQnayInC7cpWuUFvk5ql7mYdCgrOmFbc2NHvyDI+jT8LUrUOp0NMq|E3P071JGG4T1UPB8HEMCVBWZ5PJHL781
+wir_zmb9hkpzopudroeu@gmail.com|B7eKq2nS08Tw9vhjr7hDjselhIMl0SZfvmSn+2rQv9PxtgFhf7pUTh/AavLuRG/agMfpdWqHn2AQKY94e+ecYD6QNl1lHObAVolgxTznRMaKy+95nYyQvGtonv4HNBqa5n/wD5PwBLR9wTUqOkDfC8zt//i9cLVWUmKzXCT5EFmDEwT1DLm7yeG+4pRxzUIjov5e2Pw68fuFP+AQvMmJATLIwmBnaL45xOcCG9SRF+ePyo/Hjnf5I8R0bem5v9t8CPQRD/MNTnum34H6c0lYR/Lq86Vie3j/aNTLYiETrSNV3nMFTJF6/I5S32KSrp/g3RtId0UKWGENkCypIanJVTxZZJ/h2tKMZd3di7sSx8i0AbHlf7qrxLjmlU15T5BLs20zaZYQKFh4FtBkXp+8xZkLJBMVoa14kFmjf5AtjO1Dy/SRsJ5eCoHl6uuwH7yE7Ync+g6K/EjkrUG6dR3R24bz3wK6GY8jxRKU0ZFmyqdH4QSWkIFAWWr3NurwftYX|JOAQEZZIS0QDBXO83FEBAAVMZQ36QOQA
+wir_fz0dqyk4jujsj5ar@gmail.com|B7eKq2nS08Tw9vhjr7hDjnPt/bj+aE4Kc5afvyP6OVINRw7ssmqwLBevpVFIXKfZZGpyad4uuff4dxGO7N/SfolHqo2E6PFuuFXm24jQL3P+FZl/jbM41TBTZ2QuYEofiBqIHaWY5jmqm3r5i5zZvyubukxBSN9a6m6G3xG4Ft8waNoQzq5bFfcGAXWv2FMwDhkla5OokQ9UBXWIlp1p6BrYYL66cczK70fbYg5Mt2MElpRRK6vRgSpYnTeaN/Leb8/HKQLJKK3KuM5VtMDGYoaC85T6o/n9x/FqgbRPceVpJ8Xflv1Hw3Yq2J0Uyq+paj3KcdnpUOBTFQHzfO5D+V8+GcQfi6uroTZJn2YkegPh7Lkcr0qgS6FS6e9GXu9UXPMGpQOO8zkWQMPdxJtpuBgsqpbM/Ai/3JTDtNHbWhKOo6iZNk3Bng9HvEpI0psoIkwQtmACfSB0lnNbwrJS7xh4LgcVwFws0iJmGp4+dD8pn1BIQGwRYvtXgvjHMPlk|0ND3DP31DYT2JS0KGHOWO4QA3CPL2SZ0
+wir_b6p8pcikf6wl72vi@gmail.com|B7eKq2nS08Tw9vhjr7hDjqfUNcfhg4V8n3jIlHYb3xtFRib3/Af3HYBOfyThMWE2PrwAiT1JQtdkbh0lNj/0FTNoqJCCButBJHrVQe6OoHkVqRs9i8DHlUTOomhrDsTkjbQn2g7qciMRO2x9n2usmXcpsvZgo50JdH58YOxZDs0DUc7DX3mohzXCStxXvgjLuRBefOwHDJqXw30PdK6oVDMKj0LlVA5hGR9mn5/WAgtbn6DWkW8hayXTrerQj98EyKpSaVdWtA3nOcRNFn9WhA+6lq6TANoj7lm4+bnY/4gPtduoPyD/iUETtbOUld1/3ZJDRulMLPs6fIAxuTefeKG8ynhfBZKpP6d+GspjeUPWV67zhuc61IZfm1MptG1J05+/j0fi5kYxj3zS09rY+OmhBVLDlg6EJcDk8PQTLH0CERABO45hpyAWPXtl/+S7QP1vkQWrS6AiSdHzTUTxJswk6JraRLtCjy+HwRCzKJCKSaDHcgHfHGARiSC3sJ42|0DJXY2TZVGIXGLGOGMSJA24EGPK5KANR
 
 ]]
--- lidarui341@gmail.com|95:90:7D:69:3A:9E:FE95BB0A92FE871C300C70C8723B8AA1:32AAFFAF9431C48CA92BA31664B088A6:WgVhUkRg0qNhT6pY1HrfmxCdSoH4p4xuoCTo31i3TFkdGomdNgJcldClC2TT4OxS4C2bNcgLA7C\/HHPKccTNTxrpeBV2bDYXaZ96QWv11XGWWjE2dCbUoHarp6B2WKJgDPwRsA7N7BOkoFsHQJqojGamflHO9iceQo\/eJDb4S5YIEhNxZGxwS9po7ZYa1X50I+SRllt9JzEYJnQET38RNVcdj3Q0ZtYlwWPjpAfD++\/Llckw411\/8MSm9XztOuqL7ZtlXDcztcY0QzebQ\/UV6mO38KQnlACeTs4KkeTlxwT0\/obV2\/Y1lVmBnbIkegjHXuPo4UCmS0c5lblLj\/4P4ZwVm8mjFzDU3p9Oss9qHRmNH4uMRu8RdiojYRO9rjQgoXCk1Co8SIFVBZFtRZ\/r1gRy7+zI6rJjxgViUnwO3CLem3ZhFG3c6lVgOOLcH1Rz3rJVbnTxD0oU++QcrRtOIg==
 
--- lidarui341@gmail.com|0B:03:98:B1:AF:E4:8E6A5B8347E27B4609D3D931CF0453A5:ACC10FCC54991C73AEAC6462BC9F71B0:WgVhUkRg0qNhT6pY1HrfmxCdSoH4p4xuoCTo31i3TFn66QJdYB7i26Fo9Sm9L0l6kgz1P1eGlEFoMFNo3bGhBiZk7cUQ3m7Sjvmn0LeVWZ4CifetuxELDzhi7KS1vPvK8uTep11NfE3xnIsdT4FSvT4nGvfrt7Gb1cKuaIQ9i82EM/U1rsdFaplcuYvcpwKYXRbnjKGj5fz0MJEiSwDQPenHD5dJOshw102YcBrEabJaxZASMSklyYOh0uwTY5Nz4B3ohP0l0gFJe8sce7i+ZyXeZ69KkMUaWlMn3rDnioKg/YiO4UDA5wh52LloGzzh51LRYZPrPczte2THK0I5HFSjk+cTzO6iwmODZXxzU1gMa9YZH80OP6j2dhML/DsF9djlBTXDurohbWuDyChj6DxoC30OkZ0GkAgFsQygtXMd3V06b/r1H6CDtl7Fq5B2eJx2n+lasmddZwq3b1AfuQ==
--- local email, mac, rid, wk, ltoken = account:match("([^|]+)|([^|]+):([^|]+):([^|]+):(.+)")
+-- EMAIL|LTOKEN|MAC|RID|WK
 
-
--- andresaputra011105@gmail.com|1D:34:B4:69:87:DC:AD2AAD5D775861EE8D75E8D7E4BBC296:F0790D608BBDEBD2F0FCDF92FC1FEA99:P19SRdj1keCwEZTRAWRWFGRK2ukec65oBAu1oem\/tfrHonfqB+sZFNWXt\/REu3qBbdwC8vytfd0OzHzxnJpYPmxu85v6Fv2EzVscjiWaiztkqQLEMCYjAfwlQ3YCNDvux\/xfcgOQr85PF8lbsbE2yy2ab3+L4WjiN69BbHBapizhS++o2UI4vLojftkCB\/s6Pxqe0+MYzocfGKdFXBZvv94shwl\/\/QUmHA3pt0jpA5TOhtrx6yoplczapTggwgJsNjKyJSZD1+4r3DiNy7z6zmGQ\/Mrn+djM7BXpSGItu4V2ME\/cg6BFJOWaX+uTQLyLjOQmhS0HzD3X+diz1CD2PwwEkKgVolqB+7Weo0wFTF7zdEWtBod\/81PardAoBxIWh2pYwBd5fONyUGMnssIigzCHAIayK0tkWjaICjshAgxTQqgaBe2o\/XYZdG6eH\/huemODSLMUHVVKXeB8HWwcRA==
-
-
-
-
-
-
-
-
-worldBFG = "YXIS"
-bot_bypass = false
-
-
-function zeeBot(bot)
-    -- local bot = getBot()  -- Mengambil getBot() satu kali untuk menghindari pemanggilan berulang
-    local Status
-    if bot.status == BotStatus.online and bot.status == 1 then
-        Status = "online"
-    elseif bot.status == BotStatus.offline and bot.status ~= 1 then
-        Status = "offline"
-    elseif bot.status == BotStatus.wrong_password then
-        Status = "Wrong Password"
-    elseif bot.status == BotStatus.account_banned then
-        Status = "Banned"
-    elseif bot.status == BotStatus.location_banned then
-        Status = "Location Banned"
-    elseif bot.status == BotStatus.version_update then
-        Status = "Version Update"
-    elseif bot.status == BotStatus.advanced_account_protection then
-        Status = "Advanced Account Protection"
-    elseif bot.status == BotStatus.server_overload then
-        Status = "Server Overload"
-    elseif bot.status == BotStatus.too_many_login then
-        Status = "Too Many Login"
-    elseif bot.status == BotStatus.maintenance then
-        Status = "Maintenance"
-    elseif bot.status == BotStatus.http_block then
-        Status = "Http Block"
-    elseif bot.status == BotStatus.captcha_requested then
-        Status = "Captcha Requested"
-    elseif bot.status == BotStatus.error_connecting then
-        Status = "Error Connecting"
-    end
-
-    return {
-        world = bot:getWorld().name,
-        name = bot.name,
-        level = bot.level,
-        status = Status,
-        gems = bot.gem_count,
-        slots = bot:getInventory().slotcount,
-        getdoor = getTile(bot.x, bot.y).fg == 6,
+for line in string.gmatch(input_text, "([^\r\n]+)") do
+    local email, token, mac, rid, wk = line:match("([^|]+)|([^|]+)|([^|]+)|([^|]+)|([^|]+)")
+    local information = {
+        ["display"] = email,
+        ["secret"] = email,
+        ["name"] = token,
+        ["rid"] = rid,
+        ["mac"] = mac,
+        ["wk"] = wk,
+        ["platform"] = 4,
     }
-end
 
-function warpnow(world, bot)
-    warp_time = 0
-    while bot:getWorld().name ~= world do
-        while bot.status ~= BotStatus.online and bot.status ~= 1 do
-            bot:connect()
-            sleep(10000)
-        end
-        bot:warp(string.upper(world))
-        sleep(7000)
-        warp_time = warp_time + 1
-        if warp_time >= 5 then
-            sleep(8000)
-        end
+    -- 0 windows
+    -- 1 ios
+    -- 2 macos
+    -- 4 android
+
+    local bot = addBot(information)
+    local tutorial = bot.auto_tutorial
+    bot:getConsole().enabled = true
+    if bot_bypass then
+        bot.bypass_logon = true
     end
+    tutorial.enabled = true
+    tutorial.auto_quest = true
+    tutorial.set_as_home = true
+    tutorial.set_high_level = true
+    tutorial.set_random_skin = false
+    tutorial.set_random_profile = true
+    bot.dynamic_delay = true
 end
 
-function take_remote(bot)
-    ex = math.floor(bot:getWorld():getLocal().posx/32) + 0
-    ye = math.floor(bot:getWorld():getLocal().posy/32) - 1
-    bot:wrench(ex,ye)
-    sleep(3000)
-    bot:sendPacket(2,"action|dialog_return\ndialog_name|itemsucker\ntilex|"..(ex).."|\ntiley|"..(ye).."|\nbuttonClicked|getplantationdevice")
-    sleep(3000)
-end
+-- for line in string.gmatch(input_text, "([^\r\n]+)") do
+--     local email, token, rid = line:match("([^|]+)|([^|]+)|([^|]+)")
+--     local information = {
+--         ["display"] = email,
+--         ["secret"] = email,
+--         ["name"] = token,
+--         ["rid"] = rid,
+--         ["mac"] = "02:00:00:00:00:00",
+--         ["wk"] = "NONE0",
+--         ["platform"] = 1,
+--     }
 
+--     local bot = addBot(information)
+--     local tutorial = bot.auto_tutorial
+--     bot:getConsole().enabled = true
+--     if bot_bypass then
+--         bot.bypass_logon = true
+--     end
+--     tutorial.enabled = true
+--     tutorial.auto_quest = true
+--     tutorial.set_as_home = true
+--     tutorial.set_high_level = true
+--     tutorial.set_random_skin = false
+--     tutorial.set_random_profile = true
+--     bot.dynamic_delay = true
+-- end
 
-
-for account in accounts:gmatch("[^\n]+") do
-    local email, mac, rid, wk, ltoken = account:match("([^|]+)|([^|]+):([^|]+):([^|]+):(.+)")
-    if mac and rid and wk and ltoken then
-        local details = {
-            ["display"] = email,
-            ["secret"] = email,
-            ["name"] = ltoken, 
-            ["rid"] = rid,
-            ["mac"] = mac,
-            ["wk"] = wk,
-            ["platform"] = 0,
-        }
-
-        local bot = addBot(details)
-        sleep(100)
-        -- local bot = addBot(details, "", "", "", Platform.android)
-        local tutorial = bot.auto_tutorial
-        bot:getConsole().enabled = true
-        if bot_bypass then
-            bot.bypass_logon = true
-        end
-        tutorial.enabled = true
-        tutorial.auto_quest = true
-        tutorial.set_as_home = true
-        tutorial.set_high_level = true
-        tutorial.set_random_skin = true
-        tutorial.set_random_profile = true
-        bot.dynamic_delay = true
-        -- sleep(3)
-        -- while true do
-        --     if bot.level >= 6 then
-        --         warpnow(worldBFG, bot)
-        --         tile_skip = 0
-        --         get_tile_world = bot:getWorld()
-        --         for _,tile in pairs(get_tile_world:getTilesSafe()) do
-        --             tile_skip = tile_skip + 1
-        --             if tile_skip >= 4 then
-        --                 if bot:getWorld():getTile(tile.x, tile.y).fg == 5638 then
-        --                     bot:findPath(tile.x,tile.y + 1)
-        --                     sleep(1000)
-        --                     take_remote(bot)
-        --                     sleep(100)
-        --                 end
-        --             end
-        --         end
-        --         bot:leaveWorld()
-        --         break
-        --     end
-        -- end
-    end
-end
