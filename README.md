@@ -1,3 +1,4 @@
+-- SC WIR WINDOWS
 --- SC WIR
 
 local input_text = [[
@@ -9,24 +10,19 @@ wir_b6p8pcikf6wl72vi@gmail.com|B7eKq2nS08Tw9vhjr7hDjqfUNcfhg4V8n3jIlHYb3xtFRib3/
 
 ]]
 
--- EMAIL|LTOKEN|MAC|RID|WK
+
 
 for line in string.gmatch(input_text, "([^\r\n]+)") do
-    local email, token, mac, rid, wk = line:match("([^|]+)|([^|]+)|([^|]+)|([^|]+)|([^|]+)")
+    local email, token, rid = line:match("([^|]+)|([^|]+)|([^|]+)")
     local information = {
         ["display"] = email,
         ["secret"] = email,
         ["name"] = token,
         ["rid"] = rid,
-        ["mac"] = mac,
-        ["wk"] = wk,
-        ["platform"] = 4,
+        ["mac"] = "02:00:00:00:00:00",
+        ["wk"] = "NONE0",
+        ["platform"] = 1,
     }
-
-    -- 0 windows
-    -- 1 ios
-    -- 2 macos
-    -- 4 android
 
     local bot = addBot(information)
     local tutorial = bot.auto_tutorial
@@ -42,6 +38,7 @@ for line in string.gmatch(input_text, "([^\r\n]+)") do
     tutorial.set_random_profile = true
     bot.dynamic_delay = true
 end
+
 
 -- for line in string.gmatch(input_text, "([^\r\n]+)") do
 --     local email, token, rid = line:match("([^|]+)|([^|]+)|([^|]+)")
