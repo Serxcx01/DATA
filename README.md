@@ -1,3 +1,5 @@
+bot = getBot()
+
 function findHomeWorld(variant, netid)
     if variant:get(0):getString() == "OnRequestWorldSelectMenu" and variant:get(1):getString():find("Your Worlds") then
         local text = variant:get(1):getString()
@@ -15,3 +17,33 @@ function findHomeWorld(variant, netid)
         end
     end
 end
+
+function checkTutor()
+    while bot:isInWorld() do
+        bot:leaveWorld()
+        sleep(3000)
+    end
+
+    worldTutor = ""
+    noHomeWorld = false
+    printLog("Checking Tutorial/Home World")
+
+    addEvent(Event.variantlist, findHomeWorld)
+    for i = 1, 3 do
+        if worldTutor == "" and bot:getWorld().name:upper() == "EXIT" then
+            bot:sendPacket(3,"action|world_button\nname|_16")
+            listenEvents(5)
+        end
+    end
+
+    if worldTutor == "" then
+        printCrit("Doesn't Have Tutorial/Home World!")
+        callNotif("Doesn't Have Tutorial/Home World!", true)
+        noHomeWorld = true
+    end
+    
+    sleep(100)
+    removeEvent(Event.variantlist)
+end
+
+checkTutor()
