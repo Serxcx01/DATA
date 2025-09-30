@@ -31,7 +31,7 @@ ASSIST_HELPER_LIMIT  = ASSIST_HELPER_LIMIT or 1  -- max helper per world
 STEAL_HELP           = STEAL_HELP or true        -- untuk mode stale
 STALE_SEC            = STALE_SEC or 30 * 60
 LOOP_MODE            = false          -- true: terus loop nunggu job, reconcile + leaveWorld anti diem
-DELAY_EXE            = 10000
+DELAY_EXE            = 1000
 -- Delay/harvest
 USE_MAGNI     = false
 DELAY_HARVEST = 130
@@ -152,7 +152,15 @@ local function build_worlds_for_bot(base_list, my_slot, total_bots, farm_per_bot
 end
 
 -------------------- BOT INIT --------------------
-do local b=getBot and getBot() or nil; if b then b.collect_range=4; b.move_range=7; b.move_interval=120; b.dynamic_delay=true end end
+do
+  local b = (type(getBot) == "function") and getBot() or nil
+  if b then
+    b.collect_range   = 4
+    b.move_range      = 7
+    b.move_interval   = 120
+    b.dynamic_delay   = true
+  end
+end
 
 -------------------- UTIL / RECONNECT --------------------
 function UPDATE_DELAY_BY_PING()
