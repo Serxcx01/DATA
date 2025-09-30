@@ -152,7 +152,7 @@ local function build_worlds_for_bot(base_list, my_slot, total_bots, farm_per_bot
 end
 
 -------------------- BOT INIT --------------------
-do local b=getBot and getBot() or nil; if b then b.collect_range=4; b.move_range=4; b.dynamic_delay=true end end
+do local b=getBot and getBot() or nil; if b then b.collect_range=4; b.move_range=7; b.move_interval=120; b.dynamic_delay=true end end
 
 -------------------- UTIL / RECONNECT --------------------
 function UPDATE_DELAY_BY_PING()
