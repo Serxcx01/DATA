@@ -13,12 +13,11 @@ end
 
 function warp(world)
     cok = 0
+    nuked = false
     while getBot().world ~= world:upper() and not nuked do
-        sendPacket(3,"action|join_request\nname|"..world:upper().."\ninvitedWorld|0")
+        bot:warp(world or ""):upper()
         sleep(5000)
         if cok == 7 then
-            zeenuked("<a:bot:979597895487619092>|BOT NAME: "..getBot().name:upper().."\n<a:arrow_mixedright:994071510518087810>|LOGS: WORLD NUKED!\n<:emoji_11:985957316799111219>|INFO WORLD: "..world:upper().." \n<:Gada:1005486235978039396>|STATUS: "..getBot().status.." \n:loudspeaker:|MODE "..mode.."")
-            sleep(100)
             nuked = true
         else
             cok = cok + 1
