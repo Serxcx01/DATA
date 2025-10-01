@@ -1,176 +1,67 @@
-storageWorld = "100NBB"
+---- SC LOGIN JOEY STORE
 
+local accounts = [[
+norikoandrew914@gmail.com|87:a3:3b:5e:be:47:bb959e0f2abf937ced3c1747f7e1b9e0:D0EF6B5E32B9ED6FD9FBA948FE6A2BF4:80UptFvonl9/irzirSAn4hNCfIGbVyCVu4o9uC8+VWPK6DFAI5WaEl9fvVIyEsSGSHBV5jiTFh0ERPOiFdB5OcDlxfPdsMlHZaeD1udUBHRvEsbj2osnjYL4nCHAzZvQJbPr1j8owCiD+ZYzHtCrWxH+0wtR2TW0r2qClCh+9P5gAEmvBDstv2AISreKXs7lMjTL75MeC+nQ6poo456ydfkzT5449sRITmSOvGDROr9Qj8/e4SCJsVKNDELU5Td+4SVEjL9a6DIMKcwkuNziEWtyIV6bKFMf6NTZLeDq08P5/aVhDyg+fVscyqPiRKpzjl8y0aFUQbOM/mq9C/pKaPbkQuRyR0zYScyqJyD6AIWfAXfZlEYGt8FG8Xxu4tabOldStyBc/nGa/GfwzIiZDDvqzU7/FIqIoHbyTIf4YpKy9LTUGTEdO65AVQjqmKLm5bn2leex86idN1TJE11RsA==
+thaoducbui938068@gmail.com|04:2b:b2:93:2e:07:7d997133932808bfe8221d786a581cc1:EF3AB7D74ACEEB1C5ADF8B42875CE362:80UptFvonl9/irzirSAn4jh8LNv9TOKe/DqG2qoa9GUmA+zJq8bn1BRq4l8gcqpdqz621ZO6CvcUJg3UpOqh0s4dRpIP6zmrhqhfh/2rbB099fREp2SQYsePekbMK10rM/mlIQ1VwLYJEJ62fwXhALKjp/uaUg+anEpxQzywp1zFwDbrkKSWkCPKUgY1MYeq0GvetX07E9SrStcEPhbOrqovdaJuxp1JiGq1VJuUwZy6nx8HwfSE2k0cNYlWgp0PRoPKkZgeRkBiIWoCaWmznEKCdsdIr2o+Bq00XqR+H2jNheegXXoGPC2d4294unoPBFy8XOgV1PevxCaMRmLxQWuKcU84B1Gxp6zysH8LPZ7tQX8PQt3ywnOPVObf16OawhAZ4Z1PUq9oOatLDG8/A6kilvoR7x1J8OpufCzOQ3RrbeCZuRxk/oTAUHiiCIzTpIBj5g9aikRnOOLOf2jKgg==
+tamthidoknw@gmail.com|e3:93:0f:19:57:8d:d3ea180d73a61e7dbb1016f49d836a72:79704B71ADCAF4A968707AC7AD271CCE:80UptFvonl9/irzirSAn4n2jSyz7aQfA5oyEE0ZgyAmHkyQ4UTZjFPiAkUp8qdLbcFFcwo6M26edtJZBHrRB8HnFUkGIalQX6hbU70q+15IZKcTcZkP1GPbD5CUrCvCqqLoAA3N9W1QiRdakS9Qokb3l1j76z+Mbp5jwt5KTaMcz+y1dGU5mY16WqaMKPi5sTcKm5QXCe1jT5/fbRunl88dYQIg8QABYrYqFyQ+oJ1+0kRyB+OP0Evo0XUHS1b3ZxBbBcQK/foA14qhQ8gRwbUm+9X1xVDiNXeuQErqWImmHrkKfISd+lLzoSF3upqfqnSnxHIqB20aGXTsiKqluiQqG27Ac2ml2igRQIfDFYDmZu8u6SKvGRmDTwpFRl+7eb6zYYzs0Iz8Id3z60Vj7dUdFhj1ZMYDQZEyG70rASNfY4ik0c+dfMKTuoaxI7AeQJMWmRdrHJLNoVewCemPPYA==
+truongtuanngouqg@gmail.com|54:02:03:f7:67:34:0ef1b22b092df14362c2b47006d79d72:ACBDAE8BCCCAEAACB2F7858E1CC3F8CC:k+Phd3JdhNRCfzOUYs4NjTyKJ7QjjqxZFFGPYiCLVKgqzmTdurmqCaqDfjYo6hLA9cil/fwjIzH8n5MByDnX5K3dkA8BRfzF7Y/kFmUor8oe7yKrSOB4jnlGz30KyVJlQcp7Wmlg40D4YfsJ4U7FfIAJ6BRKP1aJSIWncKGyVif8KaZFsrrB3ue5sE+he0PxF96nvtkb3cR0AWfymLC3z0Df5YNLoJgavPvk8/VV/q07An6dCPqWNLtnzMerIXZOkDvrUmqnhiTGY9kn2WwEsbpXPiHuybU2zxC3f/i6C3NNP0p2AjNzvEWJNuDB8Y3JySbWgscuzH2eHFhvc6rM/JLGC2HlcWy0fsDTWlPRpeIvYfKA4+zwps/bBU/v5NyskiBYdhw8acDC/RgC2/h6R0VqHv+UEQJ/prSMXV+SVTk9ZlSySDR1g1nZ3lUJAYuV7HJ4qdShzIye0LMbYkQK3Q==
 
-local bot = getBot()
-worldTutor = ""   -- tetap global krn dipakai lintas fungsi
+]]
 
-local function round(n)
-  return (n % 1) >= 0.5 and math.ceil(n) or math.floor(n)
-end
+use_bypass =  false
+for account in accounts:gmatch("[^\n]+") do
+    local email, sisa = account:match("([^|]+)|(.+)")
 
-local function faceSide2()
-  local packet = GameUpdatePacket.new()
-  packet.type  = 0
-  packet.flags = 32
-  bot:sendRaw(packet)
-end
-
-function findHomeWorld(variant, netid)
-  if variant:get(0):getString() == "OnRequestWorldSelectMenu"
-     and variant:get(1):getString():find("Your Worlds") then
-    local text = variant:get(1):getString()
-    local lines = {}
-    for line in text:gmatch("[^\r\n]+") do
-      table.insert(lines, line)
-    end
-    for i, value in ipairs(lines) do
-      if i == 3 then
-        local kalimat = lines[3]
-        -- ambil nama world diantara '|' lalu hilangkan spasi
-        local nilai = kalimat:match("|([a-zA-Z0-9%s]+)|")
-        if nilai then
-          nilai = nilai:gsub("%s", "")
-          worldTutor = nilai
-          print("Tutorial World: " .. worldTutor)
+    if email and sisa then
+        local mac, rid, wk, ltoken = sisa:match("([^|]+):([^|]+):([^|]+):(.+)")
+        if mac and rid and wk and ltoken then
+            print(mac,rid,wk,ltoken)
+            local details = {
+                ["name"] = ltoken,
+                ["rid"] = rid,
+                ["mac"] = mac,
+                ["wk"] = wk,
+                ["platform"] = 0,
+            }
+            local bot = addBot(details)
+            bot:getConsole().enabled = true
+            bot.bypass_logon = use_bypass
+            bot.auto_ban = true
+        
+            local tutorial = bot.auto_tutorial
+            tutorial.enabled = true
+            tutorial.auto_quest = true
+            tutorial.set_as_home = true
+            tutorial.set_high_level = true
+            tutorial.set_random_skin = false
+            tutorial.set_random_profile = false
+        
+            sleep(3)
         end
-      end
+    else
+        local mac, rid, wk, ltoken = sisa:match("([^|]+):([^|]+):([^|]+):(.+)")
+        if mac and rid and wk and ltoken then
+            local details = {
+                ["name"] = ltoken,
+                ["rid"] = rid,
+                ["mac"] = mac,
+                ["wk"] = wk,
+                ["platform"] = 0,
+            }
+            local bot = addBot(details)
+            bot:getConsole().enabled = true
+            bot.bypass_logon = use_bypass
+            bot.auto_ban = true
+        
+            local tutorial = bot.auto_tutorial
+            tutorial.enabled = true
+            tutorial.auto_quest = true
+            tutorial.set_as_home = true
+            tutorial.set_high_level = true
+            tutorial.set_random_skin = false
+            tutorial.set_random_profile = false
+        
+            sleep(3)
+        end
     end
-  end
-end
-
-function checkTutor()
-  -- keluar ke EXIT terlebih dahulu
-  while bot:isInWorld() do
-    bot:leaveWorld()
-    sleep(3000)
-  end
-
-  worldTutor = ""
-  noHomeWorld = false
-  print("Checking Tutorial/Home World")
-
-  addEvent(Event.variantlist, findHomeWorld)
-
-  for _ = 1, 3 do
-    -- guard: bot:getWorld() bisa nil
-    local w = (bot and bot.getWorld and bot:getWorld() and bot:getWorld().name) or ""
-    if worldTutor == "" and w:upper() == "EXIT" then
-      bot:sendPacket(3, "action|world_button\nname|_16")
-      listenEvents(5)
-    end
-  end
-
-  if worldTutor == "" then
-    printCrit("Doesn't Have Tutorial/Home World!")
-    callNotif("Doesn't Have Tutorial/Home World!", true)
-    noHomeWorld = true
-  end
-
-  sleep(100)
-  removeEvent(Event.variantlist)
-end
-
-local function get_current_world_upper()
-  local w = ""
-  if bot and bot.getWorld and bot:getWorld() and bot:getWorld().name then
-    w = bot:getWorld().name
-  elseif bot and bot.world then
-    w = bot.world
-  elseif getBot and getBot().world then
-    w = getBot().world
-  end
-  return (w or ""):upper()
-end
-
-local function warp(world)
-  local target = (world or ""):upper()
-  if target == "" then return end  -- guard: jangan spam warp ke empty
-
-  local attempts, max_attempts = 0, 7
-  local nuked = false
-
-  while get_current_world_upper() ~= target and not nuked do
-    bot:warp(target)
-    sleep(3500)
-    attempts = attempts + 1
-    if attempts >= max_attempts then
-      nuked = true
-    end
-  end
-end
-
-local function wait_inventory_increase(id, before_cnt, timeout_ms)
-  local t0 = os.clock()
-  local max_s = math.max(0.05, (timeout_ms or 5000) / 1000)
-  while (os.clock() - t0) < max_s do
-    local now = bot:getInventory():getItemCount(id)
-    if now > before_cnt then return true end
-    sleep(150)
-  end
-  return false
-end
-
-local function take(id)
-  local have = bot:getInventory():getItemCount(id)
-  if have == 1 then
-    return
-  end
-
-  warp(storageWorld)
-  sleep(150)
-
-  -- siapkan parameter collect sebelum bergerak
-  bot.collect_range = 5
-  bot.ignore_gems   = true
-  bot.auto_collect  = true
-
-  local inv_before = bot:getInventory():getItemCount(id)
-
-  for _, obj in pairs(getObjects() or {}) do
-    if obj.id == id then
-      local tx = round(obj.x / 32)
-      local ty = math.floor(obj.y / 32)
-      bot:findPath(tx, ty)
-      -- beri waktu pathing + pickup
-      if wait_inventory_increase(id, inv_before, 5000) then
-        break
-      end
-    end
-  end
-
-  -- reset behavior collect
-  bot.auto_collect = false
-  bot.ignore_gems  = false
-
-  have = bot:getInventory():getItemCount(id)
-  if have > 1 then
-    faceSide2()
-    sleep(100)
-    bot:drop(id, have - 1)  -- sisakan 1
-    sleep(400)
-    bot:leaveWorld()
-  end
-end
-
-local function here()
-  local w = bot and bot.getWorld and bot:getWorld() or nil
-  local p = w and w.getLocal and w:getLocal() or nil
-  if not p then return 0, 0 end
-  return math.floor(p.posx/32), math.floor(p.posy/32)
-end
-
--- ====== eksekusi ======
-take(226)
-checkTutor()
-
-if worldTutor ~= "" and not noHomeWorld then
-  warp(worldTutor)
-  local x0, y0 = here()
-  -- SIGNAL JAMMER
-  bot:place(x0 - 1, y0 - 1, 226)
-  sleep(500)
-  bot:hit(x0 - 1, y0 - 1)
-  sleep(500)
-else
-  printWarn("Skip placing jammer: no tutorial/home world found.")
 end
