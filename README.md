@@ -1,5 +1,5 @@
-LIST_WORLD_BLOCK = {"COKANJI|XX1"}
-
+LIST_WORLD_BLOCK = {"FOZEEZ2|NOWXX123"}
+STORAGE_SEED = ""
 
 
 MODE = "SULAP"
@@ -10,18 +10,19 @@ ID_BLOCK = 8640
 
 
 
-
-DELAY_RECONNECT  = 20000
-DELAY_BAD_SERVER = 120000
-DELAY_BREAK      = 170
-DELAY_PUT        = 115
-DELAY_WARP       = 7000
+JUMLAH_TILE_BREAK = 3
+DELAY_RECONNECT   = 20000
+DELAY_BAD_SERVER  = 120000
+DELAY_BREAK       = 170
+DELAY_PUT         = 115
+DELAY_WARP        = 7000
 
 -- ##################### BATAS SCRIPT #####################
+TILE_BREAK = {}
 worldTutor = ""
 ID_SEED = ID_BLOCK + 1
 CHECK_WORLD_TUTORIAL = false
-
+NUKED_STATUS         = false
 
 -- ##################### UTIL / RECONNECT #####################
 function STATUS_BOT_NEW()
@@ -80,6 +81,40 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
   elseif WORLD then       WARP_WORLD((WORLD or ""):upper()) end
 
   if POSX and POSY then local b=getBot and getBot() or nil; if b and b.findPath then b:findPath(POSX,POSY) end end
+end
+
+function ZEE_COLLECT(state)
+  local b=getBot and getBot() or nil; if not b then return end
+  if state then b.auto_collect=true; b.ignore_gems=true; b.collect_range=5; b.object_collect_delay=200
+  else b.auto_collect=false end
+end
+
+-- ##################### CARA PNB #####################
+for i = math.floor(JUMLAH_TILE_BREAK/2),1,-1 do
+    i = i * -1
+    table.insert(TILE_BREAK,i)
+end
+
+for i = 0, math.ceil(JUMLAH_TILE_BREAK/2) - 1 do
+    table.insert(TILE_BREAK,i)
+end
+
+function tilePunch(x,y)
+    for _,num in pairs(TILE_BREAK) do
+        if getBot():getWorld():getTile(x + 1,y + num).fg ~= 0 or getBot():getWorld():getTile(x + 1,y + num).bg ~= 0 then
+            return true
+        end
+    end
+    return false
+end
+
+function tilePlace(x,y)
+    for _,num in pairs(TILE_BREAK) do
+        if getBot():getWorld():getTile(x + 1,y + num).fg == 0 and getBot():getWorld():getTile(x + 1,y + num).bg == 0 then
+            return true
+        end
+    end
+    return false
 end
 
 -- ##################### GET DATA WORLD TUTORIAL #####################
@@ -263,14 +298,52 @@ function WARP_WORLD(WORLD, DOOR)
   CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET= tryDoor and DOOR or nil; _cleanup(); return true
 end
 
+-- ##################### TAKE BLOCK #####################
+function TAKE_BLOCK(world, door)
+    local b=getBot and getBot() or nil
+    local TARGET_ID=ID_BLOCK; local inv=b:getInventory()
+    local have=inv:getItemCount(TARGET_ID)
+    if have < 20 then
+        WARP_WORLD(world, door); sleep(250)
+        SMART_RECONNECT(w,d)
+
+        local MAX_ROUNDS, WAIT_MS = 10, 1200
+        local got=false
+        ZEE_COLLECT(true)
+        local ok, err = pcall(function()
+        for _=1,MAX_ROUNDS do
+            if inv:getItemCount(TARGET_ID)>0 then got=true; break end
+            local objs=(getObjects and getObjects()) or {}
+            local me=b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+            local best,bestd2=nil,1e18
+            for _,o in pairs(objs) do
+            if o.id==TARGET_ID then
+                local txo,tyo=math.floor(o.x/32),math.floor(o.y/32)
+                if me then
+                local mx,my=math.floor(me.posx/32),math.floor(me.posy/32)
+                local d2=(txo-mx)*(txo-mx)+(tyo-my)*(tyo-my)
+                if d2<bestd2 then best,bestd2=o,d2 end
+                else best,bestd2=o,0 end
+            end
+            end
+            if best then
+            local tx,ty=math.floor(best.x/32),math.floor(best.y/32)
+            SMART_RECONNECT(w,d,tx,ty); b:findPath(tx,ty); sleep(WAIT_MS)
+            else
+            SMART_RECONNECT(w,d); sleep(WAIT_MS)
+            end
+        end
+        end)
+        ZEE_COLLECT(false)
+    end
+end
 
 
 
-
-
-
-function main_sulap(world, door)
-
+function main_sulap(world_block, door_block)
+    -- while true do
+        TAKE_BLOCK(world_block, door_block)
+    -- end
 end
 
 
@@ -295,13 +368,11 @@ if true then
             end
             world_block = split_data[1]
             door_block = split_data[2]
-            -- main_sulap(world_block, door_block)
-            WARP_WORLD(world_block, door_block)
-            WARP_WORLD(worldTutor)
+            main_sulap(world_block, door_block)
         end
     elseif MODE == "PNB" then
     else
         print("PLEAS INPUT MODE !!!!")
-        break
+        -- break
     end
 end
