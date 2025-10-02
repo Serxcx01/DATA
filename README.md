@@ -9,7 +9,7 @@ MODE = "SULAP"
 ID_BLOCK = 8640
 
 
-
+LIMIT_SEED_IN_BP  = 100
 JUMLAH_TILE_BREAK = 3
 DELAY_RECONNECT   = 20000
 DELAY_BAD_SERVER  = 120000
@@ -338,12 +338,62 @@ function TAKE_BLOCK(world, door)
     end
 end
 
+function pnb_sulap()
+    local b=getBot and getBot() or nil
+    local inv=b:getInventory()
+    local jml_block=inv:getItemCount(ID_BLOCK)
+    local jml_seed=inv:getItemCount(ID_SEED)
+    local WAIT_MS=1200
+    local counter = 0
+    if (worldTutor or "")=="" then checkTutor() end
+    local w=worldTutor
+    WARP_WORLD(worldTutor); sleep(100)
+    SMART_RECONNECT(w); sleep(100)
+    while jml_block<0 and jml_seed>LIMIT_SEED_IN_BP do
+        while tilePlace(ex,ye) do
+            for _,i in pairs(TILE_BREAK) do
+                if getBot():getWorld():getTile(ex + 1,ye + i).fg == 0 and getBot():getWorld():getTile(ex + 1,ye + i).bg == 0 then
+                    getBot():place(getBot().x + 1, getBot().y + i, ID_BLOCK)
+                    sleep(DELAY_PLACE)
+                    SMART_RECONNECT(w); sleep(100)
+                    counter = counter + 1
+                    if counter == 150 then
+                        counter = 0
+                        local b=getBot and getBot() or nil; if b and b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
+                        sleep(WAIT_MS)
+                        SMART_RECONNECT(w); sleep(100)
+                    end
+                else
+                    break
+                end
+            end
+        end
+        local counter = 0
+        while tilePunch(ex,ye) do
+            for _,i in pairs(TILE_BREAK) do
+                if getBot():getWorld():getTile(ex + 1,ye + i).fg ~= 0 or getBot():getWorld():getTile(ex + 1,ye + i).bg ~= 0 then
+                    getBot():hit(getBot().x + 1, getBot().y + i)
+                    sleep(DELAY_PUNCH)
+                    SMART_RECONNECT(w); sleep(100)
+                    counter = counter + 1
+                    if counter == 150 then
+                        counter = 0
+                        local b=getBot and getBot() or nil; if b and b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
+                        sleep(WAIT_MS)
+                        SMART_RECONNECT(w); sleep(100)
+                    end
+                end
+            end
+        end
+    end
+end
 
 
 function main_sulap(world_block, door_block)
-    -- while true do
+    while true do
         TAKE_BLOCK(world_block, door_block)
-    -- end
+        pnb_sulap()
+    end
 end
 
 
