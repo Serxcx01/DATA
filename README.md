@@ -1,5 +1,14 @@
 bot = getBot()
 
+function findStatus()
+    for _, con in pairs(bot:getConsole().contents) do
+        if con:find("Status:") and bot.status == BotStatus.online then
+            return true
+        end
+    end
+    return false
+end
+
 function checkMalady()
     if bot:isInWorld() and bot.status == BotStatus.online then
         clearConsole()
