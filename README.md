@@ -25,10 +25,6 @@ CHECK_WORLD_TUTORIAL = false
 NUKED_STATUS         = false
 WORLD_MAX_X = WORLD_MAX_X or 99
 WORLD_MAX_Y = WORLD_MAX_Y or 59
-MALADY_COOLDOWN      = MALADY_COOLDOWN or {}
-MALADY_FAILS         = MALADY_FAILS or {}
-MALADY_COOLDOWN_MIN  = tonumber(MALADY_COOLDOWN_MIN or MAGNI_COOLDOWN_MIN or 10)
-MALADY_FAILS_MAX_TRY = tonumber(MALADY_FAILS_MAX_TRY or MAGNI_FAILS_MAX_TRY or 3)
 
 -- ##################### UTIL / RECONNECT #####################
 function STATUS_BOT_NEW()
@@ -100,17 +96,6 @@ function faceSide2()
   local b=getBot and getBot() or bot; if not b then return end
   local packet=GameUpdatePacket.new(); packet.type=0; packet.flags=32; b:sendRaw(packet)
 end
-
--- ##################### MALADY #####################
-getBot().malady
-malady = getBot().auto_malady
-malady.enabled = true
-malady.auto_surgery_station = false
-malady.auto_vial = true
-malady.auto_chicken_feet = false
-malady.auto_grumbleteeth = false
-malady.auto_refresh = true
-malady.storage = STORAGE_TOOLS_MALADY
 
 -- ##################### CARA PNB #####################
 for i = math.floor(JUMLAH_TILE_BREAK/2),1,-1 do
