@@ -107,6 +107,7 @@ function findHomeWorld(variant, netid)
 end
 
 function checkTutor()
+    local bot=getBot and getBot()
     -- keluar ke EXIT terlebih dahulu
     while bot:isInWorld() do
         bot:leaveWorld()
