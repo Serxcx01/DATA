@@ -299,92 +299,135 @@ function WARP_WORLD(WORLD, DOOR)
 end
 
 -- ##################### TAKE BLOCK #####################
+-- === FIX kecil di TAKE_BLOCK(): hindari variabel w/d yang tidak ada ===
 function TAKE_BLOCK(world, door)
-    local b=getBot and getBot() or nil
-    local TARGET_ID=ID_BLOCK; local inv=b:getInventory()
-    local have=inv:getItemCount(TARGET_ID)
+    local b = getBot and getBot() or nil
+    local TARGET_ID = ID_BLOCK
+    local inv = b:getInventory()
+    local have = inv:getItemCount(TARGET_ID)
+
     if have < 20 then
         WARP_WORLD(world, door); sleep(250)
-        SMART_RECONNECT(w,d)
+        SMART_RECONNECT(world, door)  -- FIX: pakai argumen yang benar
 
         local MAX_ROUNDS, WAIT_MS = 10, 1200
-        local got=false
         ZEE_COLLECT(true)
-        local ok, err = pcall(function()
-        for _=1,MAX_ROUNDS do
-            if inv:getItemCount(TARGET_ID)>0 then got=true; break end
-            local objs=(getObjects and getObjects()) or {}
-            local me=b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
-            local best,bestd2=nil,1e18
-            for _,o in pairs(objs) do
-            if o.id==TARGET_ID then
-                local txo,tyo=math.floor(o.x/32),math.floor(o.y/32)
-                if me then
-                local mx,my=math.floor(me.posx/32),math.floor(me.posy/32)
-                local d2=(txo-mx)*(txo-mx)+(tyo-my)*(tyo-my)
-                if d2<bestd2 then best,bestd2=o,d2 end
-                else best,bestd2=o,0 end
+        pcall(function()
+            for _ = 1, MAX_ROUNDS do
+                if inv:getItemCount(TARGET_ID) > 0 then break end
+                local objs = (getObjects and getObjects()) or {}
+                local me = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+                local best, bestd2 = nil, 1e18
+                for _, o in pairs(objs) do
+                    if o.id == TARGET_ID then
+                        local txo, tyo = math.floor(o.x/32), math.floor(o.y/32)
+                        if me then
+                            local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
+                            local d2 = (txo-mx)*(txo-mx) + (tyo-my)*(tyo-my)
+                            if d2 < bestd2 then best, bestd2 = o, d2 end
+                        else
+                            best, bestd2 = o, 0
+                        end
+                    end
+                end
+                if best then
+                    local tx, ty = math.floor(best.x/32), math.floor(best.y/32)
+                    SMART_RECONNECT(world, door, tx, ty)
+                    b:findPath(tx, ty)
+                    sleep(WAIT_MS)
+                else
+                    SMART_RECONNECT(world, door)
+                    sleep(WAIT_MS)
+                end
+                inv = b:getInventory() -- refresh
             end
-            end
-            if best then
-            local tx,ty=math.floor(best.x/32),math.floor(best.y/32)
-            SMART_RECONNECT(w,d,tx,ty); b:findPath(tx,ty); sleep(WAIT_MS)
-            else
-            SMART_RECONNECT(w,d); sleep(WAIT_MS)
-            end
-        end
         end)
         ZEE_COLLECT(false)
     end
 end
 
+
+-- === FIX: pnb_sulap() ===
 function pnb_sulap()
-    local b=getBot and getBot() or nil
-    local inv=b:getInventory()
-    local jml_block=inv:getItemCount(ID_BLOCK)
-    local jml_seed=inv:getItemCount(ID_SEED)
-    local WAIT_MS=1200
+    local b = getBot and getBot() or nil
+    if not b then return end
+
+    if (worldTutor or "") == "" then
+        checkTutor()
+    end
+    local w = worldTutor
+
+    -- warp + jaga koneksi
+    WARP_WORLD(w); sleep(100)
+    SMART_RECONNECT(w); sleep(100)
+
+    -- gunakan tile posisi saat ini sebagai acuan
+    local me = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+    if not me then return end
+    local ex = math.floor((me.posx or 0) / 32)
+    local ye = math.floor((me.posy or 0) / 32)
+
     local counter = 0
-    if (worldTutor or "")=="" then checkTutor() end
-    local w=worldTutor
-    WARP_WORLD(worldTutor); sleep(100)
-    local ex, ye = b.x, b.y
-    while jml_block<0 and jml_seed>LIMIT_SEED_IN_BP do
-        while tilePlace(ex,ye) do
-            for _,i in pairs(TILE_BREAK) do
-                if getBot():getWorld():getTile(ex + 1,ye + i).fg == 0 and getBot():getWorld():getTile(ex + 1,ye + i).bg == 0 then
-                    getBot():place(getBot().x + 1, getBot().y + i, ID_BLOCK)
-                    sleep(DELAY_PLACE)
+    local WAIT_MS = 1200
+
+    -- REFRESH inventory setiap iterasi
+    local inv = b:getInventory()
+
+    -- Logika: sulap block -> seed sampai jumlah seed mencapai batas
+    -- Loop berlanjut selama masih ada block dan seed di bawah batas
+    while inv:getItemCount(ID_BLOCK) > 0 and inv:getItemCount(ID_SEED) < LIMIT_SEED_IN_BP do
+
+        -- PLACE: isi celah kosong di depan + offset vertikal
+        while tilePlace(ex, ye) do
+            for _, i in pairs(TILE_BREAK) do
+                local t = b:getWorld():getTile(ex + 1, ye + i)
+                if t.fg == 0 and t.bg == 0 then
+                    b:place(ex + 1, ye + i, ID_BLOCK)
+                    sleep(DELAY_PUT)                 -- FIX: gunakan konstanta yang ada
                     SMART_RECONNECT(w); sleep(100)
                     counter = counter + 1
                     if counter == 150 then
                         counter = 0
-                        local b=getBot and getBot() or nil; if b and b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
+                        if b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
                         sleep(WAIT_MS)
                         SMART_RECONNECT(w); sleep(100)
                     end
                 else
+                    -- sudah terisi, keluar dari for ini untuk re-check tilePlace
                     break
                 end
             end
+            inv = b:getInventory() -- refresh setelah aksi
+            if inv:getItemCount(ID_BLOCK) <= 0 then break end
         end
-        local counter = 0
-        while tilePunch(ex,ye) do
-            for _,i in pairs(TILE_BREAK) do
-                if getBot():getWorld():getTile(ex + 1,ye + i).fg ~= 0 or getBot():getWorld():getTile(ex + 1,ye + i).bg ~= 0 then
-                    getBot():hit(getBot().x + 1, getBot().y + i)
-                    sleep(DELAY_PUNCH)
+
+        -- PUNCH: hancurkan tile yang ada untuk jadi seed
+        -- (hanya jalan kalau memang ada tile yang bisa dipukul)
+        while tilePunch(ex, ye) do
+            for _, i in pairs(TILE_BREAK) do
+                local t = b:getWorld():getTile(ex + 1, ye + i)
+                if t.fg ~= 0 or t.bg ~= 0 then
+                    b:hit(ex + 1, ye + i)
+                    sleep(DELAY_BREAK)               -- FIX: gunakan konstanta yang ada
                     SMART_RECONNECT(w); sleep(100)
                     counter = counter + 1
                     if counter == 150 then
                         counter = 0
-                        local b=getBot and getBot() or nil; if b and b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
+                        if b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
                         sleep(WAIT_MS)
                         SMART_RECONNECT(w); sleep(100)
                     end
                 end
             end
+            inv = b:getInventory() -- refresh setelah aksi
+            if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
+                -- seed sudah mencapai batas, sudahi
+                break
+            end
         end
+
+        -- refresh terakhir untuk syarat while
+        inv = b:getInventory()
     end
 end
 
