@@ -158,6 +158,15 @@ function _current_world_upper()
   return (w or ""):upper()
 end
 
+local function _current_tile_fg()
+  local b=getBot and getBot() or nil; if not (b and b.getWorld) then return -1 end
+  local okW,w=pcall(function() return b:getWorld() end); if not okW or not w then return -1 end
+  local okL,me=pcall(function() return w:getLocal() end); if not okL or not me then return -1 end
+  local tx=math.floor((me.posx or 0)/32); local ty=math.floor((me.posy or 0)/32)
+  local okT,t=pcall(function() return w:getTile(tx,ty) end); if not okT or not t then return -1 end
+  return t.fg or -1
+end
+
 function _current_tile_fg_safe(polls,wait_ms)
   polls=polls or 12; wait_ms=wait_ms or 120
   for _=1,polls do local fg=_current_tile_fg(); if fg and fg>=0 then return fg end; sleep(wait_ms) end
