@@ -288,6 +288,7 @@ while true do
             door_block = split_data[2]
             -- main_sulap(world_block, door_block)
             WARP_WORLD(world_block, door_block)
+            WARP_WORLD(worldTutor)
         end
     elseif MODE == "PNB" then
     else
