@@ -348,7 +348,6 @@ function pnb_sulap()
     if (worldTutor or "")=="" then checkTutor() end
     local w=worldTutor
     WARP_WORLD(worldTutor); sleep(100)
-    SMART_RECONNECT(w); sleep(100)
     local ex, ye = b.x, b.y
     while jml_block<0 and jml_seed>LIMIT_SEED_IN_BP do
         while tilePlace(ex,ye) do
