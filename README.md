@@ -277,7 +277,7 @@ end
 
 
 
-while true do
+if true then
     if MODE == "SULAP" then
         if not CHECK_WORLD_TUTORIAL then
             checkTutor()
