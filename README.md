@@ -1296,7 +1296,7 @@ function main_sulap(world_block, door_block)
     local ok, reason = TAKE_BLOCK(world_block, door_block, {
       min_stack      = 20,
       max_rounds     = 40,
-      wait_ms        = 1200,
+      wait_ms        = 100,
       max_miss       = 5,
       max_time_secs  = 180
     })
