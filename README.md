@@ -6,6 +6,7 @@ MODE = "SULAP"
 
 STORAGE_SEED, DOOR_SEED     = "FENCEPAPA1", "NOWXX123"
 STORAGE_MALADY, DOOR_MALADY = "COKANJI", "XX1"
+SHOW_PUNCH                  = false
 ID_BLOCK                    = 8640
 LIMIT_SEED_IN_BP            = 70
 JUMLAH_TILE_BREAK           = 3
@@ -114,15 +115,15 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     if STATUS_BOT_NEW().status=="online" then
       if type(waitMaladyCheck) == "function" then
         local ok, ready = pcall(waitMaladyCheck, 1)  -- sama dengan waitMaladyCheck(3)
+
         if not ok then
-          print("[MALADY] error:", ready)  -- 'ready' berisi pesan error dari pcall
+          print("[MALADY] error: " .. tostring(ready))  -- 'ready' = pesan error dari pcall
         elseif ready then
-          print(("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check."):format(THRESHOLD_MIN))
-          -- contoh kalau mau lanjut ambil di sini (opsional):
-          -- take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
+          print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.",
+                              MALADY_CHECK_MINUTES))
         else
-          print(("[MALADY] belum clear / sisa >= %d menit."):format(THRESHOLD_MIN))
-        end
+          print(string.format("[MALADY] belum clear / sisa >= %d menit.",
+                              MALADY_CHECK_MINUTES))
       end
     end
   end
@@ -138,6 +139,11 @@ function ZEE_COLLECT(state)
   local b=getBot and getBot() or nil; if not b then return end
   if state then b.auto_collect=true; b.ignore_gems=true; b.collect_range=5; b.object_collect_delay=200
   else b.auto_collect=false end
+  if SHOW_PUNCH then
+    b.legit_mode=true
+  else
+    b.legit_mode=false
+  end
 end
 
 -------------------- FACE KANAN --------------------
@@ -955,16 +961,16 @@ function TAKE_BLOCK(world, door)
         ZEE_COLLECT(false)
         -- default 3 menit
         if type(waitMaladyCheck) == "function" then
-          local ok, ready = pcall(waitMaladyCheck, 2)  -- sama dengan waitMaladyCheck(3)
+          local ok, ready = pcall(waitMaladyCheck, 1)  -- sama dengan waitMaladyCheck(3)
+
           if not ok then
-            print("[MALADY] error:", ready)  -- 'ready' berisi pesan error dari pcall
+            print("[MALADY] error: " .. tostring(ready))  -- 'ready' = pesan error dari pcall
           elseif ready then
-            print(("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check."):format(THRESHOLD_MIN))
-            -- contoh kalau mau lanjut ambil di sini (opsional):
-            -- take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
+            print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.",
+                                MALADY_CHECK_MINUTES))
           else
-            print(("[MALADY] belum clear / sisa >= %d menit."):format(THRESHOLD_MIN))
-          end
+            print(string.format("[MALADY] belum clear / sisa >= %d menit.",
+                                MALADY_CHECK_MINUTES))
         end
     end
 end
@@ -988,16 +994,16 @@ function pnb_sulap()
   -- masuk world + jaga koneksi
   WARP_WORLD(w); sleep(100)
   if type(waitMaladyCheck) == "function" then
-    local ok, ready = pcall(waitMaladyCheck, 3)  -- sama dengan waitMaladyCheck(3)
+    local ok, ready = pcall(waitMaladyCheck, 5)  -- sama dengan waitMaladyCheck(3)
+
     if not ok then
-      print("[MALADY] error:", ready)  -- 'ready' berisi pesan error dari pcall
+      print("[MALADY] error: " .. tostring(ready))  -- 'ready' = pesan error dari pcall
     elseif ready then
-      print(("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check."):format(THRESHOLD_MIN))
-      -- contoh kalau mau lanjut ambil di sini (opsional):
-      -- take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
+      print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.",
+                          MALADY_CHECK_MINUTES))
     else
-      print(("[MALADY] belum clear / sisa >= %d menit."):format(THRESHOLD_MIN))
-    end
+      print(string.format("[MALADY] belum clear / sisa >= %d menit.",
+                          MALADY_CHECK_MINUTES))
   end
   SMART_RECONNECT(w); sleep(100)
 
