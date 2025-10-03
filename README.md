@@ -1291,41 +1291,43 @@ function pnb_sulap()
 end
 
 
+-- ==========================================
+-- MAIN SULAP — break kalau block habis
+-- ==========================================
 function main_sulap(world_block, door_block)
   while true do
     local ok, reason = TAKE_BLOCK(world_block, door_block, {
-      min_stack      = 20,
-      max_rounds     = 40,
-      wait_ms        = 100,
-      max_miss       = 5,
-      max_time_secs  = 180
+      min_stack      = 20,    -- target minimal item di inventory
+      max_rounds     = 40,    -- batas iterasi pathing
+      wait_ms        = 1200,  -- jeda tiap pathing
+      max_miss       = 5,     -- berturut-turut tidak ketemu objek → anggap habis
+      max_time_secs  = 180    -- guard waktu total (3 menit)
     })
 
     if ok then
-      -- punya block cukup → lanjut proses
+      -- punya block cukup → lanjut proses utama
       pnb_sulap()
     else
-      -- Gagal; pilih tindakan:
       if reason == "not_found" then
-        -- tidak ada block di world tsb -> keluar loop / ganti world / tidur dulu
-        -- break   -- uncomment jika mau stop total
-        sleep(2000)
+        print("[SULAP] Block ID_BLOCK sudah tidak ditemukan. Stop loop.")
+        break  -- <<<<<<<<<<<<<<  BREAK di sini kalau block habis
       elseif reason == "timeout" then
-        -- terlalu lama, bisa re-warp lalu coba lagi, atau stop
+        -- terlalu lama; bisa re-sync world lalu coba lagi
+        print("[SULAP] Timeout ambil block. Re-sync world & coba lagi.")
         if SMART_RECONNECT then SMART_RECONNECT(world_block, door_block) end
         sleep(1500)
       elseif reason == "reconnect" then
-        -- world/door problem
+        print("[SULAP] Gagal reconnect. Retry sebentar...")
         sleep(1500)
       else
-        -- no_bot / storage / dll
-        sleep(1500)
+        -- alasan lain: no_bot / check_failed / dll — retry ringan
+        print("[SULAP] Gagal ambil block: " .. tostring(reason))
+        sleep(1200)
       end
-
-      -- opsional: kalau gagal jangan lanjut pnb_sulap:
-      -- goto continue  -- (kalau kamu pakai label), atau simply 'goto' dihilangkan.
     end
   end
+
+  print("[SULAP] Selesai: tidak ada block tersisa.")
 end
 
 
