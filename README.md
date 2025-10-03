@@ -749,7 +749,7 @@ function ensureMalady(threshold_min, opts)
   local useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
 
   -- 1) Baca konsensus awal (poll 4x) → robust
-  local has, max_secs, code, nm = _detect_malady_dual(4, 1000)
+  local has, max_secs, code, nm = _detect_malady_dual(2, 1000)
 
   -- 2) Kalau masih ada & sisa > threshold → SKIP
   if has and (max_secs or 0) > THRESH_SECS then
@@ -1090,9 +1090,6 @@ function TAKE_BLOCK(world, door)
         end)
         ZEE_COLLECT(false)
         -- default 3 menit
-        if STATUS_BOT_NEW().status=="online" then
-          ensureMalady(5)
-        end
     end
 end
 
@@ -1228,9 +1225,6 @@ function main_sulap(world_block, door_block)
     while true do
         TAKE_BLOCK(world_block, door_block)
         pnb_sulap()
-        if STATUS_BOT_NEW().status=="online" then
-          ensureMalady(5)
-        end
     end
 end
 
