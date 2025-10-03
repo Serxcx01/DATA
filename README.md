@@ -112,15 +112,15 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     or (STATUS_BOT_NEW().status=="Server Overload") do
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
+    if STATUS_BOT_NEW().status=="online" then
+      ensureMalady(5)
+    end
   end
 
   if WORLD and DOOR then WARP_WORLD((WORLD or ""):upper(), DOOR)
   elseif WORLD then       WARP_WORLD((WORLD or ""):upper()) end
 
   if POSX and POSY then local b=getBot and getBot() or nil; if b and b.findPath then b:findPath(POSX,POSY) end end
-  if STATUS_BOT_NEW().status=="online" then
-    ensureMalady(5)
-  end
 end
 
 function ZEE_COLLECT(state)
@@ -132,6 +132,7 @@ function ZEE_COLLECT(state)
   else
     b.legit_mode=false
   end
+  malady = b.auto_malady
   malady.enabled = true
   malady.auto_refresh = true
 end
@@ -1089,7 +1090,9 @@ function TAKE_BLOCK(world, door)
         end)
         ZEE_COLLECT(false)
         -- default 3 menit
-        ensureMalady(5)
+        if STATUS_BOT_NEW().status=="online" then
+          ensureMalady(5)
+        end
     end
 end
 
@@ -1225,6 +1228,9 @@ function main_sulap(world_block, door_block)
     while true do
         TAKE_BLOCK(world_block, door_block)
         pnb_sulap()
+        if STATUS_BOT_NEW().status=="online" then
+          ensureMalady(5)
+        end
     end
 end
 
