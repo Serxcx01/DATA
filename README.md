@@ -423,6 +423,13 @@ function findStatus()
     return false
 end
 
+function clearConsole()
+    local bot = (getBot and getBot()) or nil
+    for i = 1, 50 do
+        bot:getConsole():append("")
+    end
+end
+
 function checkMalady()
     local b = (getBot and getBot()) or nil
     if b and b.isInWorld and b:isInWorld() and (b.status == BotStatus.online or b.status == 1) then
