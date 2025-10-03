@@ -141,23 +141,46 @@ for i = 0, math.ceil(JUMLAH_TILE_BREAK/2) - 1 do
     table.insert(TILE_BREAK,i)
 end
 
-function tilePunch(x,y)
-    for _,num in pairs(TILE_BREAK) do
-        if getBot():getWorld():getTile(x + 1,y + num).fg ~= 0 or getBot():getWorld():getTile(x + 1,y + num).bg ~= 0 then
-            return true
-        end
-    end
-    return false
+-- helper kecil: ambil tile dengan guard batas & pcall
+local function _safeTile(w, x, y)
+  if x < 0 or x > WORLD_MAX_X or y < 0 or y > WORLD_MAX_Y then return nil end
+  local ok, t = pcall(function() return w:getTile(x, y) end)
+  if not ok then return nil end
+  return t
 end
 
-function tilePlace(x,y)
-    for _,num in pairs(TILE_BREAK) do
-        if getBot():getWorld():getTile(x + 1,y + num).fg == 0 and getBot():getWorld():getTile(x + 1,y + num).bg == 0 then
-            return true
-        end
+function tilePunch(x, y)
+  local b = getBot and getBot() or nil
+  local w = b and b.getWorld and b:getWorld() or nil
+  if not w then return false end
+
+  for _, num in ipairs(TILE_BREAK) do       -- urutan TERJAGA
+    local tx, ty = x + 1, y + num
+    local t = _safeTile(w, tx, ty)
+    -- punch hanya kalau ADA foreground (bg tidak relevan buat seed)
+    if t and (t.fg or 0) ~= 0 then
+      return true
     end
-    return false
+  end
+  return false
 end
+
+function tilePlace(x, y)
+  local b = getBot and getBot() or nil
+  local w = b and b.getWorld and b:getWorld() or nil
+  if not w then return false end
+
+  for _, num in ipairs(TILE_BREAK) do       -- urutan TERJAGA
+    local tx, ty = x + 1, y + num
+    local t = _safeTile(w, tx, ty)
+    -- place cukup cek foreground kosong; background boleh ada
+    if t and (t.fg or 0) == 0 then
+      return true
+    end
+  end
+  return false
+end
+
 
 -- ##################### GET DATA WORLD TUTORIAL #####################
 function findHomeWorld(variant, netid)
