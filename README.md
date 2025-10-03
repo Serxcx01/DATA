@@ -432,7 +432,7 @@ function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
       attempts_here=attempts_here+1
       local before=inv:getItemCount(item_id)
       b:drop(item_id, drop_try)         -- use numeric id
-      sleep(STEP_MS); SMART_RECONNECT(); GUARD_DOOR_STUCK()
+      sleep(STEP_MS); SMART_RECONNECT();
       inv = b:getInventory()            -- refresh inv
       local after=inv:getItemCount(item_id)
       if after<before then
