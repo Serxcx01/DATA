@@ -25,6 +25,12 @@ CHECK_WORLD_TUTORIAL = false
 NUKED_STATUS         = false
 WORLD_MAX_X = WORLD_MAX_X or 99
 WORLD_MAX_Y = WORLD_MAX_Y or 59
+local FULL_CACHE, BAD_CACHE = {}, {}
+local function _key(x,y) return x..":"..y end
+function mark_full(x,y) FULL_CACHE[_key(x,y)]=true end
+function mark_bad (x,y) BAD_CACHE [_key(x,y)]=true end
+function is_full_or_bad(x,y) return FULL_CACHE[_key(x,y)] or BAD_CACHE[_key(x,y)] end
+function reset_caches() FULL_CACHE={}; BAD_CACHE={} end
 
 -- ##################### UTIL / RECONNECT #####################
 function STATUS_BOT_NEW()
@@ -311,6 +317,99 @@ end
 -- TAKE MALADY (ID 8542) — BLOCKING TANPA COOLDOWN
 -- Stay di WORLD itu, tunggu sampai ada item 8542, ambil, pakai.
 -- ===========================================================
+local function _gotoExact(world, door, tx, ty, path_try, step_ms)
+  local b = getBot and getBot() or nil; if not b then return false end
+  path_try = path_try or 10
+  step_ms  = step_ms  or 700
+
+  local last_mx, last_my = nil, nil
+  local stale_ticks = 0
+  local backoff     = 0         -- tambahan jeda kecil saat stuck
+
+  for _ = 1, path_try do
+    local mx, my = _meTile()
+    if mx == tx and my == ty then return true end
+
+    -- coba pathing
+    b:findPath(tx, ty)
+
+    -- jeda + reconnect ringan (tanpa guard door di sini)
+    sleep(step_ms + backoff)
+    SMART_RECONNECT(world, door)
+
+    -- cek apakah bergerak
+    local cmx, cmy = _meTile()
+    if (cmx == (last_mx or mx)) and (cmy == (last_my or my)) then
+      stale_ticks = stale_ticks + 1
+      -- kalau 3x tidak berubah, anggap stuck → tambah backoff (maks 600ms)
+      if stale_ticks >= 3 then
+        if backoff < 600 then backoff = math.min(600, (backoff == 0) and 150 or math.floor(backoff * 2)) end
+        -- beri kesempatan server sync dulu sebelum ulangi findPath
+        sleep(120)
+        -- kalau tetap tidak maju setelah backoff bertambah, gagal total
+        if stale_ticks >= 6 then return false end
+      end
+    else
+      -- ada progres → reset indikator stuck & backoff
+      stale_ticks = 0
+      backoff = 0
+    end
+    last_mx, last_my = cmx, cmy
+  end
+
+  return false
+end
+
+function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
+  local b=getBot and getBot() or nil; if not b then return end
+  keep=keep or 1; opts=opts or {}
+  local CHUNK=opts.chunk or 400; local STEP_MS=opts.step_ms or 700; local PATH_TRY=opts.path_try or 10
+  local TILE_CAP=opts.tile_cap or 4000; local STACK_CAP=opts.stack_cap or 20; local RETRIES_TL=opts.tile_retries or 2
+
+  local inv=b:getInventory(); local have=inv:getItemCount(item_id)
+  if have<=keep then return end
+  if (storageW or "")~="" then WARP_WORLD(storageW,storageD); sleep(150); SMART_RECONNECT(storageW,storageD) end
+  reset_caches(); ZEE_COLLECT(false)
+  local me=b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+  local sx,sy= (me and math.floor(me.posx/32) or 1), (me and math.floor(me.posy/32) or 1)
+  local cursor={x=math.min(sx+1,WORLD_MAX_X), y=math.max(0, math.min(sy, WORLD_MAX_Y))}
+  local extras=have-keep
+  while extras>0 do
+    ::seek_slot::
+    local candX,candY; candX,candY,cursor=_nextDropTileSnake_auto(sx,sy,cursor,TILE_CAP,STACK_CAP)
+    if not candX then print("[MAGNI] Storage area penuh/jangkauan habis."); return end
+    local stanceX,stanceY=candX-1,candY
+    if (stanceX<0) or (not _is_in_bounds(stanceX,stanceY)) or (not _is_walkable(stanceX,stanceY)) then
+      mark_bad(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot
+    end
+    if not _gotoExact(storageW,storageD,stanceX,stanceY,PATH_TRY,STEP_MS) then
+      mark_bad(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot
+    end
+    faceSide2()
+    local total,stacks=_countOnTile(candX,candY)
+    if (total>=TILE_CAP) or (stacks>=STACK_CAP) then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot end
+    local cap=math.max(0,TILE_CAP-total); local drop_try=math.min(extras,CHUNK,cap); if drop_try<=0 then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot end
+    local attempts_here=0
+    while drop_try>0 and extras>0 do
+      attempts_here=attempts_here+1
+      local before=inv:getItemCount(item_id)
+      b:drop(tostring(item_id), drop_try)
+      sleep(STEP_MS); SMART_RECONNECT();
+      local after=inv:getItemCount(item_id)
+      if after<before then
+        local dropped=before-after; extras=math.max(0, extras-dropped)
+        local t2,s2=_countOnTile(candX,candY)
+        if (t2>=TILE_CAP) or (s2>=STACK_CAP) then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); break end
+        local sisa_cap=TILE_CAP-t2; if sisa_cap<=0 then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); break end
+        drop_try=math.min(extras,CHUNK,sisa_cap); attempts_here=0
+      else
+        if attempts_here>=RETRIES_TL then mark_bad(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot end
+        drop_try=math.max(1, math.floor(drop_try/2))
+      end
+    end
+  end
+end
+
 function take_malady(WORLD, DOOR, opts)
   local b = getBot and getBot() or nil
   if not b or (USE_MALADY == false) then return false end
