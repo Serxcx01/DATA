@@ -124,6 +124,7 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
         else
           print(string.format("[MALADY] belum clear / sisa >= %d menit.",
                               MALADY_CHECK_MINUTES))
+        end
       end
     end
   end
@@ -971,6 +972,7 @@ function TAKE_BLOCK(world, door)
           else
             print(string.format("[MALADY] belum clear / sisa >= %d menit.",
                                 MALADY_CHECK_MINUTES))
+          end
         end
     end
 end
@@ -1004,6 +1006,7 @@ function pnb_sulap()
     else
       print(string.format("[MALADY] belum clear / sisa >= %d menit.",
                           MALADY_CHECK_MINUTES))
+    end
   end
   SMART_RECONNECT(w); sleep(100)
 
