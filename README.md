@@ -141,24 +141,20 @@ for i = 0, math.ceil(JUMLAH_TILE_BREAK/2) - 1 do
     table.insert(TILE_BREAK,i)
 end
 
--- helper kecil: ambil tile dengan guard batas & pcall
+-- helper: ambil tile aman dengan guard batas
 local function _safeTile(w, x, y)
   if x < 0 or x > WORLD_MAX_X or y < 0 or y > WORLD_MAX_Y then return nil end
   local ok, t = pcall(function() return w:getTile(x, y) end)
-  if not ok then return nil end
-  return t
+  return ok and t or nil
 end
 
 function tilePunch(x, y)
   local b = getBot and getBot() or nil
   local w = b and b.getWorld and b:getWorld() or nil
   if not w then return false end
-
-  for _, num in ipairs(TILE_BREAK) do       -- urutan TERJAGA
-    local tx, ty = x + 1, y + num
-    local t = _safeTile(w, tx, ty)
-    -- punch hanya kalau ADA foreground (bg tidak relevan buat seed)
-    if t and (t.fg or 0) ~= 0 then
+  for _, num in ipairs(TILE_BREAK) do            -- pakai ipairs: urutan terjaga
+    local t = _safeTile(w, x + 1, y + num)
+    if t and (t.fg or 0) ~= 0 then               -- hanya cek FG
       return true
     end
   end
@@ -169,12 +165,9 @@ function tilePlace(x, y)
   local b = getBot and getBot() or nil
   local w = b and b.getWorld and b:getWorld() or nil
   if not w then return false end
-
-  for _, num in ipairs(TILE_BREAK) do       -- urutan TERJAGA
-    local tx, ty = x + 1, y + num
-    local t = _safeTile(w, tx, ty)
-    -- place cukup cek foreground kosong; background boleh ada
-    if t and (t.fg or 0) == 0 then
+  for _, num in ipairs(TILE_BREAK) do            -- pakai ipairs: urutan terjaga
+    local t = _safeTile(w, x + 1, y + num)
+    if t and (t.fg or 0) == 0 then               -- cukup cek FG kosong (BG boleh ada)
       return true
     end
   end
@@ -954,95 +947,131 @@ end
 
 -- ##################### PNB SULAP #####################
 function pnb_sulap()
-    local b = getBot and getBot() or nil
-    if not b then return end
+  local b = getBot and getBot() or nil
+  if not b then return end
 
-    if (worldTutor or "") == "" then
-        checkTutor()
+  -- pastikan punya home/tutorial world
+  if (worldTutor or "") == "" then
+    if type(checkTutor) == "function" then checkTutor() end
+  end
+  local w = worldTutor
+  if (w or "") == "" then
+    print("[PNB] Tidak punya Tutorial/Home World. Abort.")
+    return
+  end
+
+  -- masuk world + jaga koneksi
+  WARP_WORLD(w); sleep(100)
+  -- kalau kamu pakai logika malady < 1 menit, panggil helper (opsional)
+  if type(waitMaladyThenTake) == "function" then
+    pcall(waitMaladyThenTake)
+  end
+  SMART_RECONNECT(w); sleep(100)
+
+  local function pos_now()
+    local me = b:getWorld() and b:getWorld():getLocal() or nil
+    if not me then return nil, nil end
+    return math.floor((me.posx or 0)/32), math.floor((me.posy or 0)/32)
+  end
+
+  local counter, COUNTER_MAX = 0, 150
+  local function soft_reset()
+    counter = counter + 1
+    if counter >= COUNTER_MAX then
+      counter = 0
+      if b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
+      sleep(1200)
+      SMART_RECONNECT(w); sleep(120)
     end
-    local w = worldTutor
-    if (w or "") == "" then
-        print("[PNB] Tidak punya Tutorial/Home World. Abort.")
-        return
-    end
+  end
 
-    -- warp + jaga koneksi
-    WARP_WORLD(w); sleep(100)
-    waitMaladyThenTake(); sleep(100)
-    SMART_RECONNECT(w); sleep(100)
+  local inv = b:getInventory()
+  ZEE_COLLECT(true)
 
-    -- gunakan tile posisi saat ini sebagai acuan
-    local me = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
-    if not me then return end
-    local ex = getBot().x
-    local ye = getBot().y
+  -- loop utama: selama masih ada block & seed belum mencapai limit
+  while inv:getItemCount(ID_BLOCK) > 0 and inv:getItemCount(ID_SEED) < LIMIT_SEED_IN_BP do
+    ------------------------------------------------------------
+    -- PLACE: isi satu tile kosong per iterasi; keluar jika tidak ada yg bisa di-place
+    ------------------------------------------------------------
+    while true do
+      local ex, ye = pos_now()
+      if not ex then break end
+      if not tilePlace(ex, ye) then break end
 
-    local counter = 0
-    local WAIT_MS = 1200
-
-    -- REFRESH inventory setiap iterasi
-    local inv = b:getInventory()
-    ZEE_COLLECT(true)
-
-    -- Logika: sulap block -> seed sampai jumlah seed mencapai batas
-    -- Loop berlanjut selama masih ada block dan seed di bawah batas
-    while inv:getItemCount(ID_BLOCK) > 0 and inv:getItemCount(ID_SEED) < LIMIT_SEED_IN_BP do
-
-        -- PLACE: isi celah kosong di depan + offset vertikal
-        while tilePlace(ex, ye) do
-            for _, i in pairs(TILE_BREAK) do
-                local t = b:getWorld():getTile(ex + 1, ye + i)
-                if t.fg == 0 and t.bg == 0 then
-                    b:place(ex + 1, ye + i, ID_BLOCK)
-                    sleep(DELAY_PUT)
-                    SMART_RECONNECT(w); sleep(100)
-                    counter = counter + 1
-                    if counter == 150 then
-                        counter = 0
-                        if b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
-                        sleep(WAIT_MS)
-                        SMART_RECONNECT(w); sleep(100)
-                    end
-                else
-                    -- sudah terisi, keluar dari for ini untuk re-check tilePlace
-                    break
-                end
-            end
-            inv = b:getInventory() -- refresh setelah aksi
-            if inv:getItemCount(ID_BLOCK) <= 0 then break end
+      local acted = false
+      for _, off in ipairs(TILE_BREAK) do
+        local wx, wy = ex + 1, ye + off
+        local t = b:getWorld():getTile(wx, wy)
+        if (t.fg or 0) == 0 then
+          local before_fg = t.fg or 0
+          b:place(wx, wy, ID_BLOCK)
+          sleep(DELAY_PUT)
+          SMART_RECONNECT()      -- keep-alive ringan (tanpa forced warp)
+          -- verifikasi berhasil (tile berubah dan tidak 0)
+          local t2 = b:getWorld():getTile(wx, wy)
+          if t2 and (t2.fg or 0) ~= before_fg and (t2.fg or 0) ~= 0 then
+            acted = true
+            soft_reset()
+            break
+          end
         end
+      end
 
-        -- PUNCH: hancurkan tile yang ada untuk jadi seed
-        while tilePunch(ex, ye) do
-            for _, i in pairs(TILE_BREAK) do
-                local t = b:getWorld():getTile(ex + 1, ye + i)
-                if t.fg ~= 0 or t.bg ~= 0 then
-                    b:hit(ex + 1, ye + i)
-                    sleep(DELAY_BREAK)
-                    SMART_RECONNECT(w); sleep(100)
-                    counter = counter + 1
-                    if counter == 150 then
-                        counter = 0
-                        if b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
-                        sleep(WAIT_MS)
-                        SMART_RECONNECT(w); sleep(100)
-                    end
-                end
-            end
-            inv = b:getInventory() -- refresh setelah aksi
-            if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
-                -- seed sudah mencapai batas, sudahi
-                break
-            end
+      if not acted then
+        -- tidak ada offset yang berhasil dipasang → keluar agar tidak spin
+        break
+      end
+
+      inv = b:getInventory()
+      if inv:getItemCount(ID_BLOCK) <= 0 then break end
+    end
+
+    ------------------------------------------------------------
+    -- PUNCH: hancurkan satu tile per iterasi; keluar jika tidak ada yg bisa di-punch
+    ------------------------------------------------------------
+    while true do
+      local ex, ye = pos_now()
+      if not ex then break end
+      if not tilePunch(ex, ye) then break end
+
+      local acted = false
+      for _, off in ipairs(TILE_BREAK) do
+        local wx, wy = ex + 1, ye + off
+        local t = b:getWorld():getTile(wx, wy)
+        if (t.fg or 0) ~= 0 then
+          b:hit(wx, wy)
+          sleep(DELAY_BREAK)
+          SMART_RECONNECT()      -- keep-alive ringan
+          -- verifikasi hancur
+          local t2 = b:getWorld():getTile(wx, wy)
+          if t2 and (t2.fg or 0) == 0 then
+            acted = true
+            soft_reset()
+            break
+          end
         end
+      end
 
-        -- refresh terakhir untuk syarat while
-        inv = b:getInventory()
+      if not acted then
+        -- gagal hancurkan di semua offset → keluar agar tidak spin
+        break
+      end
+
+      inv = b:getInventory()
+      if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
+        break
+      end
     end
-    ZEE_COLLECT(false)
-    if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
-      DROP_ITEMS_SNAKE(STORAGE_SEED, DOOR_SEED, {ID_SEED}, {tile_cap=3000, stack_cap=20})
-    end
+
+    -- refresh inv untuk kondisi while utama
+    inv = b:getInventory()
+  end
+
+  ZEE_COLLECT(false)
+
+  if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
+    DROP_ITEMS_SNAKE(STORAGE_SEED, DOOR_SEED, {ID_SEED}, {tile_cap=3000, stack_cap=20})
+  end
 end
 
 
