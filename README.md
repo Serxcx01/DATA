@@ -1,4 +1,4 @@
-LIST_WORLD_BLOCK = {"FOZEEZ2|NOWXX123"}
+LIST_WORLD_BLOCK = {"COKANJI|XX1","FOZEEZ2|NOWXX123"}
 
 MODE = "SULAP"
 -- SULAP
@@ -8,7 +8,7 @@ STORAGE_SEED, DOOR_SEED     = "FENCEPAPA1", "NOWXX123"
 STORAGE_MALADY, DOOR_MALADY = "COKANJI", "XX1"
 SHOW_PUNCH                  = false
 ID_BLOCK                    = 8640
-LIMIT_SEED_IN_BP            = 120
+LIMIT_SEED_IN_BP            = 190
 JUMLAH_TILE_BREAK           = 3
 DELAY_RECONNECT             = 20000
 DELAY_BAD_SERVER            = 120000
@@ -17,6 +17,7 @@ DELAY_PUT                   = 115
 DELAY_WARP                  = 7000
 
 -- ##################### BATAS SCRIPT #####################
+
 TILE_BREAK = {}
 worldTutor = ""
 ID_SEED = ID_BLOCK + 1
@@ -30,6 +31,7 @@ function mark_full(x,y) FULL_CACHE[_key(x,y)]=true end
 function mark_bad (x,y) BAD_CACHE [_key(x,y)]=true end
 function is_full_or_bad(x,y) return FULL_CACHE[_key(x,y)] or BAD_CACHE[_key(x,y)] end
 function reset_caches() FULL_CACHE={}; BAD_CACHE={} end
+getBot().auto_reconnect = false
 
 -- (NEW) safe stub if not provided elsewhere: count items on a tile
 if _countOnTile == nil then
@@ -135,6 +137,16 @@ function ZEE_COLLECT(state)
   malady = b.auto_malady
   malady.enabled = true
   malady.auto_refresh = true
+end
+
+function scan(id)
+    count = 0
+    for _, object in pairs(getObjects()) do
+      if object.id == id then
+        count = count + object.count
+      end
+    end
+    return count
 end
 
 -------------------- FACE KANAN --------------------
@@ -1045,52 +1057,110 @@ end
 
 
 -- ##################### TAKE BLOCK #####################
--- === FIX kecil di TAKE_BLOCK(): hindari variabel w/d yang tidak ada ===
-function TAKE_BLOCK(world, door)
-    local b = getBot and getBot() or nil
-    local TARGET_ID = ID_BLOCK
-    local inv = b:getInventory()
-    local have = inv:getItemCount(TARGET_ID)
+-- ==========================================
+-- TAKE_BLOCK dengan deteksi selesai yang jelas
+-- - Pakai scan(ID_BLOCK) sebagai syarat awal
+-- - Loop cari objek terdekat
+-- - Keluar bila:
+--     a) inventory >= target_min
+--     b) miss_streak >= max_miss (tidak ada objek)
+--     c) melebihi max_time_secs
+-- Return:
+--   true,  "done"         -> cukup block terkumpul
+--   false, "not_found"    -> tidak ada block terdeteksi (berulang)
+--   false, "timeout"      -> waktu habis
+--   false, "reconnect"    -> gagal world/door (opsional)
+-- ==========================================
+function TAKE_BLOCK(world, door, opts)
+  local b = getBot and getBot() or nil
+  if not b then return false, "no_bot" end
 
-    if have < 20 then
-        WARP_WORLD(world, door); sleep(250)
-        SMART_RECONNECT(world, door)  -- FIX: pakai argumen yang benar
+  local TARGET_ID = ID_BLOCK
+  opts = opts or {}
+  local target_min     = tonumber(opts.min_stack or 20)       -- minimal block yang diinginkan
+  local max_rounds     = tonumber(opts.max_rounds or 40)      -- batas iterasi pathing
+  local wait_ms        = tonumber(opts.wait_ms or 1200)
+  local max_miss       = tonumber(opts.max_miss or 5)         -- berapa kali berturut-turut tidak ketemu objek
+  local max_time_secs  = tonumber(opts.max_time_secs or 180)  -- guard waktu total (3 menit default)
 
-        local MAX_ROUNDS, WAIT_MS = 10, 1200
-        ZEE_COLLECT(true)
-        pcall(function()
-            for _ = 1, MAX_ROUNDS do
-                if inv:getItemCount(TARGET_ID) > 0 then break end
-                local objs = (getObjects and getObjects()) or {}
-                local me = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
-                local best, bestd2 = nil, 1e18
-                for _, o in pairs(objs) do
-                    if o.id == TARGET_ID then
-                        local txo, tyo = math.floor(o.x/32), math.floor(o.y/32)
-                        if me then
-                            local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
-                            local d2 = (txo-mx)*(txo-mx) + (tyo-my)*(tyo-my)
-                            if d2 < bestd2 then best, bestd2 = o, d2 end
-                        else
-                            best, bestd2 = o, 0
-                        end
-                    end
-                end
-                if best then
-                    local tx, ty = math.floor(best.x/32), math.floor(best.y/32)
-                    SMART_RECONNECT(world, door, tx, ty)
-                    b:findPath(tx, ty)
-                    sleep(WAIT_MS)
-                else
-                    SMART_RECONNECT(world, door)
-                    sleep(WAIT_MS)
-                end
-                inv = b:getInventory() -- refresh
-            end
-        end)
-        ZEE_COLLECT(false)
-        -- default 3 menit
+  -- Cek inventory awal
+  local inv = b:getInventory()
+  if inv:getItemCount(TARGET_ID) >= target_min then
+    return true, "done"
+  end
+
+  -- WARP & RECONNECT
+  if WARP_WORLD then WARP_WORLD(world, door) end
+  sleep(250)
+  if SMART_RECONNECT then SMART_RECONNECT(world, door) end
+
+  -- Syarat awal: harus terdeteksi ada objek ID_BLOCK
+  if not scan or not scan(TARGET_ID) then
+    return false, "not_found"
+  end
+
+  -- Koleksi ON
+  if ZEE_COLLECT then ZEE_COLLECT(true) end
+
+  local start_time = os.time()
+  local miss_streak = 0
+
+  -- Loop pencarian & pathing
+  for round = 1, max_rounds do
+    -- Guard waktu total
+    if (os.time() - start_time) >= max_time_secs then
+      if ZEE_COLLECT then ZEE_COLLECT(false) end
+      return false, "timeout"
     end
+
+    -- Cek inventory cukup?
+    inv = b:getInventory()
+    if inv:getItemCount(TARGET_ID) >= target_min then
+      if ZEE_COLLECT then ZEE_COLLECT(false) end
+      return true, "done"
+    end
+
+    -- Cari objek terdekat
+    local objs = (getObjects and getObjects()) or {}
+    local me   = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+    local best, bestd2 = nil, 1e18
+
+    for _, o in pairs(objs) do
+      if o.id == TARGET_ID then
+        local txo, tyo = math.floor(o.x/32), math.floor(o.y/32)
+        if me then
+          local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
+          local d2 = (txo-mx)*(txo-mx) + (tyo-my)*(tyo-my)
+          if d2 < bestd2 then best, bestd2 = o, d2 end
+        else
+          best, bestd2 = o, 0
+        end
+      end
+    end
+
+    if best then
+      miss_streak = 0
+      local tx, ty = math.floor(best.x/32), math.floor(best.y/32)
+      if SMART_RECONNECT then SMART_RECONNECT(world, door, tx, ty) end
+      b:findPath(tx, ty)
+      sleep(wait_ms)
+    else
+      -- Tidak ketemu objek: naikkan miss counter & coba re-sync world
+      miss_streak = miss_streak + 1
+      if miss_streak >= max_miss then
+        if ZEE_COLLECT then ZEE_COLLECT(false) end
+        return false, "not_found"
+      end
+      if SMART_RECONNECT then SMART_RECONNECT(world, door) end
+      sleep(wait_ms)
+    end
+  end
+
+  -- Kalau sampai sini: iterasi habis tapi belum memenuhi target
+  if ZEE_COLLECT then ZEE_COLLECT(false) end
+  -- putuskan alasan: jika memang tidak ada objek beberapa kali terakhir, anggap not_found;
+  -- kalau masih ada tetapi tidak terkumpul, anggap timeout.
+  return false, (miss_streak >= max_miss) and "not_found" or "timeout"
 end
 
 
@@ -1222,12 +1292,41 @@ end
 
 
 function main_sulap(world_block, door_block)
-    while true do
-        TAKE_BLOCK(world_block, door_block)
-        pnb_sulap()
-    end
-end
+  while true do
+    local ok, reason = TAKE_BLOCK(world_block, door_block, {
+      min_stack      = 20,
+      max_rounds     = 40,
+      wait_ms        = 1200,
+      max_miss       = 5,
+      max_time_secs  = 180
+    })
 
+    if ok then
+      -- punya block cukup → lanjut proses
+      pnb_sulap()
+    else
+      -- Gagal; pilih tindakan:
+      if reason == "not_found" then
+        -- tidak ada block di world tsb -> keluar loop / ganti world / tidur dulu
+        -- break   -- uncomment jika mau stop total
+        sleep(2000)
+      elseif reason == "timeout" then
+        -- terlalu lama, bisa re-warp lalu coba lagi, atau stop
+        if SMART_RECONNECT then SMART_RECONNECT(world_block, door_block) end
+        sleep(1500)
+      elseif reason == "reconnect" then
+        -- world/door problem
+        sleep(1500)
+      else
+        -- no_bot / storage / dll
+        sleep(1500)
+      end
+
+      -- opsional: kalau gagal jangan lanjut pnb_sulap:
+      -- goto continue  -- (kalau kamu pakai label), atau simply 'goto' dihilangkan.
+    end
+  end
+end
 
 
 if true then
