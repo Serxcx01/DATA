@@ -323,10 +323,11 @@ function take_malady(WORLD, DOOR, opts)
   local storageW      = (STORAGE_MALADY and STORAGE_MALADY ~= "") and STORAGE_MALADY or ""
   local storageD      = (DOOR_MALADY    and DOOR_MALADY    ~= "") and DOOR_MALADY    or ""
 
-  local function _same_world(targetW)
-    local cw = b.getWorld and b:getWorld() and b:getWorld():getName() or ""
+    local function _same_world(targetW)
+    local w = b.getWorld and b:getWorld() or nil
+    local cw = (w and (w.name or (w.getName and w:getName()))) or ""
     return tostring(cw):upper() == tostring(targetW or ""):upper()
-  end
+    end
 
   local function _ensure_in_world(w, d)
     if (not b:isInWorld()) or (not _same_world(w)) then
@@ -366,19 +367,18 @@ function take_malady(WORLD, DOOR, opts)
     -- kalau sudah punya di tas → normalize & pakai
     inv = b:getInventory()
     if inv:getItemCount(TARGET_ID) > 0 then
-      -- normalize: sisakan 1 (drop sisanya ke storage kalau ada, kalau kosong ya biarkan di world ini)
-      local sw, sd = storageW, storageD
-      if (sw or "") == "" then sw, sd = WORLD, DOOR end
-      _ensure_single_item_in_storage(TARGET_ID, 1, sw, sd,
-        {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2})
+        local sw, sd = storageW, storageD
+        if (sw or "") == "" then sw, sd = WORLD, DOOR end
+        _ensure_single_item_in_storage(TARGET_ID, 1, sw, sd,
+            {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2})
 
-      -- pakai
-      if inv:getItemCount(TARGET_ID) > 0 then
-        b:use(TARGET_ID); sleep(250)
-        print(string.format("%s Dapat & pakai item %d. Selesai.", LOG_PREFIX, TARGET_ID))
-        return true
-      end
-      -- kalau sudah ke-drop semua karena normalize, lanjut loop sampai dapat lagi
+        inv = b:getInventory()                  -- << refresh inv
+        if inv:getItemCount(TARGET_ID) > 0 then
+            b:use(TARGET_ID); sleep(250)
+            print(string.format("%s Dapat & pakai item %d. Selesai.", LOG_PREFIX, TARGET_ID))
+            ZEE_COLLECT(false)                     -- << matikan auto collect sebelum balik
+            return true
+        end
     end
 
     -- coba cari di map (nearest), path, dan ambil
@@ -409,42 +409,55 @@ function take_malady(WORLD, DOOR, opts)
       print(string.format("%s Dihentikan oleh flag %s", LOG_PREFIX, tostring(opts.stop_flag)))
       return false
     end
+    ZEE_COLLECT(false)
   end
 end
 
+function findStatus()
+    local bot = (getBot and getBot()) or nil
+    for _, con in pairs(bot:getConsole().contents) do
+        if con:find("Status:") and bot.status == BotStatus.online then
+            return true
+        end
+    end
+    return false
+end
+
 function checkMalady()
-    if bot:isInWorld() and bot.status == BotStatus.online then
-        clearConsole()
+    local b = (getBot and getBot()) or nil
+    if b and b.isInWorld and b:isInWorld() and (b.status == BotStatus.online or b.status == 1) then
+        if type(clearConsole)=="function" then clearConsole() end
         sleep(100)
-        bot:say("/status")
+        if b.say then b:say("/status") end
         sleep(700)
 
-        if findStatus() then
-            for _, con in pairs(bot:getConsole().contents) do
-                if con:lower():find("malady:") then
-                    local name = con:match("[Mm]alady:%s*([^!]+)")
-                    if name then name = name:gsub("%s+$","") end
+        if type(findStatus)=="function" and findStatus() and b.getConsole then
+            local conso = b:getConsole()
+            if conso and conso.contents then
+                for _, con in pairs(conso.contents) do
+                    if type(con)=="string" and con:lower():find("malady:") then
+                        local name = con:match("[Mm]alady:%s*([^!]+)")
+                        if name then name = name:gsub("%s+$","") end
 
-                    local h = tonumber(con:match("(%d+)%s*hours?")) or 0
-                    local m = tonumber(con:match("(%d+)%s*mins?"))  or 0
-                    local s = tonumber(con:match("(%d+)%s*secs?"))  or 0
-                    local total = h * 3600 + m * 60 + s
+                        local h = tonumber(con:match("(%d+)%s*hours?")) or 0
+                        local m = tonumber(con:match("(%d+)%s*mins?"))  or 0
+                        local s = tonumber(con:match("(%d+)%s*secs?"))  or 0
+                        local total = h * 3600 + m * 60 + s
 
-                    maladyName, maladyHours, maladyMins, maladySecs, totalSeconds =
-                        name, h, m, s, total
+                        maladyName, maladyHours, maladyMins, maladySecs, totalSeconds =
+                            name, h, m, s, total
 
-                    print(("Malady: %s. Time Left: %d hours, %d mins, %d secs")
-                        :format(name or "None", h, m, s))
-
-                    -- return: (ada_malady, detik_tersisa, nama_malady)
-                    return true, total, name
+                        print(("Malady: %s. Time Left: %d hours, %d mins, %d secs")
+                            :format(name or "None", h, m, s))
+                        return true, total, name
+                    end
                 end
             end
-        end 
+        end
     end
-    -- tidak ada/ tidak terbaca
     return false, nil, nil
 end
+
 
 -- Tunggu kalau malady < 60s, lalu ambil malady saat sudah hilang
 function waitMaladyThenTake()
@@ -789,6 +802,10 @@ function pnb_sulap()
         checkTutor()
     end
     local w = worldTutor
+    if (w or "") == "" then
+        print("[PNB] Tidak punya Tutorial/Home World. Abort.")
+        return
+    end
 
     -- warp + jaga koneksi
     waitMaladyThenTake(); sleep(100)
