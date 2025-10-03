@@ -111,12 +111,27 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     or (STATUS_BOT_NEW().status=="Server Overload") do
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
+    if STATUS_BOT_NEW().status=="online" then
+      if type(waitMaladyCheck) == "function" then
+        local ok, ready = pcall(waitMaladyCheck, 1)  -- sama dengan waitMaladyCheck(3)
+        if not ok then
+          print("[MALADY] error:", ready)  -- 'ready' berisi pesan error dari pcall
+        elseif ready then
+          print(("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check."):format(THRESHOLD_MIN))
+          -- contoh kalau mau lanjut ambil di sini (opsional):
+          -- take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
+        else
+          print(("[MALADY] belum clear / sisa >= %d menit."):format(THRESHOLD_MIN))
+        end
+      end
+    end
   end
 
   if WORLD and DOOR then WARP_WORLD((WORLD or ""):upper(), DOOR)
   elseif WORLD then       WARP_WORLD((WORLD or ""):upper()) end
 
   if POSX and POSY then local b=getBot and getBot() or nil; if b and b.findPath then b:findPath(POSX,POSY) end end
+  
 end
 
 function ZEE_COLLECT(state)
@@ -612,56 +627,53 @@ end
 
 
 -- Tunggu kalau malady < 60s, lalu ambil malady saat sudah hilang
-function waitMaladyThenTake()
-    local has, secs = checkMalady()
-
-    -- Kalau tidak ada malady: langsung ambil
-    if not has then
-        return take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
-    end
-
-    -- Kalau >= 60s, jangan nunggu (biar tidak block lama); keluar saja
-    if (secs or 0) >= 60 then
-        print(("[MALADY] %ds left (>=60s): skip waiting now."):format(secs or -1))
-        return false
-    end
-
-    -- Di sini: 0 < secs < 60 → tunggu sampai habis
-    print(("[MALADY] %ds left (<60s): waiting until it clears..."):format(secs or -1))
-
-    local deadline = os.time() + 120  -- failsafe 2 menit biar nggak ke-lock
-    local last = secs or 60
-
-    while true do
-        local ok, s = checkMalady()
-
-        -- kalau sudah tidak ada / sisa <= 0 → selesai nunggu
-        if (not ok) or (s or 0) <= 0 then break end
-
-        -- proteksi kalau timer “naik” tiba-tiba (server lag/parse)
-        if s > last + 2 then
-            print("[MALADY] timer jumped up; abort waiting, retry later.")
-            return false
-        end
-        last = s
-
-        -- tidur pendek menyesuaikan sisa waktu (hindari spam /status)
-        local step_ms = math.max(250, math.min(1000, math.floor(s * 500)))
-        sleep(step_ms)
-    end
-
-    -- double-check agar yakin sudah clear, baru take
-    local ok2 = select(1, checkMalady())
-    if not ok2 then
-        print("[MALADY] cleared. Taking malady now...")
-        return take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
-    else
-        print("[MALADY] still reported after countdown; will retry later.")
-        return false
-    end
+-- helper: apakah sedang di world (bukan EXIT)?
+local function _is_in_play_world()
+  local b = getBot and getBot() or nil
+  if not (b and b.isInWorld and b:isInWorld()) then return false end
+  local w = b.getWorld and b:getWorld() or nil
+  local name = (w and (w.name or (w.getName and w:getName()))) or ""
+  return name:upper() ~= "EXIT"
 end
 
+function waitMaladyCheck(threshold_min)
+  -- >>> GUARD: kalau di EXIT, jangan lanjut <<<
+  if not _is_in_play_world() then
+    print("[MALADY] Di EXIT: skip check.")
+    return false
+  end
 
+  local MINUTES = tonumber(threshold_min) or 3
+  local THRESHOLD_SECS = MINUTES * 60
+
+  local has, secs = checkMalady()
+  if not has then return true end
+  if (secs or 0) >= THRESHOLD_SECS then
+    print(("[MALADY] %ds left (>= %d menit): skip waiting now."):format(secs or -1, MINUTES))
+    return false
+  end
+
+  print(("[MALADY] %ds left (< %d menit): waiting until it clears..."):format(secs or -1, MINUTES))
+  local deadline = os.time() + math.max(120, (secs or 0) + 30)
+  local last = secs or THRESHOLD_SECS
+
+  while true do
+    -- kalau tiba-tiba ke EXIT saat nunggu, stop
+    if not _is_in_play_world() then
+      print("[MALADY] Pindah ke EXIT saat menunggu: abort.")
+      return false
+    end
+
+    local ok, s = checkMalady()
+    if (not ok) or (s or 0) <= 0 then break end
+    if s > last + 2 then print("[MALADY] timer jumped; abort."); return false end
+    if os.time() >= deadline then print("[MALADY] timeout."); return false end
+    last = s
+    sleep(math.max(250, math.min(1000, math.floor((s or 1) * 500))))
+  end
+
+  return not select(1, checkMalady())
+end
 
 
 
@@ -941,6 +953,19 @@ function TAKE_BLOCK(world, door)
             end
         end)
         ZEE_COLLECT(false)
+        -- default 3 menit
+        if type(waitMaladyCheck) == "function" then
+          local ok, ready = pcall(waitMaladyCheck, 2)  -- sama dengan waitMaladyCheck(3)
+          if not ok then
+            print("[MALADY] error:", ready)  -- 'ready' berisi pesan error dari pcall
+          elseif ready then
+            print(("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check."):format(THRESHOLD_MIN))
+            -- contoh kalau mau lanjut ambil di sini (opsional):
+            -- take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
+          else
+            print(("[MALADY] belum clear / sisa >= %d menit."):format(THRESHOLD_MIN))
+          end
+        end
     end
 end
 
@@ -962,9 +987,17 @@ function pnb_sulap()
 
   -- masuk world + jaga koneksi
   WARP_WORLD(w); sleep(100)
-  -- kalau kamu pakai logika malady < 1 menit, panggil helper (opsional)
-  if type(waitMaladyThenTake) == "function" then
-    pcall(waitMaladyThenTake)
+  if type(waitMaladyCheck) == "function" then
+    local ok, ready = pcall(waitMaladyCheck, 3)  -- sama dengan waitMaladyCheck(3)
+    if not ok then
+      print("[MALADY] error:", ready)  -- 'ready' berisi pesan error dari pcall
+    elseif ready then
+      print(("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check."):format(THRESHOLD_MIN))
+      -- contoh kalau mau lanjut ambil di sini (opsional):
+      -- take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
+    else
+      print(("[MALADY] belum clear / sisa >= %d menit."):format(THRESHOLD_MIN))
+    end
   end
   SMART_RECONNECT(w); sleep(100)
 
