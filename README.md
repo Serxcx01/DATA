@@ -113,17 +113,16 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
     if STATUS_BOT_NEW().status=="online" then
+      local minutes = tonumber(MALADY_CHECK_MINUTES) or 2  -- atau langsung 5 kalau mau hardcode
       if type(waitMaladyCheck) == "function" then
-        local ok, ready = pcall(waitMaladyCheck, 1)  -- sama dengan waitMaladyCheck(3)
+        local ok, ready = pcall(waitMaladyCheck, minutes)  -- sama dengan waitMaladyCheck(minutes)
 
         if not ok then
-          print("[MALADY] error: " .. tostring(ready))  -- 'ready' = pesan error dari pcall
+          print("[MALADY] error: " .. tostring(ready))
         elseif ready then
-          print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.",
-                              MALADY_CHECK_MINUTES))
+          print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.", minutes))
         else
-          print(string.format("[MALADY] belum clear / sisa >= %d menit.",
-                              MALADY_CHECK_MINUTES))
+          print(string.format("[MALADY] belum clear / sisa >= %d menit.", minutes))
         end
       end
     end
@@ -961,17 +960,15 @@ function TAKE_BLOCK(world, door)
         end)
         ZEE_COLLECT(false)
         -- default 3 menit
+        local minutes = tonumber(MALADY_CHECK_MINUTES) or 2  -- atau langsung 5 kalau mau hardcode
         if type(waitMaladyCheck) == "function" then
-          local ok, ready = pcall(waitMaladyCheck, 1)  -- sama dengan waitMaladyCheck(3)
-
+          local ok, ready = pcall(waitMaladyCheck, minutes)  -- sama dengan waitMaladyCheck(minutes)
           if not ok then
-            print("[MALADY] error: " .. tostring(ready))  -- 'ready' = pesan error dari pcall
+            print("[MALADY] error: " .. tostring(ready))
           elseif ready then
-            print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.",
-                                MALADY_CHECK_MINUTES))
+            print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.", minutes))
           else
-            print(string.format("[MALADY] belum clear / sisa >= %d menit.",
-                                MALADY_CHECK_MINUTES))
+            print(string.format("[MALADY] belum clear / sisa >= %d menit.", minutes))
           end
         end
     end
@@ -995,17 +992,16 @@ function pnb_sulap()
 
   -- masuk world + jaga koneksi
   WARP_WORLD(w); sleep(100)
+  local minutes = tonumber(MALADY_CHECK_MINUTES) or 5  -- atau langsung 5 kalau mau hardcode
   if type(waitMaladyCheck) == "function" then
-    local ok, ready = pcall(waitMaladyCheck, 5)  -- sama dengan waitMaladyCheck(3)
+    local ok, ready = pcall(waitMaladyCheck, minutes)  -- sama dengan waitMaladyCheck(minutes)
 
     if not ok then
-      print("[MALADY] error: " .. tostring(ready))  -- 'ready' = pesan error dari pcall
+      print("[MALADY] error: " .. tostring(ready))
     elseif ready then
-      print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.",
-                          MALADY_CHECK_MINUTES))
+      print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.", minutes))
     else
-      print(string.format("[MALADY] belum clear / sisa >= %d menit.",
-                          MALADY_CHECK_MINUTES))
+      print(string.format("[MALADY] belum clear / sisa >= %d menit.", minutes))
     end
   end
   SMART_RECONNECT(w); sleep(100)
