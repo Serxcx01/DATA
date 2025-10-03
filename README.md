@@ -974,8 +974,8 @@ function pnb_sulap()
     -- gunakan tile posisi saat ini sebagai acuan
     local me = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
     if not me then return end
-    local ex = math.floor((me.posx or 0) / 32)
-    local ye = math.floor((me.posy or 0) / 32)
+    local ex = getBot().x
+    local ye = getBot().y
 
     local counter = 0
     local WAIT_MS = 1200
