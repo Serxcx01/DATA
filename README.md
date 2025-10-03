@@ -137,6 +137,10 @@ function ZEE_COLLECT(state)
   malady = b.auto_malady
   malady.enabled = true
   malady.auto_refresh = true
+  malady.auto_grumbleteeth = false
+  malady.auto_chicken_feet = false
+  malady.auto_surgery_station = false
+  malady.auto_vial = false
 end
 
 function scan(id)
