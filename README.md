@@ -1,4 +1,4 @@
-LIST_WORLD_BLOCK = {"COKANJI|XX1","FOZEEZ2|NOWXX123"}
+LIST_WORLD_BLOCK = {"FOZEEZ2|NOWXX123","WORU15|NOWXX123"}
 
 MODE = "SULAP"
 -- SULAP
@@ -1331,28 +1331,40 @@ function main_sulap(world_block, door_block)
 end
 
 
-if true then
-    if MODE == "SULAP" then
-        if not CHECK_WORLD_TUTORIAL then
-            checkTutor()
-            CHECK_WORLD_TUTORIAL = true
-        end
-        for i =1,#LIST_WORLD_BLOCK do
-            
-            if getBot().level < 12 then
-                LEVEL_RENDAH = true
-            end
-
-            local split_data = {}
-            for w in LIST_WORLD_BLOCK[i]:gmatch("([^|]+)") do 
-                table.insert(split_data, w) 
-            end
-            world_block = split_data[1]
-            door_block = split_data[2]
-            main_sulap(world_block, door_block)
-        end
-    elseif MODE == "PNB" then
-    else
-        print("PLEAS INPUT MODE !!!!")
+while true do
+  if MODE == "SULAP" then
+    if not CHECK_WORLD_TUTORIAL then
+      checkTutor()
+      CHECK_WORLD_TUTORIAL = true
     end
+
+    -- (opsional) reset flag level rendah tiap siklus penuh
+    -- LEVEL_RENDAH = (getBot() and getBot().level or 0) < 12
+
+    -- proses semua world di LIST_WORLD_BLOCK
+    for i = 1, #LIST_WORLD_BLOCK do
+      local entry = LIST_WORLD_BLOCK[i]
+      if entry and entry ~= "" then
+        local world_block, door_block = entry:match("^([^|]+)|?(.*)$")
+        -- pastikan string jadi non-nil
+        world_block = tostring(world_block or "")
+        door_block  = tostring(door_block  or "")
+
+        main_sulap(world_block, door_block)  -- dia akan break internal kalau block habis
+      end
+    end
+
+    -- ✅ aksi setelah SEMUA world selesai diproses
+    ZEE_COLLECT(false)
+    local b = (getBot and getBot()) or nil
+    if b and b.leaveWorld then b:leaveWorld() end
+    sleep(10*60*1000)  -- 15 detik, kalau maunya 10 menit: sleep(10*60*1000) jika milidetik, atau sesuai API kamu
+    if b then b.auto_reconnect = true end
+
+  elseif MODE == "PNB" then
+    -- jalankan mode PNB kamu di sini
+  else
+    print("PLEASE INPUT MODE !!!!")
+  end
 end
+
