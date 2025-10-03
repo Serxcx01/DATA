@@ -488,7 +488,7 @@ function waitMaladyThenTake()
     local last = secs or 60
 
     while true do
-        local ok, s = checkMalady()
+        ok, s = checkMalady()
 
         -- kalau sudah tidak ada / sisa <= 0 → selesai nunggu
         if (not ok) or (s or 0) <= 0 then break end
@@ -506,7 +506,7 @@ function waitMaladyThenTake()
     end
 
     -- double-check agar yakin sudah clear, baru take
-    local ok2 = select(1, checkMalady())
+    ok2 = select(1, checkMalady())
     if not ok2 then
         print("[MALADY] cleared. Taking malady now...")
         return take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
@@ -901,31 +901,29 @@ end
 
 
 
--- if true then
---     if MODE == "SULAP" then
---         if not CHECK_WORLD_TUTORIAL then
---             checkTutor()
---             CHECK_WORLD_TUTORIAL = true
---         end
---         for i =1,#LIST_WORLD_BLOCK do
+if true then
+    if MODE == "SULAP" then
+        if not CHECK_WORLD_TUTORIAL then
+            checkTutor()
+            CHECK_WORLD_TUTORIAL = true
+        end
+        for i =1,#LIST_WORLD_BLOCK do
             
---             if getBot().level < 12 then
---                 LEVEL_RENDAH = true
---             end
+            if getBot().level < 12 then
+                LEVEL_RENDAH = true
+            end
 
---             local split_data = {}
---             for w in LIST_WORLD_BLOCK[i]:gmatch("([^|]+)") do 
---                 table.insert(split_data, w) 
---             end
---             world_block = split_data[1]
---             door_block = split_data[2]
---             main_sulap(world_block, door_block)
---         end
---     elseif MODE == "PNB" then
---     else
---         print("PLEAS INPUT MODE !!!!")
---         -- break
---     end
--- end
-
-waitMaladyThenTake()
+            local split_data = {}
+            for w in LIST_WORLD_BLOCK[i]:gmatch("([^|]+)") do 
+                table.insert(split_data, w) 
+            end
+            world_block = split_data[1]
+            door_block = split_data[2]
+            main_sulap(world_block, door_block)
+        end
+    elseif MODE == "PNB" then
+    else
+        print("PLEAS INPUT MODE !!!!")
+        -- break
+    end
+end
