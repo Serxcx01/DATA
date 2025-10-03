@@ -815,8 +815,8 @@ function pnb_sulap()
     end
 
     -- warp + jaga koneksi
-    waitMaladyThenTake(); sleep(100)
     WARP_WORLD(w); sleep(100)
+    waitMaladyThenTake(); sleep(100)
     SMART_RECONNECT(w); sleep(100)
 
     -- gunakan tile posisi saat ini sebagai acuan
