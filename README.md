@@ -317,25 +317,23 @@ function take_malady(WORLD, DOOR, opts)
 
   opts = opts or {}
   local TARGET_ID     = 8542
-  local STEP_MS       = tonumber(opts.step_ms or 800)     -- jeda polling
-  local REWARP_EVERY  = tonumber(opts.rewarp_every or 180) -- rewarp tiap X detik biar gak ke-lock
+  local STEP_MS       = tonumber(opts.step_ms or 800)
+  local REWARP_EVERY  = tonumber(opts.rewarp_every or 180)
   local LOG_PREFIX    = "[TAKE_MALADY-BLOCK]"
   local storageW      = (STORAGE_MALADY and STORAGE_MALADY ~= "") and STORAGE_MALADY or ""
   local storageD      = (DOOR_MALADY    and DOOR_MALADY    ~= "") and DOOR_MALADY    or ""
 
-    local function _same_world(targetW)
+  local function _same_world(targetW)
     local w = b.getWorld and b:getWorld() or nil
     local cw = (w and (w.name or (w.getName and w:getName()))) or ""
     return tostring(cw):upper() == tostring(targetW or ""):upper()
-    end
-
+  end
   local function _ensure_in_world(w, d)
     if (not b:isInWorld()) or (not _same_world(w)) then
       WARP_WORLD(w, d); sleep(250); SMART_RECONNECT(w, d)
       faceSide2()
     end
   end
-
   local function _nearest_target_tile()
     local objs = (getObjects and getObjects()) or {}
     local me   = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
@@ -361,57 +359,52 @@ function take_malady(WORLD, DOOR, opts)
   print(string.format("%s Menunggu item %d di %s ...", LOG_PREFIX, TARGET_ID, tostring(WORLD)))
 
   while true do
-    -- pastikan stay di world target
     _ensure_in_world(WORLD, DOOR)
 
-    -- kalau sudah punya di tas → normalize & pakai
     inv = b:getInventory()
     if inv:getItemCount(TARGET_ID) > 0 then
-        local sw, sd = storageW, storageD
-        if (sw or "") == "" then sw, sd = WORLD, DOOR end
-        _ensure_single_item_in_storage(TARGET_ID, 1, sw, sd,
-            {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2})
+      local sw, sd = storageW, storageD
+      if (sw or "") == "" then sw, sd = WORLD, DOOR end
+      _ensure_single_item_in_storage(TARGET_ID, 1, sw, sd,
+        {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2})
 
-        inv = b:getInventory()                  -- << refresh inv
-        if inv:getItemCount(TARGET_ID) > 0 then
-            b:use(TARGET_ID); sleep(250)
-            print(string.format("%s Dapat & pakai item %d. Selesai.", LOG_PREFIX, TARGET_ID))
-            ZEE_COLLECT(false)                     -- << matikan auto collect sebelum balik
-            return true
-        end
+      inv = b:getInventory()
+      if inv:getItemCount(TARGET_ID) > 0 then
+        b:use(TARGET_ID); sleep(250)
+        print(string.format("%s Dapat & pakai item %d. Selesai.", LOG_PREFIX, TARGET_ID))
+        ZEE_COLLECT(false)
+        return true
+      end
+      -- kalau ke-drop semua saat normalize → lanjut tunggu
     end
 
-    -- coba cari di map (nearest), path, dan ambil
     local tgt = _nearest_target_tile()
     if tgt then
       ZEE_COLLECT(true)
       SMART_RECONNECT(WORLD, DOOR, tgt.x, tgt.y)
       b:findPath(tgt.x, tgt.y)
       sleep(STEP_MS)
-      -- loop akan re-check inventory di atas
     else
-      -- tidak ada: keep-alive supaya tidak AFK / tidak disconnect
       ZEE_COLLECT(true)
       SMART_RECONNECT(WORLD, DOOR)
       faceSide2()
       sleep(STEP_MS)
     end
 
-    -- re-warp periodik untuk jaga-jaga stuck
     if (os.time() - last_warp) >= REWARP_EVERY then
       WARP_WORLD(WORLD, DOOR); sleep(200); SMART_RECONNECT(WORLD, DOOR)
       faceSide2()
       last_warp = os.time()
     end
 
-    -- optional: hentikan dari luar dengan global flag (kalau kamu mau)
     if opts.stop_flag and _G[opts.stop_flag] then
       print(string.format("%s Dihentikan oleh flag %s", LOG_PREFIX, tostring(opts.stop_flag)))
+      ZEE_COLLECT(false)
       return false
     end
-    ZEE_COLLECT(false)
   end
 end
+
 
 function findStatus()
     local bot = (getBot and getBot()) or nil
