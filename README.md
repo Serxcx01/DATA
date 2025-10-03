@@ -132,6 +132,8 @@ function ZEE_COLLECT(state)
   else
     b.legit_mode=false
   end
+  malady.enabled = true
+  malady.auto_refresh = true
 end
 
 -------------------- FACE KANAN --------------------
@@ -632,88 +634,153 @@ end
 
 
 -- ============================================================
--- ensureMalady(threshold_min)
--- Behaviour:
--- 1) Kalau ada malady dan sisa > threshold  => SKIP (false,"over_threshold")
--- 2) Kalau ada & sisa ≤ threshold           => TUNGGU sampai 0 (countdown)
--- 3) Kalau tidak ada malady                 => langsung lanjut
--- 4) TAKE MALADY: while true sampai BERHASIL (bukan 2x cek),
---    dengan ABSOLUTE GUARD agar tidak infinite hang
---
--- Kebutuhan:
--- - STORAGE_MALADY (string, wajib)
--- - DOOR_MALADY (string, boleh kosong kalau gak pakai door)
---
--- Return:
---   true,  "taken"          -> sukses
---   false, "over_threshold" -> sisa > threshold (skip)
---   false, "not_in_world"   -> posisi tidak valid (EXIT)
---   false, "storage_not_set"-> variabel storage kosong
---   false, "check_failed"   -> checkMalady() error (nil)
---   false, "timeout_wait"   -> nunggu habis melebihi guard
---   false, "take_timeout"   -> loop take melebihi ABS guard waktu
--- ============================================================
+----------------------------------------------------------------
+-- Map kode malady -> nama (opsional, untuk log)
+----------------------------------------------------------------
+local MALADY_CODES = {
+  [1]="Torn Punching Muscle",[2]="Gem Cuts",[3]="Chicken Feet",[4]="Grumbleteeth",
+  [5]="Broken Heart",[6]="Chaos Infection",[7]="Moldy Guts",[8]="Brainworms",
+  [9]="Lupus",[10]="Ecto-Bones",[11]="Fatty Liver"
+}
 
+----------------------------------------------------------------
+-- Deteksi ganda (checkMalady + getBot().malady) dengan polling
+-- Return: has, max_secs, code, name
+--  - has       : true kalau konsensus masih ada malady (dari salah satu sumber)
+--  - max_secs  : maksimum sisa detik yang teramati selama polling (nil kalau tak ada)
+--  - code      : kode malady terakhir yang terlihat (0 jika tak ada)
+--  - name      : nama malady terakhir (bisa nil)
+----------------------------------------------------------------
+local function _detect_malady_dual(polls, delay_ms)
+  polls     = polls or 4
+  delay_ms  = delay_ms or 1000
+
+  local b = getBot and getBot() or nil
+  local code_seen, max_secs, name_seen = 0, nil, nil
+  local positive_votes, negative_votes  = 0, 0
+
+  for i=1,polls do
+    local code = 0
+    if b and b.malady ~= nil then
+      -- beberapa framework expose .malady sebagai integer
+      code = tonumber(b.malady) or 0
+    end
+
+    local has1, secs1, name1 = checkMalady()         -- sumber /status
+    local have_secs = nil
+    if has1 == true then have_secs = tonumber(secs1 or 0)
+    elseif has1 == false then have_secs = nil
+    end
+
+    -- gabungkan
+    local any_has = (code and code>0) or (has1 == true and (have_secs or 0) > 0)
+
+    if any_has then
+      positive_votes = positive_votes + 1
+      if code and code>0 then code_seen = code end
+      if have_secs then
+        max_secs = math.max(max_secs or 0, have_secs)
+      end
+      if name1 and name1 ~= "" then name_seen = name1 end
+    else
+      negative_votes = negative_votes + 1
+      -- tetap update nama jika /status bilang None
+      if name1 and name1 ~= "" then name_seen = name1 end
+    end
+
+    if i < polls then sleep(delay_ms) end
+  end
+
+  local has = (positive_votes > 0)         -- kalau salah satu polling mendeteksi masih ada, anggap "ada"
+  if not has then
+    max_secs = nil
+    code_seen = 0
+    name_seen = nil
+  end
+  return has, max_secs, code_seen, name_seen or (MALADY_CODES[code_seen] or nil)
+end
+
+----------------------------------------------------------------
+-- Tunggu clear dengan konfirmasi berturut-turut (anti false clear)
+-- syarat_clear: butuh N konfirmasi berurutan "tidak ada malady"
+----------------------------------------------------------------
+local function _wait_until_clear_consecutive(N, recheck_ms, guard_secs)
+  N = N or 3
+  recheck_ms = recheck_ms or 1000
+  local start = os.time()
+  local ok_streak = 0
+
+  while true do
+    local has, secs = _detect_malady_dual(1, 100)  -- single poll cepat
+    if (not has) or (secs or 0) <= 0 then
+      ok_streak = ok_streak + 1
+      if ok_streak >= N then return true end
+    else
+      ok_streak = 0
+    end
+    sleep(recheck_ms)
+    if guard_secs and (os.time() - start) >= guard_secs then
+      return false, "timeout_wait"
+    end
+  end
+end
+
+----------------------------------------------------------------
+-- ENSURE MALADY — versi stabil (deteksi ganda + counter)
+-- Behaviour:
+-- 1) Ada malady & sisa > threshold    => SKIP (false,"over_threshold")
+-- 2) Ada malady & sisa ≤ threshold    => WAJIB NUNGGU sampai benar2 clear (konfirmasi Nx)
+-- 3) Tidak ada malady dari awal       => langsung TAKE
+-- 4) TAKE: while true sampai sukses, tapi tetap ada absolute guard
+----------------------------------------------------------------
 function ensureMalady(threshold_min, opts)
   local minutes     = tonumber(threshold_min or 5) or 5
   local THRESH_SECS = math.floor(minutes * 60)
 
-  -- guard waktu (silakan atur)
-  local SAFE_WAIT_GUARD_SECS = math.max(THRESH_SECS + 90, 180)  -- nunggu habis
-  local TAKE_ABSOLUTE_GUARD_SECS = 600                          -- 10 menit max loop take
-  local REWARP_EVERY_ATTEMPTS = 5                               -- setiap 5 attempt re-warp
-  local BACKOFF_MS = 600                                         -- jeda antar attempt
-
-  -- validasi posisi
   local b = getBot and getBot() or nil
   local w = b and b:getWorld() or nil
   if not w or not w.name or tostring(w.name):upper() == "EXIT" then
     return false, "not_in_world"
   end
-
-  -- validasi storage
-  if not STORAGE_MALADY or STORAGE_MALADY == "" then
+  if (not STORAGE_MALADY) or STORAGE_MALADY == "" then
     return false, "storage_not_set"
   end
   local useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
 
-  -- 1) cek malady (ambil 3 nilai)
-  local has, secs, mname = checkMalady()
-  if has == nil then
-    return false, "check_failed"
-  end
+  -- 1) Baca konsensus awal (poll 4x) → robust
+  local has, max_secs, code, nm = _detect_malady_dual(4, 1000)
 
-  -- 2) jika ada & sisa > threshold => skip (biarkan langkah lain jalan)
-  if has == true and (secs or 0) > THRESH_SECS then
+  -- 2) Kalau masih ada & sisa > threshold → SKIP
+  if has and (max_secs or 0) > THRESH_SECS then
+    -- log kecil (opsional)
+    if code and code>0 then
+      print(string.format("[MALADY] Detected %s (code %d), sisa ~%ds > %d → skip.",
+        nm or "Unknown", code, max_secs or -1, THRESH_SECS))
+    end
     return false, "over_threshold"
   end
 
-  -- 3) jika ada & sisa ≤ threshold => wajib nunggu sampai habis
-  if has == true then
-    local waited = 0
-    while true do
-      local h2, s2 = checkMalady()
-      if (not h2) or (s2 or 0) <= 0 then
-        break
-      end
-      sleep(1000)
-      waited = waited + 1
-      if waited >= SAFE_WAIT_GUARD_SECS then
-        return false, "timeout_wait"
-      end
+  -- 3) Kalau masih ada tetapi sisa ≤ threshold → WAJIB nunggu clear
+  if has and (max_secs or 0) <= THRESH_SECS then
+    print(string.format("[MALADY] Sisa %ds ≤ %d. Menunggu CLEAR dengan konfirmasi beruntun...",
+      max_secs or 0, THRESH_SECS))
+    local ok, why = _wait_until_clear_consecutive(3, 1000, math.max(THRESH_SECS + 120, 240))
+    if not ok then
+      return false, why or "timeout_wait"
     end
   end
-  -- titik ini CLEAR: (habis ditunggu) atau memang tidak ada dari awal
+  -- titik ini CLEAR (baik dari awal, atau setelah nunggu)
 
-  -- 4) LOOP TAKE SAMPAI BERHASIL
+  -- 4) LOOP TAKE SAMPAI SUKSES (dengan absolute guard)
   local started = os.time()
   local attempt = 0
+  local ABS_GUARD_SECS  = 600           -- 10 menit
+  local REWARP_EVERY    = 5             -- re-warp tiap 5 attempt
+  local BACKOFF_MS      = 600
+
   while true do
     attempt = attempt + 1
-
-    -- re-warp berkala agar posisi/door tidak stale
-    if (attempt % REWARP_EVERY_ATTEMPTS) == 1 then
-      -- aman dipanggil berkala kalau kamu punya helper:
+    if (attempt % REWARP_EVERY) == 1 then
       if SMART_RECONNECT then pcall(SMART_RECONNECT, useW, useD) end
       if WARP_WORLD then pcall(WARP_WORLD, useW, useD) end
       sleep(300)
@@ -724,13 +791,21 @@ function ensureMalady(threshold_min, opts)
       return true, "taken"
     end
 
-    -- backoff ringan antar attempt
     sleep(BACKOFF_MS)
-
-    -- absolute guard: hentikan bila terlalu lama (hindari infinite lock)
-    local elapsed = os.time() - started
-    if elapsed >= TAKE_ABSOLUTE_GUARD_SECS then
+    if (os.time() - started) >= ABS_GUARD_SECS then
       return false, "take_timeout"
+    end
+
+    -- ekstra defensif: kalau tiba2 terdeteksi malady lagi (efek visual / lag), tunggu sebentar
+    local h2, s2 = _detect_malady_dual(2, 800)
+    if h2 and (s2 or 0) > 0 then
+      -- bila ternyata muncul lagi & sisa kecil, tunggu clear lagi
+      if (s2 or 0) <= THRESH_SECS then
+        _wait_until_clear_consecutive(2, 1000, math.max(THRESH_SECS + 60, 180))
+      else
+        -- sisa besar → hentikan (caller bisa panggil ensureMalady lagi nanti)
+        return false, "over_threshold"
+      end
     end
   end
 end
