@@ -113,18 +113,7 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
     if STATUS_BOT_NEW().status=="online" then
-      local minutes = tonumber(MALADY_CHECK_MINUTES) or 2  -- atau langsung 5 kalau mau hardcode
-      if type(waitMaladyCheck) == "function" then
-        local ok, ready = pcall(waitMaladyCheck, minutes)  -- sama dengan waitMaladyCheck(minutes)
-
-        if not ok then
-          print("[MALADY] error: " .. tostring(ready))
-        elseif ready then
-          print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.", minutes))
-        else
-          print(string.format("[MALADY] belum clear / sisa >= %d menit.", minutes))
-        end
-      end
+      ensureMalady(5)
     end
   end
 
@@ -642,43 +631,111 @@ local function _is_in_play_world()
   return name:upper() ~= "EXIT"
 end
 
-function waitMaladyCheck(threshold_min)
-  -- >>> GUARD: kalau di EXIT, jangan lanjut <<<
-  if not _is_in_play_world() then
-    print("[MALADY] Di EXIT: skip check.")
-    return false
+-- ============================================================
+-- ensureMalady(threshold_min)
+-- - Jika sisa MALADY > threshold  => SKIP (return false,"over_threshold")
+-- - Jika sisa ≤ threshold         => TUNGGU sampai 0, lalu auto take_malady
+-- - Ada retry terbatas + circuit breaker (anti retry tanpa henti)
+--
+-- Return:
+--   true,  "taken"                -> sukses ambil/pakai
+--   false, "over_threshold"       -> sisa > threshold (skip)
+--   false, "not_in_world"         -> lagi di EXIT / gak di world
+--   false, "check_failed"         -> checkMalady() gagal
+--   false, "timeout_wait"         -> tunggu melebihi guard
+--   false, "take_failed"          -> ambil/pakai gagal (setelah retry)
+--   false, "circuit_open"         -> lagi cooldown gara2 kegagalan berulang
+-- ============================================================
+
+-- state lokal (circuit breaker) — boleh taruh global di file
+local _MALADY_STATE = _MALADY_STATE or { fail_count = 0, circuit_until = 0 }
+
+function ensureMalady(threshold_min)
+  local now_ms = os.time() * 1000
+  if _MALADY_STATE.circuit_until and now_ms < _MALADY_STATE.circuit_until then
+    return false, "circuit_open"
   end
 
-  local MINUTES = tonumber(threshold_min) or 3
-  local THRESHOLD_SECS = MINUTES * 60
+  local minutes  = tonumber(threshold_min or 5) or 5
+  local THRESH   = math.floor(minutes * 60)
+  local MAX_TAKE_RETRIES  = 2            -- retry ambil/pakai di DALAM fungsi
+  local MAX_FAILS_CIRCUIT = 3            -- berapa kali gagal berturut2 baru buka circuit
+  local CIRCUIT_COOLDOWN  = 60 * 1000    -- 60 detik cooldown
+  local SAFE_WAIT_GUARD   = math.max(THRESH + 90, 180) -- detik
 
-  local has, secs = checkMalady()
-  if not has then return true end
-  if (secs or 0) >= THRESHOLD_SECS then
-    print(("[MALADY] %ds left (>= %d menit): skip waiting now."):format(secs or -1, MINUTES))
-    return false
-  end
-
-  print(("[MALADY] %ds left (< %d menit): waiting until it clears..."):format(secs or -1, MINUTES))
-  local deadline = os.time() + math.max(120, (secs or 0) + 30)
-  local last = secs or THRESHOLD_SECS
-
-  while true do
-    -- kalau tiba-tiba ke EXIT saat nunggu, stop
-    if not _is_in_play_world() then
-      print("[MALADY] Pindah ke EXIT saat menunggu: abort.")
-      return false
+  local bot = getBot and getBot() or nil
+  local w   = bot and bot:getWorld() or nil
+  if not w or not w.name or tostring(w.name):upper() == "EXIT" then
+    _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
+    if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
+      _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
     end
-
-    local ok, s = checkMalady()
-    if (not ok) or (s or 0) <= 0 then break end
-    if s > last + 2 then print("[MALADY] timer jumped; abort."); return false end
-    if os.time() >= deadline then print("[MALADY] timeout."); return false end
-    last = s
-    sleep(math.max(250, math.min(1000, math.floor((s or 1) * 500))))
+    return false, "not_in_world"
   end
 
-  return not select(1, checkMalady())
+  -- 1) Cek sisa malady
+  local has, secs = checkMalady()
+  if has == nil then
+    _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
+    if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
+      _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
+    end
+    return false, "check_failed"
+  end
+
+  -- 2) Jika sisa > threshold → skip (perilaku lama)
+  if (secs or 0) > THRESH then
+    -- Tidak dianggap OK supaya caller bisa bedakan "skip karena lama"
+    return false, "over_threshold"
+  end
+
+  -- 3) Sisa ≤ threshold → wajib nunggu sampai clear (sampai 0)
+  local waited = 0
+  while true do
+    has, secs = checkMalady()
+    if (not has) or (secs or 0) <= 0 then
+      break
+    end
+    sleep(1000)
+    waited = waited + 1
+    if waited >= SAFE_WAIT_GUARD then
+      _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
+      if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
+        _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
+      end
+      return false, "timeout_wait"
+    end
+  end
+
+  -- 4) CLEAR → coba take_malady dengan retry terbatas
+  local useW, useD
+  -- Default: ambil di world sekarang (tidak pindah ke storage biar cepat)
+  useW, useD = w.name, (CURRENT_DOOR_TARGET or "")
+  -- Kalau kamu memang mau pakai storage, aktifkan dua baris ini:
+  -- if STORAGE_MALADY and STORAGE_MALADY ~= "" then
+  --   useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
+  -- end
+
+  local ok_take = false
+  for attempt = 1, MAX_TAKE_RETRIES + 1 do
+    ok_take = take_malady(useW, useD, { step_ms = 700, rewarp_every = 180 })
+    if ok_take then break end
+    -- kecilkan backoff agar cepat
+    sleep(600) -- backoff ringan antar attempt
+  end
+
+  if ok_take then
+    -- reset counter kegagalan
+    _MALADY_STATE.fail_count   = 0
+    _MALADY_STATE.circuit_until = 0
+    return true, "taken"
+  else
+    _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
+    if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
+      _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
+    end
+    return false, "take_failed"
+  end
 end
 
 
@@ -960,17 +1017,7 @@ function TAKE_BLOCK(world, door)
         end)
         ZEE_COLLECT(false)
         -- default 3 menit
-        local minutes = tonumber(MALADY_CHECK_MINUTES) or 2  -- atau langsung 5 kalau mau hardcode
-        if type(waitMaladyCheck) == "function" then
-          local ok, ready = pcall(waitMaladyCheck, minutes)  -- sama dengan waitMaladyCheck(minutes)
-          if not ok then
-            print("[MALADY] error: " .. tostring(ready))
-          elseif ready then
-            print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.", minutes))
-          else
-            print(string.format("[MALADY] belum clear / sisa >= %d menit.", minutes))
-          end
-        end
+        ensureMalady(5)
     end
 end
 
@@ -992,18 +1039,7 @@ function pnb_sulap()
 
   -- masuk world + jaga koneksi
   WARP_WORLD(w); sleep(100)
-  local minutes = tonumber(MALADY_CHECK_MINUTES) or 5  -- atau langsung 5 kalau mau hardcode
-  if type(waitMaladyCheck) == "function" then
-    local ok, ready = pcall(waitMaladyCheck, minutes)  -- sama dengan waitMaladyCheck(minutes)
-
-    if not ok then
-      print("[MALADY] error: " .. tostring(ready))
-    elseif ready then
-      print(string.format("[MALADY] CLEAR (<= %d menit). Silakan ambil di luar fungsi check.", minutes))
-    else
-      print(string.format("[MALADY] belum clear / sisa >= %d menit.", minutes))
-    end
-  end
+  ensureMalady(5)
   SMART_RECONNECT(w); sleep(100)
 
   local function pos_now()
