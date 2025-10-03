@@ -634,99 +634,105 @@ end
 
 -- ============================================================
 -- ensureMalady(threshold_min)
--- - Jika ada Malady dan sisa > threshold  => SKIP (false,"over_threshold")
--- - Jika ada dan sisa ≤ threshold         => TUNGGU sampai 0, lalu auto take_malady
--- - Jika TIDAK ada Malady                 => langsung take_malady
--- - Selalu prioritaskan STORAGE_MALADY/DOOR_MALADY jika tersedia
--- - Ada retry terbatas + circuit breaker
+-- Behaviour:
+-- 1) Kalau ada malady dan sisa > threshold  => SKIP (false,"over_threshold")
+-- 2) Kalau ada & sisa ≤ threshold           => TUNGGU sampai 0 (countdown)
+-- 3) Kalau tidak ada malady                 => langsung lanjut
+-- 4) TAKE MALADY: while true sampai BERHASIL (bukan 2x cek),
+--    dengan ABSOLUTE GUARD agar tidak infinite hang
+--
+-- Kebutuhan:
+-- - STORAGE_MALADY (string, wajib)
+-- - DOOR_MALADY (string, boleh kosong kalau gak pakai door)
+--
+-- Return:
+--   true,  "taken"          -> sukses
+--   false, "over_threshold" -> sisa > threshold (skip)
+--   false, "not_in_world"   -> posisi tidak valid (EXIT)
+--   false, "storage_not_set"-> variabel storage kosong
+--   false, "check_failed"   -> checkMalady() error (nil)
+--   false, "timeout_wait"   -> nunggu habis melebihi guard
+--   false, "take_timeout"   -> loop take melebihi ABS guard waktu
 -- ============================================================
 
-local _MALADY_STATE = _MALADY_STATE or { fail_count = 0, circuit_until = 0 }
+function ensureMalady(threshold_min, opts)
+  local minutes     = tonumber(threshold_min or 5) or 5
+  local THRESH_SECS = math.floor(minutes * 60)
 
-function ensureMalady(threshold_min)
-  local now_ms = os.time() * 1000
-  if _MALADY_STATE.circuit_until and now_ms < _MALADY_STATE.circuit_until then
-    return false, "circuit_open"
-  end
+  -- guard waktu (silakan atur)
+  local SAFE_WAIT_GUARD_SECS = math.max(THRESH_SECS + 90, 180)  -- nunggu habis
+  local TAKE_ABSOLUTE_GUARD_SECS = 600                          -- 10 menit max loop take
+  local REWARP_EVERY_ATTEMPTS = 5                               -- setiap 5 attempt re-warp
+  local BACKOFF_MS = 600                                         -- jeda antar attempt
 
-  local minutes  = tonumber(threshold_min or 5) or 5
-  local THRESH   = math.floor(minutes * 60)
-  local MAX_TAKE_RETRIES  = 2
-  local MAX_FAILS_CIRCUIT = 3
-  local CIRCUIT_COOLDOWN  = 60 * 1000
-  local SAFE_WAIT_GUARD   = math.max(THRESH + 90, 180) -- detik
-
+  -- validasi posisi
   local b = getBot and getBot() or nil
   local w = b and b:getWorld() or nil
   if not w or not w.name or tostring(w.name):upper() == "EXIT" then
-    _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
-    if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
-      _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
-    end
     return false, "not_in_world"
   end
 
-  -- === 1) Cek malady (AMBIL 3 NILAI) ===
-  local has, secs, mname = checkMalady()
-  -- has==false,nil,nil -> tidak ada malady (anggap CLEAR)
+  -- validasi storage
+  if not STORAGE_MALADY or STORAGE_MALADY == "" then
+    return false, "storage_not_set"
+  end
+  local useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
 
+  -- 1) cek malady (ambil 3 nilai)
+  local has, secs, mname = checkMalady()
   if has == nil then
-    _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
-    if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
-      _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
-    end
     return false, "check_failed"
   end
 
-  -- === 2) Ada malady tapi sisa > threshold → skip ===
-  if has == true and (secs or 0) > THRESH then
+  -- 2) jika ada & sisa > threshold => skip (biarkan langkah lain jalan)
+  if has == true and (secs or 0) > THRESH_SECS then
     return false, "over_threshold"
   end
 
-  -- === 3) Ada malady & sisa ≤ threshold → tunggu sampai habis ===
+  -- 3) jika ada & sisa ≤ threshold => wajib nunggu sampai habis
   if has == true then
     local waited = 0
     while true do
       local h2, s2 = checkMalady()
-      if (not h2) or (s2 or 0) <= 0 then break end
+      if (not h2) or (s2 or 0) <= 0 then
+        break
+      end
       sleep(1000)
       waited = waited + 1
-      if waited >= SAFE_WAIT_GUARD then
-        _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
-        if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
-          _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
-        end
+      if waited >= SAFE_WAIT_GUARD_SECS then
         return false, "timeout_wait"
       end
     end
   end
-  -- titik ini: CLEAR (habis ditunggu atau memang tidak ada malady)
+  -- titik ini CLEAR: (habis ditunggu) atau memang tidak ada dari awal
 
-  -- === 4) TAKE dari storage (prioritas), fallback ke world sekarang ===
-  local useW, useD
-  if STORAGE_MALADY and STORAGE_MALADY ~= "" then
-    useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
-  else
-    useW, useD = w.name, (CURRENT_DOOR_TARGET or "")
-  end
+  -- 4) LOOP TAKE SAMPAI BERHASIL
+  local started = os.time()
+  local attempt = 0
+  while true do
+    attempt = attempt + 1
 
-  local ok_take = false
-  for attempt = 1, MAX_TAKE_RETRIES + 1 do
-    ok_take = take_malady(useW, useD, { step_ms = 700, rewarp_every = 180 })
-    if ok_take then break end
-    sleep(600) -- backoff ringan
-  end
-
-  if ok_take then
-    _MALADY_STATE.fail_count    = 0
-    _MALADY_STATE.circuit_until = 0
-    return true, "taken"
-  else
-    _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
-    if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
-      _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
+    -- re-warp berkala agar posisi/door tidak stale
+    if (attempt % REWARP_EVERY_ATTEMPTS) == 1 then
+      -- aman dipanggil berkala kalau kamu punya helper:
+      if SMART_RECONNECT then pcall(SMART_RECONNECT, useW, useD) end
+      if WARP_WORLD then pcall(WARP_WORLD, useW, useD) end
+      sleep(300)
     end
-    return false, "take_failed"
+
+    local ok = take_malady(useW, useD, opts or { step_ms = 700, rewarp_every = 180 })
+    if ok then
+      return true, "taken"
+    end
+
+    -- backoff ringan antar attempt
+    sleep(BACKOFF_MS)
+
+    -- absolute guard: hentikan bila terlalu lama (hindari infinite lock)
+    local elapsed = os.time() - started
+    if elapsed >= TAKE_ABSOLUTE_GUARD_SECS then
+      return false, "take_timeout"
+    end
   end
 end
 
@@ -1150,29 +1156,30 @@ end
 
 
 
-if true then
-    if MODE == "SULAP" then
-        if not CHECK_WORLD_TUTORIAL then
-            checkTutor()
-            CHECK_WORLD_TUTORIAL = true
-        end
-        for i =1,#LIST_WORLD_BLOCK do
+-- if true then
+--     if MODE == "SULAP" then
+--         if not CHECK_WORLD_TUTORIAL then
+--             checkTutor()
+--             CHECK_WORLD_TUTORIAL = true
+--         end
+--         for i =1,#LIST_WORLD_BLOCK do
             
-            if getBot().level < 12 then
-                LEVEL_RENDAH = true
-            end
+--             if getBot().level < 12 then
+--                 LEVEL_RENDAH = true
+--             end
 
-            local split_data = {}
-            for w in LIST_WORLD_BLOCK[i]:gmatch("([^|]+)") do 
-                table.insert(split_data, w) 
-            end
-            world_block = split_data[1]
-            door_block = split_data[2]
-            main_sulap(world_block, door_block)
-        end
-    elseif MODE == "PNB" then
-    else
-        print("PLEAS INPUT MODE !!!!")
-    end
-end
+--             local split_data = {}
+--             for w in LIST_WORLD_BLOCK[i]:gmatch("([^|]+)") do 
+--                 table.insert(split_data, w) 
+--             end
+--             world_block = split_data[1]
+--             door_block = split_data[2]
+--             main_sulap(world_block, door_block)
+--         end
+--     elseif MODE == "PNB" then
+--     else
+--         print("PLEAS INPUT MODE !!!!")
+--     end
+-- end
 
+ensureMalady(5)
