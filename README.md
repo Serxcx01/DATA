@@ -1,21 +1,19 @@
 LIST_WORLD_BLOCK = {"FOZEEZ2|NOWXX123"}
-STORAGE_SEED = ""
-
 
 MODE = "SULAP"
 -- SULAP
 -- PNB
 
-ID_BLOCK = 8640
+STORAGE_SEED, DOOR_SEED     = "FENCEPAPA1", "NOWXX123"
 STORAGE_MALADY, DOOR_MALADY = "COKANJI", "XX1"
-STORAGE_TOOLS_MALADY = "HVKKLL"
-LIMIT_SEED_IN_BP  = 100
-JUMLAH_TILE_BREAK = 3
-DELAY_RECONNECT   = 20000
-DELAY_BAD_SERVER  = 120000
-DELAY_BREAK       = 170
-DELAY_PUT         = 115
-DELAY_WARP        = 7000
+ID_BLOCK                    = 8640
+LIMIT_SEED_IN_BP            = 70
+JUMLAH_TILE_BREAK           = 3
+DELAY_RECONNECT             = 20000
+DELAY_BAD_SERVER            = 120000
+DELAY_BREAK                 = 170
+DELAY_PUT                   = 115
+DELAY_WARP                  = 7000
 
 -- ##################### BATAS SCRIPT #####################
 TILE_BREAK = {}
@@ -1019,6 +1017,9 @@ function pnb_sulap()
         inv = b:getInventory()
     end
     ZEE_COLLECT(false)
+    if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
+      DROP_ITEMS_SNAKE(STORAGE_SEED, DOOR_SEED, {ID_SEED}, {tile_cap=3000, stack_cap=20})
+    end
 end
 
 
