@@ -32,6 +32,36 @@ function mark_bad (x,y) BAD_CACHE [_key(x,y)]=true end
 function is_full_or_bad(x,y) return FULL_CACHE[_key(x,y)] or BAD_CACHE[_key(x,y)] end
 function reset_caches() FULL_CACHE={}; BAD_CACHE={} end
 
+-- (NEW) safe stub if not provided elsewhere: count items on a tile
+if _countOnTile == nil then
+  function _countOnTile(cx,cy)
+    local objs = (getObjects and getObjects()) or {}
+    local total, stacks = 0, 0
+    for _, o in pairs(objs) do
+      local tx, ty = math.floor((o.x or 0)/32), math.floor((o.y or 0)/32)
+      if tx == cx and ty == cy then
+        local cnt = tonumber(o.count or o.amount or 1) or 1
+        total = total + cnt
+        stacks = stacks + 1
+      end
+    end
+    return total, stacks
+  end
+end
+
+-- (NEW) nudge helper stub used by WARP_WORLD if not present
+_nudge_and_warp = _nudge_and_warp or function(WORLD, DOOR, tries)
+  local b=getBot and getBot() or nil
+  for _=1,(tries or 1) do
+    if b and b.warp then
+      if DOOR and DOOR ~= "" then b:warp((WORLD or "").."|"..DOOR) else b:warp(WORLD or "") end
+    end
+    if type(listenEvents)=="function" then listenEvents(5) end
+    sleep(math.max(1000, math.floor(DELAY_WARP/2)))
+  end
+  return true
+end
+
 -- ##################### UTIL / RECONNECT #####################
 function STATUS_BOT_NEW()
   local b = getBot and getBot() or nil
@@ -317,17 +347,25 @@ end
 -- TAKE MALADY (ID 8542) — BLOCKING TANPA COOLDOWN
 -- Stay di WORLD itu, tunggu sampai ada item 8542, ambil, pakai.
 -- ===========================================================
-local function _gotoExact(world, door, tx, ty, path_try, step_ms)
+function _gotoExact(world, door, tx, ty, path_try, step_ms)
   local b = getBot and getBot() or nil; if not b then return false end
   path_try = path_try or 10
   step_ms  = step_ms  or 700
+
+  -- local helper to read current tile
+  local function meTile()
+    local w = b.getWorld and b:getWorld() or nil
+    local me = w and w.getLocal and w:getLocal() or nil
+    if not me then return -999,-999 end
+    return math.floor((me.posx or 0)/32), math.floor((me.posy or 0)/32)
+  end
 
   local last_mx, last_my = nil, nil
   local stale_ticks = 0
   local backoff     = 0         -- tambahan jeda kecil saat stuck
 
   for _ = 1, path_try do
-    local mx, my = _meTile()
+    local mx, my = meTile()
     if mx == tx and my == ty then return true end
 
     -- coba pathing
@@ -338,7 +376,7 @@ local function _gotoExact(world, door, tx, ty, path_try, step_ms)
     SMART_RECONNECT(world, door)
 
     -- cek apakah bergerak
-    local cmx, cmy = _meTile()
+    local cmx, cmy = meTile()
     if (cmx == (last_mx or mx)) and (cmy == (last_my or my)) then
       stale_ticks = stale_ticks + 1
       -- kalau 3x tidak berubah, anggap stuck → tambah backoff (maks 600ms)
@@ -393,8 +431,9 @@ function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
     while drop_try>0 and extras>0 do
       attempts_here=attempts_here+1
       local before=inv:getItemCount(item_id)
-      b:drop(tostring(item_id), drop_try)
-      sleep(STEP_MS); SMART_RECONNECT();
+      b:drop(item_id, drop_try)         -- use numeric id
+      sleep(STEP_MS); SMART_RECONNECT(); GUARD_DOOR_STUCK()
+      inv = b:getInventory()            -- refresh inv
       local after=inv:getItemCount(item_id)
       if after<before then
         local dropped=before-after; extras=math.max(0, extras-dropped)
@@ -560,7 +599,7 @@ end
 
 -- Tunggu kalau malady < 60s, lalu ambil malady saat sudah hilang
 function waitMaladyThenTake()
-    has, secs = checkMalady()
+    local has, secs = checkMalady()
 
     -- Kalau tidak ada malady: langsung ambil
     if not has then
@@ -580,7 +619,7 @@ function waitMaladyThenTake()
     local last = secs or 60
 
     while true do
-        ok, s = checkMalady()
+        local ok, s = checkMalady()
 
         -- kalau sudah tidak ada / sisa <= 0 → selesai nunggu
         if (not ok) or (s or 0) <= 0 then break end
@@ -598,7 +637,7 @@ function waitMaladyThenTake()
     end
 
     -- double-check agar yakin sudah clear, baru take
-    ok2 = select(1, checkMalady())
+    local ok2 = select(1, checkMalady())
     if not ok2 then
         print("[MALADY] cleared. Taking malady now...")
         return take_malady(STORAGE_MALADY, DOOR_MALADY, { step_ms = 700, rewarp_every = 120 })
@@ -613,8 +652,8 @@ end
 
 
 -------------------- SMART DROP SNAKE (kanan→atas, fallback kiri) --------------------
-WORLD_MAX_X, WORLD_MAX_Y = 99, 23 -- map kecil: x:0..99, y:0..23
-local function REFRESH_WORLD_BOUNDS()
+WORLD_MAX_X, WORLD_MAX_Y = WORLD_MAX_X or 99, WORLD_MAX_Y or 23 -- map kecil: x:0..99, y:0..23
+function REFRESH_WORLD_BOUNDS()
   local b=getBot and getBot() or nil; if not (b and b.getWorld) then return end
   local w=b:getWorld(); if not w then return end
   local wx=(w.width and (w.width-1)) or WORLD_MAX_X
@@ -622,19 +661,19 @@ local function REFRESH_WORLD_BOUNDS()
   WORLD_MAX_X, WORLD_MAX_Y = wx, wy
 end
 
-local function _my_xy()
+function _my_xy()
   local b=getBot and getBot() or nil; if not (b and b.getWorld) then return 0,0 end
   local w=b:getWorld(); local me=w and w:getLocal() or nil; if not me then return 0,0 end
   return math.floor((me.posx or 0)/32), math.floor((me.posy or 0)/32)
 end
-local function _is_in_bounds(x,y) return x>=0 and x<=WORLD_MAX_X and y>=0 and y<=WORLD_MAX_Y end
-local function _is_walkable(tx,ty)
+function _is_in_bounds(x,y) return x>=0 and x<=WORLD_MAX_X and y>=0 and y<=WORLD_MAX_Y end
+function _is_walkable(tx,ty)
   local b=getBot and getBot() or nil; if not (b and b.getWorld) then return false end
   local w=b:getWorld(); local t=w and w:getTile(tx,ty) or nil
   return (t~=nil) and ((t.fg or 0)==0)
 end
 
-local function _probe_slot(cx,cy,tile_cap,stack_cap)
+function _probe_slot(cx,cy,tile_cap,stack_cap)
   if not _is_in_bounds(cx,cy) then return false end
 
   -- cek tile world
@@ -665,18 +704,18 @@ local function _probe_slot(cx,cy,tile_cap,stack_cap)
   return true
 end
 
-local function _scan_row_right(start_x, cy, tile_cap, stack_cap)
+function _scan_row_right(start_x, cy, tile_cap, stack_cap)
   local cx=math.max(0, math.min(start_x, WORLD_MAX_X))
   while cx<=WORLD_MAX_X do if _probe_slot(cx,cy,tile_cap,stack_cap) then return cx,cy end; cx=cx+1 end
   return nil,nil
 end
-local function _scan_row_left(start_x, cy, tile_cap, stack_cap)
+function _scan_row_left(start_x, cy, tile_cap, stack_cap)
   local cx=math.max(0, math.min(start_x, WORLD_MAX_X))
   while cx>=0 do if _probe_slot(cx,cy,tile_cap,stack_cap) then return cx,cy end; cx=cx-1 end
   return nil,nil
 end
 
-local function _nextDropTileSnake_auto(sx,sy,cursor,tile_cap,stack_cap)
+function _nextDropTileSnake_auto(sx,sy,cursor,tile_cap,stack_cap)
   local start_col=sx+1; if start_col>WORLD_MAX_X then start_col=WORLD_MAX_X end; if start_col<0 then start_col=0 end
   local curx=cursor.x or start_col; local cury=math.max(0, math.min(cursor.y or sy, WORLD_MAX_Y))
 
@@ -934,7 +973,7 @@ function pnb_sulap()
                 local t = b:getWorld():getTile(ex + 1, ye + i)
                 if t.fg == 0 and t.bg == 0 then
                     b:place(ex + 1, ye + i, ID_BLOCK)
-                    sleep(DELAY_PUT)                 -- FIX: gunakan konstanta yang ada
+                    sleep(DELAY_PUT)
                     SMART_RECONNECT(w); sleep(100)
                     counter = counter + 1
                     if counter == 150 then
@@ -953,13 +992,12 @@ function pnb_sulap()
         end
 
         -- PUNCH: hancurkan tile yang ada untuk jadi seed
-        -- (hanya jalan kalau memang ada tile yang bisa dipukul)
         while tilePunch(ex, ye) do
             for _, i in pairs(TILE_BREAK) do
                 local t = b:getWorld():getTile(ex + 1, ye + i)
                 if t.fg ~= 0 or t.bg ~= 0 then
                     b:hit(ex + 1, ye + i)
-                    sleep(DELAY_BREAK)               -- FIX: gunakan konstanta yang ada
+                    sleep(DELAY_BREAK)
                     SMART_RECONNECT(w); sleep(100)
                     counter = counter + 1
                     if counter == 150 then
@@ -1016,6 +1054,5 @@ if true then
     elseif MODE == "PNB" then
     else
         print("PLEAS INPUT MODE !!!!")
-        -- break
     end
 end
