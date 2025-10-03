@@ -8,7 +8,7 @@ STORAGE_SEED, DOOR_SEED     = "FENCEPAPA1", "NOWXX123"
 STORAGE_MALADY, DOOR_MALADY = "COKANJI", "XX1"
 SHOW_PUNCH                  = false
 ID_BLOCK                    = 8640
-LIMIT_SEED_IN_BP            = 70
+LIMIT_SEED_IN_BP            = 120
 JUMLAH_TILE_BREAK           = 3
 DELAY_RECONNECT             = 20000
 DELAY_BAD_SERVER            = 120000
@@ -112,16 +112,15 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     or (STATUS_BOT_NEW().status=="Server Overload") do
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
-    if STATUS_BOT_NEW().status=="online" then
-      ensureMalady(5)
-    end
   end
 
   if WORLD and DOOR then WARP_WORLD((WORLD or ""):upper(), DOOR)
   elseif WORLD then       WARP_WORLD((WORLD or ""):upper()) end
 
   if POSX and POSY then local b=getBot and getBot() or nil; if b and b.findPath then b:findPath(POSX,POSY) end end
-  
+  if STATUS_BOT_NEW().status=="online" then
+    ensureMalady(5)
+  end
 end
 
 function ZEE_COLLECT(state)
