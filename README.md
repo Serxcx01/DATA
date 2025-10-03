@@ -631,23 +631,16 @@ local function _is_in_play_world()
   return name:upper() ~= "EXIT"
 end
 
+
 -- ============================================================
 -- ensureMalady(threshold_min)
--- - Jika sisa MALADY > threshold  => SKIP (return false,"over_threshold")
--- - Jika sisa ≤ threshold         => TUNGGU sampai 0, lalu auto take_malady
--- - Ada retry terbatas + circuit breaker (anti retry tanpa henti)
---
--- Return:
---   true,  "taken"                -> sukses ambil/pakai
---   false, "over_threshold"       -> sisa > threshold (skip)
---   false, "not_in_world"         -> lagi di EXIT / gak di world
---   false, "check_failed"         -> checkMalady() gagal
---   false, "timeout_wait"         -> tunggu melebihi guard
---   false, "take_failed"          -> ambil/pakai gagal (setelah retry)
---   false, "circuit_open"         -> lagi cooldown gara2 kegagalan berulang
+-- - Jika ada Malady dan sisa > threshold  => SKIP (false,"over_threshold")
+-- - Jika ada dan sisa ≤ threshold         => TUNGGU sampai 0, lalu auto take_malady
+-- - Jika TIDAK ada Malady                 => langsung take_malady
+-- - Selalu prioritaskan STORAGE_MALADY/DOOR_MALADY jika tersedia
+-- - Ada retry terbatas + circuit breaker
 -- ============================================================
 
--- state lokal (circuit breaker) — boleh taruh global di file
 local _MALADY_STATE = _MALADY_STATE or { fail_count = 0, circuit_until = 0 }
 
 function ensureMalady(threshold_min)
@@ -658,13 +651,13 @@ function ensureMalady(threshold_min)
 
   local minutes  = tonumber(threshold_min or 5) or 5
   local THRESH   = math.floor(minutes * 60)
-  local MAX_TAKE_RETRIES  = 2            -- retry ambil/pakai di DALAM fungsi
-  local MAX_FAILS_CIRCUIT = 3            -- berapa kali gagal berturut2 baru buka circuit
-  local CIRCUIT_COOLDOWN  = 60 * 1000    -- 60 detik cooldown
+  local MAX_TAKE_RETRIES  = 2
+  local MAX_FAILS_CIRCUIT = 3
+  local CIRCUIT_COOLDOWN  = 60 * 1000
   local SAFE_WAIT_GUARD   = math.max(THRESH + 90, 180) -- detik
 
-  local bot = getBot and getBot() or nil
-  local w   = bot and bot:getWorld() or nil
+  local b = getBot and getBot() or nil
+  local w = b and b:getWorld() or nil
   if not w or not w.name or tostring(w.name):upper() == "EXIT" then
     _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
     if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
@@ -673,8 +666,10 @@ function ensureMalady(threshold_min)
     return false, "not_in_world"
   end
 
-  -- 1) Cek sisa malady
-  local has, secs = checkMalady()
+  -- === 1) Cek malady (AMBIL 3 NILAI) ===
+  local has, secs, mname = checkMalady()
+  -- has==false,nil,nil -> tidak ada malady (anggap CLEAR)
+
   if has == nil then
     _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
     if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
@@ -683,50 +678,47 @@ function ensureMalady(threshold_min)
     return false, "check_failed"
   end
 
-  -- 2) Jika sisa > threshold → skip (perilaku lama)
-  if (secs or 0) > THRESH then
-    -- Tidak dianggap OK supaya caller bisa bedakan "skip karena lama"
+  -- === 2) Ada malady tapi sisa > threshold → skip ===
+  if has == true and (secs or 0) > THRESH then
     return false, "over_threshold"
   end
 
-  -- 3) Sisa ≤ threshold → wajib nunggu sampai clear (sampai 0)
-  local waited = 0
-  while true do
-    has, secs = checkMalady()
-    if (not has) or (secs or 0) <= 0 then
-      break
-    end
-    sleep(1000)
-    waited = waited + 1
-    if waited >= SAFE_WAIT_GUARD then
-      _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
-      if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
-        _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
+  -- === 3) Ada malady & sisa ≤ threshold → tunggu sampai habis ===
+  if has == true then
+    local waited = 0
+    while true do
+      local h2, s2 = checkMalady()
+      if (not h2) or (s2 or 0) <= 0 then break end
+      sleep(1000)
+      waited = waited + 1
+      if waited >= SAFE_WAIT_GUARD then
+        _MALADY_STATE.fail_count = (_MALADY_STATE.fail_count or 0) + 1
+        if _MALADY_STATE.fail_count >= MAX_FAILS_CIRCUIT then
+          _MALADY_STATE.circuit_until = now_ms + CIRCUIT_COOLDOWN
+        end
+        return false, "timeout_wait"
       end
-      return false, "timeout_wait"
     end
   end
+  -- titik ini: CLEAR (habis ditunggu atau memang tidak ada malady)
 
-  -- 4) CLEAR → coba take_malady dengan retry terbatas
+  -- === 4) TAKE dari storage (prioritas), fallback ke world sekarang ===
   local useW, useD
-  -- Default: ambil di world sekarang (tidak pindah ke storage biar cepat)
-  useW, useD = w.name, (CURRENT_DOOR_TARGET or "")
-  -- Kalau kamu memang mau pakai storage, aktifkan dua baris ini:
-  -- if STORAGE_MALADY and STORAGE_MALADY ~= "" then
-  --   useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
-  -- end
+  if STORAGE_MALADY and STORAGE_MALADY ~= "" then
+    useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
+  else
+    useW, useD = w.name, (CURRENT_DOOR_TARGET or "")
+  end
 
   local ok_take = false
   for attempt = 1, MAX_TAKE_RETRIES + 1 do
     ok_take = take_malady(useW, useD, { step_ms = 700, rewarp_every = 180 })
     if ok_take then break end
-    -- kecilkan backoff agar cepat
-    sleep(600) -- backoff ringan antar attempt
+    sleep(600) -- backoff ringan
   end
 
   if ok_take then
-    -- reset counter kegagalan
-    _MALADY_STATE.fail_count   = 0
+    _MALADY_STATE.fail_count    = 0
     _MALADY_STATE.circuit_until = 0
     return true, "taken"
   else
@@ -1185,4 +1177,4 @@ end
 -- end
 
 
-print(checkMalady())
+ensureMalady(5)
