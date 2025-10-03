@@ -1150,31 +1150,29 @@ end
 
 
 
--- if true then
---     if MODE == "SULAP" then
---         if not CHECK_WORLD_TUTORIAL then
---             checkTutor()
---             CHECK_WORLD_TUTORIAL = true
---         end
---         for i =1,#LIST_WORLD_BLOCK do
+if true then
+    if MODE == "SULAP" then
+        if not CHECK_WORLD_TUTORIAL then
+            checkTutor()
+            CHECK_WORLD_TUTORIAL = true
+        end
+        for i =1,#LIST_WORLD_BLOCK do
             
---             if getBot().level < 12 then
---                 LEVEL_RENDAH = true
---             end
+            if getBot().level < 12 then
+                LEVEL_RENDAH = true
+            end
 
---             local split_data = {}
---             for w in LIST_WORLD_BLOCK[i]:gmatch("([^|]+)") do 
---                 table.insert(split_data, w) 
---             end
---             world_block = split_data[1]
---             door_block = split_data[2]
---             main_sulap(world_block, door_block)
---         end
---     elseif MODE == "PNB" then
---     else
---         print("PLEAS INPUT MODE !!!!")
---     end
--- end
+            local split_data = {}
+            for w in LIST_WORLD_BLOCK[i]:gmatch("([^|]+)") do 
+                table.insert(split_data, w) 
+            end
+            world_block = split_data[1]
+            door_block = split_data[2]
+            main_sulap(world_block, door_block)
+        end
+    elseif MODE == "PNB" then
+    else
+        print("PLEAS INPUT MODE !!!!")
+    end
+end
 
-
-ensureMalady(5)
