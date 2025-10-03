@@ -468,7 +468,7 @@ end
 
 -- Tunggu kalau malady < 60s, lalu ambil malady saat sudah hilang
 function waitMaladyThenTake()
-    local has, secs = checkMalady()
+    has, secs = checkMalady()
 
     -- Kalau tidak ada malady: langsung ambil
     if not has then
@@ -928,4 +928,4 @@ end
 --     end
 -- end
 
-print(checkMalady())
+waitMaladyThenTake()
