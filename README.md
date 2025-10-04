@@ -1,11 +1,22 @@
-LIST_WORLD_BLOCK = {"FOZEEZ2|NOWXX123","WORU15|NOWXX123"}
+LIST_WORLD_BLOCK = {
+  "WORU15|NOWXX123",
+  "BOHKARA|NOWXX123",
+  "FENCEMM1|NOWXX123",
+}
+
+
+STORAGE_SEED = {
+  "AFILFENCE10|NOWXX123",
+  "LEOD83|NOWXX123",
+  "FENCEMM100|NOWXX123",
+}
 
 MODE = "SULAP"
 -- SULAP
 -- PNB
 
-STORAGE_SEED, DOOR_SEED     = "FENCEPAPA1", "NOWXX123"
 STORAGE_MALADY, DOOR_MALADY = "COKANJI", "XX1"
+LIMIT_SEED_STORAGE          = 54000  -- kapasitas per world
 SHOW_PUNCH                  = false
 ID_BLOCK                    = 8640
 LIMIT_SEED_IN_BP            = 190
@@ -32,6 +43,12 @@ function mark_bad (x,y) BAD_CACHE [_key(x,y)]=true end
 function is_full_or_bad(x,y) return FULL_CACHE[_key(x,y)] or BAD_CACHE[_key(x,y)] end
 function reset_caches() FULL_CACHE={}; BAD_CACHE={} end
 getBot().auto_reconnect = false
+
+_SEED_RING = _SEED_RING or {
+  list = nil,   -- { {world=..., door=...}, ... }
+  idx  = 1,     -- pointer storage saat ini (1-based)
+  full = {},    -- map[index]=true kalau dianggap penuh di putaran ini
+}
 
 -- (NEW) safe stub if not provided elsewhere: count items on a tile
 if _countOnTile == nil then
@@ -1058,7 +1075,180 @@ function DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS, opts)
     end
   end
 end
+-- ##################### MULTI STORAGE SEED #####################
+local function _normalize_storage_list(list)
+  local out = {}
+  if type(list) ~= "table" then return out end
+  for _, entry in ipairs(list) do
+    if type(entry) == "string" and entry ~= "" then
+      local w,d = entry:match("^([^|]+)|?(.*)$")
+      table.insert(out, { world=tostring(w or ""), door=tostring(d or "") })
+    elseif type(entry) == "table" and entry.world then
+      table.insert(out, { world=tostring(entry.world), door=tostring(entry.door or "") })
+    end
+  end
+  return out
+end
 
+local function _warp_sync(W, D)
+  if (W or "") == "" then return false end
+  if WARP_WORLD then WARP_WORLD(W, D) end
+  sleep(200)
+  if SMART_RECONNECT then SMART_RECONNECT(W, D) end
+  return true
+end
+
+-- scan stabil (ambil maksimum dari 2 pembacaan singkat)
+local function _scan_stable(id)
+  local a = tonumber(scan(id) or 0) or 0
+  sleep(120)
+  local b = tonumber(scan(id) or 0) or 0
+  return (a > b) and a or b
+end
+
+local function _seed_ring_init()
+  if _SEED_RING.list and #_SEED_RING.list > 0 then return end
+  _SEED_RING.list = _normalize_storage_list(STORAGE_SEED)
+  _SEED_RING.idx  = math.min(_SEED_RING.idx or 1, math.max(1, #_SEED_RING.list))
+  _SEED_RING.full = {}
+end
+
+local function _seed_ring_reset_marks()
+  _SEED_RING.full = {}
+end
+
+-- Cari storage berikutnya yang MASIH ADA kapasitas, mulai dari idx sekarang.
+-- Hanya 1 putaran penuh (tidak looping tanpa akhir).
+-- return: i, W, D, free_cap  | nil jika semua full
+local function _seed_ring_pick_with_capacity(item_id, per_world_cap)
+  _seed_ring_init()
+  local cap_max = tonumber(per_world_cap or LIMIT_SEED_STORAGE) or 27000
+  local n = #_SEED_RING.list
+  if n == 0 then return nil end
+
+  local start_i = _SEED_RING.idx
+  local i = start_i
+  repeat
+    if not _SEED_RING.full[i] then
+      local S = _SEED_RING.list[i]
+      local W, D = S.world, S.door
+      if _warp_sync(W, D) then
+        local total_here = _scan_stable(item_id)
+        local free_cap   = cap_max - total_here
+        if free_cap > 0 then
+          -- pilih storage i (ada kapasitas)
+          _SEED_RING.idx = i  -- arahkan pointer ke storage terpilih
+          return i, W, D, free_cap
+        else
+          -- tandai penuh di putaran ini, jangan cek lagi
+          _SEED_RING.full[i] = true
+        end
+      else
+        -- gagal warp → anggap sementara penuh agar tidak muter-muter
+        _SEED_RING.full[i] = true
+      end
+    end
+    i = (i % n) + 1
+  until i == start_i
+
+  -- semua dianggap full
+  return nil
+end
+
+-- Setelah drop ke storage i, majukan pointer ke storage berikutnya (ring)
+local function _seed_ring_advance()
+  if not _SEED_RING.list or #_SEED_RING.list == 0 then return end
+  local n = #_SEED_RING.list
+  _SEED_RING.idx = (_SEED_RING.idx % n) + 1
+end
+
+-- =========================
+-- DROP KE SATU WORLD DENGAN LIMIT
+-- =========================
+local function _drop_to_world_limit(item_id, max_to_drop, W, D)
+  local b = getBot and getBot() or nil
+  if not b then return false end
+  max_to_drop = math.max(0, tonumber(max_to_drop or 0) or 0)
+  if max_to_drop == 0 then return true end
+
+  if not _warp_sync(W, D) then return false end
+
+  if type(DROP_ITEMS_SNAKE) == "function" then
+    DROP_ITEMS_SNAKE(W, D, { item_id }, {
+      max_total_to_drop = max_to_drop,  -- <= batasi total drop di world ini
+      step_ms = 700, tile_cap = 3000, stack_cap = 20, path_try = 10, tile_retries = 2
+    })
+    return true
+  end
+
+  -- fallback sederhana
+  local CHUNK = 400
+  while max_to_drop > 0 do
+    local have = b:getInventory():getItemCount(item_id)
+    if have <= 0 then return true end
+    local to_drop = math.min(CHUNK, have, max_to_drop)
+    b:drop(item_id, to_drop)
+    sleep(700)
+    if SMART_RECONNECT then SMART_RECONNECT(W, D) end
+    local after = b:getInventory():getItemCount(item_id)
+    local dropped = have - after
+    if dropped <= 0 then
+      if WARP_WORLD then WARP_WORLD(W, D) end
+      sleep(300)
+    else
+      max_to_drop = math.max(0, max_to_drop - dropped)
+    end
+  end
+  return true
+end
+
+-- =========================
+-- FUNGSI UTAMA: MULTI STORAGE DENGAN RING
+-- =========================
+function DROP_SEEDS_MULTI(stor_list, item_id, per_world_cap)
+  local b = getBot and getBot() or nil
+  if not b then return false, "no_bot" end
+
+  -- inisialisasi ring berdasarkan STORAGE_SEED saat ini
+  _SEED_RING.list = _normalize_storage_list(stor_list or STORAGE_SEED)
+  if #_SEED_RING.list == 0 then return false, "storage_list_empty" end
+  if _SEED_RING.idx < 1 or _SEED_RING.idx > #_SEED_RING.list then _SEED_RING.idx = 1 end
+
+  -- putaran: selama masih ada seed di backpack
+  while true do
+    local have = b:getInventory():getItemCount(item_id)
+    if have <= 0 then
+      -- selesai drop semua
+      return true, "done"
+    end
+
+    -- cari storage berikutnya yang punya kapasitas
+    local i, W, D, free = _seed_ring_pick_with_capacity(item_id, per_world_cap)
+    if not i then
+      -- semua storage "penuh" pada putaran ini → reset tanda, balik ke #1, dan coba lagi
+      _seed_ring_reset_marks()
+      _SEED_RING.idx = 1
+      -- cek ulang satu kali: jika tetap tidak ada kapasitas, keluar dengan status full
+      local ii, WW, DD, free2 = _seed_ring_pick_with_capacity(item_id, per_world_cap)
+      if not ii then
+        return false, "all_storage_full"
+      else
+        i, W, D, free = ii, WW, DD, free2
+      end
+    end
+
+    -- drop secukupnya ke storage i
+    local to_drop = math.min(have, free)
+    local ok = _drop_to_world_limit(item_id, to_drop, W, D)
+    -- tandai storage i penuh kalau yang kita drop == sisa kapasitasnya
+    if ok and to_drop >= free then
+      _SEED_RING.full[i] = true
+    end
+
+    -- majukan pointer ring ke storage berikutnya
+    _seed_ring_advance()
+  end
+end
 
 -- ##################### TAKE BLOCK #####################
 -- ==========================================
@@ -1290,7 +1480,14 @@ function pnb_sulap()
   ZEE_COLLECT(false)
 
   if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
-    DROP_ITEMS_SNAKE(STORAGE_SEED, DOOR_SEED, {ID_SEED}, {tile_cap=3000, stack_cap=20})
+    -- DROP_ITEMS_SNAKE(STORAGE_SEED, DOOR_SEED, {ID_SEED}, {tile_cap=3000, stack_cap=20})
+    local inv = getBot():getInventory()
+    if inv:getItemCount(ID_SEED) >= (LIMIT_SEED_IN_BP or 18000) then
+      local ok, why = DROP_SEEDS_MULTI(STORAGE_SEED, ID_SEED, LIMIT_SEED_STORAGE)
+      if not ok and why == "all_storage_full" then
+        print(("[SEED] Semua storage ≥ %d. Tambah storage atau kosongkan dulu."):format(LIMIT_SEED_STORAGE))
+      end
+    end
   end
 end
 
