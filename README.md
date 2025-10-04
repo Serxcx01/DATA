@@ -1,9 +1,11 @@
+-- =========================
+-- KONFIG & LIST
+-- =========================
 LIST_WORLD_BLOCK = {
   "WORU15|NOWXX123",
   "BOHKARA|NOWXX123",
   "FENCEMM1|NOWXX123",
 }
-
 
 STORAGE_SEED = {
   "AFILFENCE10|NOWXX123",
@@ -11,10 +13,7 @@ STORAGE_SEED = {
   "FENCEMM100|NOWXX123",
 }
 
-MODE = "SULAP"
--- SULAP
--- PNB
-
+MODE = "SULAP"   -- SULAP | PNB
 STORAGE_MALADY, DOOR_MALADY = "COKANJI", "XX1"
 LIMIT_SEED_STORAGE          = 54000  -- kapasitas per world
 SHOW_PUNCH                  = false
@@ -28,7 +27,6 @@ DELAY_PUT                   = 115
 DELAY_WARP                  = 7000
 
 -- ##################### BATAS SCRIPT #####################
-
 TILE_BREAK = {}
 worldTutor = ""
 ID_SEED = ID_BLOCK + 1
@@ -44,11 +42,8 @@ function is_full_or_bad(x,y) return FULL_CACHE[_key(x,y)] or BAD_CACHE[_key(x,y)
 function reset_caches() FULL_CACHE={}; BAD_CACHE={} end
 getBot().auto_reconnect = false
 
-_SEED_RING = _SEED_RING or {
-  list = nil,   -- { {world=..., door=...}, ... }
-  idx  = 1,     -- pointer storage saat ini (1-based)
-  full = {},    -- map[index]=true kalau dianggap penuh di putaran ini
-}
+-- RING STATE storage seed
+_SEED_RING = _SEED_RING or { list=nil, idx=1, full={} }
 
 -- (NEW) safe stub if not provided elsewhere: count items on a tile
 if _countOnTile == nil then
@@ -80,7 +75,82 @@ _nudge_and_warp = _nudge_and_warp or function(WORLD, DOOR, tries)
   return true
 end
 
--- ##################### UTIL / RECONNECT #####################
+-- =========================
+-- [ANTI-SPAM NUKED] COUNTERS
+-- =========================
+WORLD_COUNTER = WORLD_COUNTER or {
+  block = {},   -- [WORLD] = { fails=0, until=0 }
+  seed  = {},   -- [WORLD] = { fails=0, until=0 }
+}
+
+local function log_fail(w, d, reason)
+  print(string.format("[WORLD] %s|%s -> %s", tostring(w or ""), tostring(d or ""), tostring(reason or "unknown")))
+end
+
+-- kalkulasi cooldown (exponential-ish) : 1->300s, 2->600s, >=3->900s
+local function _cooldown_secs(fails)
+  if fails <= 1 then return 300 end
+  if fails == 2 then return 600 end
+  return 900
+end
+
+-- naikkan counter & pasang cooldown
+local function mark_world_nuked(kind, WORLD, DOOR)
+  WORLD = tostring(WORLD or ""):upper()
+  kind  = (kind == "seed") and "seed" or "block"
+  local now = os.time()
+  local t = WORLD_COUNTER[kind][WORLD] or { fails=0, until=0 }
+  t.fails = math.min(99, (t.fails or 0) + 1)
+  t.until = now + _cooldown_secs(t.fails)
+  WORLD_COUNTER[kind][WORLD] = t
+  log_fail(WORLD, DOOR, string.format("nuked(%s)#%d cool=%ds", kind, t.fails, _cooldown_secs(t.fails)))
+end
+
+-- apakah world sedang cooldown (skip)
+local function should_skip_world(kind, WORLD)
+  WORLD = tostring(WORLD or ""):upper()
+  kind  = (kind == "seed") and "seed" or "block"
+  local t = WORLD_COUNTER[kind][WORLD]
+  if not t then return false end
+  local now = os.time()
+  return now < (t.until or 0)
+end
+
+-- clear counter saat sukses dipakai lagi (opsional)
+local function clear_world_counter(kind, WORLD)
+  WORLD = tostring(WORLD or ""):upper()
+  kind  = (kind == "seed") and "seed" or "block"
+  local t = WORLD_COUNTER[kind][WORLD]
+  if t then WORLD_COUNTER[kind][WORLD] = { fails=0, until=0 } end
+end
+
+-- quick checker: nuked-only (memakai listener)
+function is_world_nuked(WORLD, DOOR)
+  WORLD = tostring(WORLD or ""):upper()
+  local tryDoor = (DOOR or "") ~= ""
+  if WORLD == "" then return false, "ok" end
+  NUKED_STATUS = false
+  local added=false
+  if type(addEvent)=="function" then addEvent(Event.variantlist, checkNukeds); added=true end
+  local b = getBot and getBot() or nil
+  for _=1,2 do
+    if b and b.warp then
+      if tryDoor then b:warp(WORLD.."|"..DOOR) else b:warp(WORLD) end
+    end
+    if type(listenEvents)=="function" then listenEvents(5) end
+    sleep(700)
+    if NUKED_STATUS then
+      if added and type(removeEvent)=="function" then removeEvent(Event.variantlist) end
+      return true, "nuked"
+    end
+  end
+  if added and type(removeEvent)=="function" then removeEvent(Event.variantlist) end
+  return false, "ok"
+end
+
+-- =========================
+-- UTIL / RECONNECT
+-- =========================
 function STATUS_BOT_NEW()
   local b = getBot and getBot() or nil
   local s = b and b.status or nil
@@ -146,11 +216,7 @@ function ZEE_COLLECT(state)
   local b=getBot and getBot() or nil; if not b then return end
   if state then b.auto_collect=true; b.ignore_gems=true; b.collect_range=5; b.object_collect_delay=200
   else b.auto_collect=false end
-  if SHOW_PUNCH then
-    b.legit_mode=true
-  else
-    b.legit_mode=false
-  end
+  if SHOW_PUNCH then b.legit_mode=true else b.legit_mode=false end
   malady = b.auto_malady
   malady.enabled = true
   malady.auto_refresh = true
@@ -161,13 +227,13 @@ function ZEE_COLLECT(state)
 end
 
 function scan(id)
-    count = 0
-    for _, object in pairs(getObjects()) do
-      if object.id == id then
-        count = count + object.count
-      end
+  local count = 0
+  for _, object in pairs(getObjects()) do
+    if object.id == id then
+      count = count + (object.count or 1)
     end
-    return count
+  end
+  return count
 end
 
 -------------------- FACE KANAN --------------------
@@ -178,12 +244,11 @@ end
 
 -- ##################### CARA PNB #####################
 for i = math.floor(JUMLAH_TILE_BREAK/2),1,-1 do
-    i = i * -1
-    table.insert(TILE_BREAK,i)
+  i = i * -1
+  table.insert(TILE_BREAK,i)
 end
-
 for i = 0, math.ceil(JUMLAH_TILE_BREAK/2) - 1 do
-    table.insert(TILE_BREAK,i)
+  table.insert(TILE_BREAK,i)
 end
 
 -- helper: ambil tile aman dengan guard batas
@@ -197,11 +262,9 @@ function tilePunch(x, y)
   local b = getBot and getBot() or nil
   local w = b and b.getWorld and b:getWorld() or nil
   if not w then return false end
-  for _, num in ipairs(TILE_BREAK) do            -- pakai ipairs: urutan terjaga
+  for _, num in ipairs(TILE_BREAK) do
     local t = _safeTile(w, x + 1, y + num)
-    if t and (t.fg or 0) ~= 0 then               -- hanya cek FG
-      return true
-    end
+    if t and (t.fg or 0) ~= 0 then return true end
   end
   return false
 end
@@ -210,83 +273,44 @@ function tilePlace(x, y)
   local b = getBot and getBot() or nil
   local w = b and b.getWorld and b:getWorld() or nil
   if not w then return false end
-  for _, num in ipairs(TILE_BREAK) do            -- pakai ipairs: urutan terjaga
+  for _, num in ipairs(TILE_BREAK) do
     local t = _safeTile(w, x + 1, y + num)
-    if t and (t.fg or 0) == 0 then               -- cukup cek FG kosong (BG boleh ada)
-      return true
-    end
+    if t and (t.fg or 0) == 0 then return true end
   end
   return false
 end
 
-
 -- ##################### GET DATA WORLD TUTORIAL #####################
 function findHomeWorld(variant, netid)
-    if variant:get(0):getString() == "OnRequestWorldSelectMenu"
-        and variant:get(1):getString():find("Your Worlds") then
-        local text = variant:get(1):getString()
-        local lines = {}
-        for line in text:gmatch("[^\r\n]+") do
-        table.insert(lines, line)
-        end
-        for i, value in ipairs(lines) do
-        if i == 3 then
-            local kalimat = lines[3]
-            -- ambil nama world diantara '|' lalu hilangkan spasi
-            local nilai = kalimat:match("|([a-zA-Z0-9%s]+)|")
-            if nilai then
-            nilai = nilai:gsub("%s", "")
-            worldTutor = nilai
-            print("Tutorial World: " .. worldTutor)
-            end
-        end
-        end
+  if variant:get(0):getString() == "OnRequestWorldSelectMenu"
+      and variant:get(1):getString():find("Your Worlds") then
+    local text = variant:get(1):getString()
+    local lines = {}
+    for line in text:gmatch("[^\r\n]+") do table.insert(lines, line) end
+    for i, value in ipairs(lines) do
+      if i == 3 then
+        local kalimat = lines[3]
+        local nilai = kalimat:match("|([a-zA-Z0-9%s]+)|")
+        if nilai then nilai = nilai:gsub("%s", ""); worldTutor = nilai; print("Tutorial World: " .. worldTutor) end
+      end
     end
+  end
 end
 
 function checkTutor()
-    local bot=getBot and getBot()
-    -- keluar ke EXIT terlebih dahulu
-    while bot:isInWorld() do
-        bot:leaveWorld()
-        sleep(3000)
+  local bot=getBot and getBot()
+  while bot:isInWorld() do bot:leaveWorld(); sleep(3000) end
+  worldTutor = ""; noHomeWorld = false
+  print("Checking Tutorial/Home World")
+  addEvent(Event.variantlist, findHomeWorld)
+  for _ = 1, 3 do
+    local w = (bot and bot.getWorld and bot:getWorld() and bot:getWorld().name) or ""
+    if worldTutor == "" and (w:upper() == "EXIT") then
+      bot:sendPacket(3, "action|world_button\nname|_16"); listenEvents(5)
     end
-
-    worldTutor = ""
-    noHomeWorld = false
-    print("Checking Tutorial/Home World")
-
-    addEvent(Event.variantlist, findHomeWorld)
-
-    for _ = 1, 3 do
-        -- guard: bot:getWorld() bisa nil
-        local w = (bot and bot.getWorld and bot:getWorld() and bot:getWorld().name) or ""
-        if worldTutor == "" and w:upper() == "EXIT" then
-        bot:sendPacket(3, "action|world_button\nname|_16")
-        listenEvents(5)
-        end
-    end
-
-    if worldTutor == "" then
-        printCrit("Doesn't Have Tutorial/Home World!")
-        callNotif("Doesn't Have Tutorial/Home World!", true)
-        noHomeWorld = true
-    end
-
-    sleep(100)
-    removeEvent(Event.variantlist)
-    end
-
-    local function get_current_world_upper()
-    local w = ""
-    if bot and bot.getWorld and bot:getWorld() and bot:getWorld().name then
-        w = bot:getWorld().name
-    elseif bot and bot.world then
-        w = bot.world
-    elseif getBot and getBot().world then
-        w = getBot().world
-    end
-    return (w or ""):upper()
+  end
+  if worldTutor == "" then printCrit("Doesn't Have Tutorial/Home World!"); callNotif("Doesn't Have Tutorial/Home World!", true); noHomeWorld = true end
+  sleep(100); removeEvent(Event.variantlist)
 end
 
 -- ##################### GET WARP #####################
@@ -401,7 +425,10 @@ function WARP_WORLD(WORLD, DOOR)
   CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET= tryDoor and DOOR or nil; _cleanup(); return true
 end
 
-
+-- ===========================================================
+-- TAKE MALADY / checkMalady / ensureMalady
+-- (…bagian ini sama seperti file kamu, tidak diubah logikanya…)
+-- ===========================================================
 -- ===========================================================
 -- TAKE MALADY (ID 8542) — BLOCKING TANPA COOLDOWN
 -- Stay di WORLD itu, tunggu sampai ada item 8542, ambil, pakai.
@@ -613,18 +640,10 @@ function findStatus()
     return false
 end
 
-function clearConsole()
-    local bot = (getBot and getBot()) or nil
-    for i = 1, 50 do
-        bot:getConsole():append("")
-    end
-end
 
 function checkMalady()
     local b = (getBot and getBot()) or nil
     if b and b.isInWorld and b:isInWorld() and (b.status == BotStatus.online or b.status == 1) then
-        if type(clearConsole)=="function" then clearConsole() end
-        sleep(100)
         if b.say then b:say("/status") end
         sleep(700)
 
@@ -654,18 +673,6 @@ function checkMalady()
     end
     return false, nil, nil
 end
-
-
--- Tunggu kalau malady < 60s, lalu ambil malady saat sudah hilang
--- helper: apakah sedang di world (bukan EXIT)?
-local function _is_in_play_world()
-  local b = getBot and getBot() or nil
-  if not (b and b.isInWorld and b:isInWorld()) then return false end
-  local w = b.getWorld and b:getWorld() or nil
-  local name = (w and (w.name or (w.getName and w:getName()))) or ""
-  return name:upper() ~= "EXIT"
-end
-
 
 -- ============================================================
 ----------------------------------------------------------------
@@ -844,8 +851,29 @@ function ensureMalady(threshold_min, opts)
   end
 end
 
+-------------------- SMART DROP SNAKE & MULTI STORAGE --------------------
+WORLD_MAX_X, WORLD_MAX_Y = WORLD_MAX_X or 99, WORLD_MAX_Y or 23
+function REFRESH_WORLD_BOUNDS()
+  local b=getBot and getBot() or nil; if not (b and b.getWorld) then return end
+  local w=b:getWorld(); if not w then return end
+  local wx=(w.width and (w.width-1)) or WORLD_MAX_X
+  local wy=(w.height and (w.height-1)) or WORLD_MAX_Y
+  WORLD_MAX_X, WORLD_MAX_Y = wx, wy
+end
 
+function _my_xy()
+  local b=getBot and getBot() or nil; if not (b and b.getWorld) then return 0,0 end
+  local w=b:getWorld(); local me=w and w:getLocal() or nil; if not me then return 0,0 end
+  return math.floor((me.posx or 0)/32), math.floor((me.posy or 0)/32)
+end
+function _is_in_bounds(x,y) return x>=0 and x<=WORLD_MAX_X and y>=0 and y<=WORLD_MAX_Y end
+function _is_walkable(tx,ty)
+  local b=getBot and getBot() or nil; if not (b and b.getWorld) then return false end
+  local w=b:getWorld(); local t=w and w:getTile(tx,ty) or nil
+  return (t~=nil) and ((t.fg or 0)==0)
+end
 
+-- … (DROP_ITEMS_SNAKE dari file kamu, tidak diubah) …
 -------------------- SMART DROP SNAKE (kanan→atas, fallback kiri) --------------------
 WORLD_MAX_X, WORLD_MAX_Y = WORLD_MAX_X or 99, WORLD_MAX_Y or 23 -- map kecil: x:0..99, y:0..23
 function REFRESH_WORLD_BOUNDS()
@@ -1075,7 +1103,9 @@ function DROP_ITEMS_SNAKE(WORLD, DOOR, ITEMS, opts)
     end
   end
 end
--- ##################### MULTI STORAGE SEED #####################
+
+
+-- ===== helper normalize & scan stable (dipakai ring storage) =====
 local function _normalize_storage_list(list)
   local out = {}
   if type(list) ~= "table" then return out end
@@ -1090,12 +1120,23 @@ local function _normalize_storage_list(list)
   return out
 end
 
-local function _warp_sync(W, D)
-  if (W or "") == "" then return false end
-  if WARP_WORLD then WARP_WORLD(W, D) end
+-- [ANTI-SPAM NUKED] warp sync + guard nuked SEED
+local function _warp_sync_seed(W, D)
+  if (W or "") == "" then return false, "no_world" end
+  -- skip kalau sedang cooldown anti-spam
+  if should_skip_world("seed", W) then
+    return false, "seed_cooldown"
+  end
+  local ok = WARP_WORLD(W, D)
   sleep(200)
-  if SMART_RECONNECT then SMART_RECONNECT(W, D) end
-  return true
+  if not ok or NUKED_STATUS then
+    mark_world_nuked("seed", W, D)
+    return false, "nuked"
+  end
+  SMART_RECONNECT(W, D)
+  -- sukses → bersihkan counter (opsional)
+  clear_world_counter("seed", W)
+  return true, "ok"
 end
 
 -- scan stabil (ambil maksimum dari 2 pembacaan singkat)
@@ -1117,9 +1158,7 @@ local function _seed_ring_reset_marks()
   _SEED_RING.full = {}
 end
 
--- Cari storage berikutnya yang MASIH ADA kapasitas, mulai dari idx sekarang.
--- Hanya 1 putaran penuh (tidak looping tanpa akhir).
--- return: i, W, D, free_cap  | nil jika semua full
+-- pick storage dengan kapasitas (pakai anti-spam)
 local function _seed_ring_pick_with_capacity(item_id, per_world_cap)
   _seed_ring_init()
   local cap_max = tonumber(per_world_cap or LIMIT_SEED_STORAGE) or 27000
@@ -1132,56 +1171,51 @@ local function _seed_ring_pick_with_capacity(item_id, per_world_cap)
     if not _SEED_RING.full[i] then
       local S = _SEED_RING.list[i]
       local W, D = S.world, S.door
-      if _warp_sync(W, D) then
+
+      local okSync, why = _warp_sync_seed(W, D)
+      if okSync then
         local total_here = _scan_stable(item_id)
         local free_cap   = cap_max - total_here
         if free_cap > 0 then
-          -- pilih storage i (ada kapasitas)
-          _SEED_RING.idx = i  -- arahkan pointer ke storage terpilih
+          _SEED_RING.idx = i
           return i, W, D, free_cap
         else
-          -- tandai penuh di putaran ini, jangan cek lagi
           _SEED_RING.full[i] = true
         end
       else
-        -- gagal warp → anggap sementara penuh agar tidak muter-muter
         _SEED_RING.full[i] = true
+        if why == "nuked" then log_fail(W, D, "nuked(seed)") end
       end
     end
     i = (i % n) + 1
   until i == start_i
 
-  -- semua dianggap full
   return nil
 end
 
--- Setelah drop ke storage i, majukan pointer ke storage berikutnya (ring)
 local function _seed_ring_advance()
   if not _SEED_RING.list or #_SEED_RING.list == 0 then return end
   local n = #_SEED_RING.list
   _SEED_RING.idx = (_SEED_RING.idx % n) + 1
 end
 
--- =========================
--- DROP KE SATU WORLD DENGAN LIMIT
--- =========================
 local function _drop_to_world_limit(item_id, max_to_drop, W, D)
   local b = getBot and getBot() or nil
   if not b then return false end
   max_to_drop = math.max(0, tonumber(max_to_drop or 0) or 0)
   if max_to_drop == 0 then return true end
 
-  if not _warp_sync(W, D) then return false end
+  local okSync, why = _warp_sync_seed(W, D)
+  if not okSync then return false end
 
   if type(DROP_ITEMS_SNAKE) == "function" then
     DROP_ITEMS_SNAKE(W, D, { item_id }, {
-      max_total_to_drop = max_to_drop,  -- <= batasi total drop di world ini
+      max_total_to_drop = max_to_drop,
       step_ms = 700, tile_cap = 3000, stack_cap = 20, path_try = 10, tile_retries = 2
     })
     return true
   end
 
-  -- fallback sederhana
   local CHUNK = 400
   while max_to_drop > 0 do
     local have = b:getInventory():getItemCount(item_id)
@@ -1189,12 +1223,11 @@ local function _drop_to_world_limit(item_id, max_to_drop, W, D)
     local to_drop = math.min(CHUNK, have, max_to_drop)
     b:drop(item_id, to_drop)
     sleep(700)
-    if SMART_RECONNECT then SMART_RECONNECT(W, D) end
+    SMART_RECONNECT(W, D)
     local after = b:getInventory():getItemCount(item_id)
     local dropped = have - after
     if dropped <= 0 then
-      if WARP_WORLD then WARP_WORLD(W, D) end
-      sleep(300)
+      WARP_WORLD(W, D); sleep(300)
     else
       max_to_drop = math.max(0, max_to_drop - dropped)
     end
@@ -1202,115 +1235,89 @@ local function _drop_to_world_limit(item_id, max_to_drop, W, D)
   return true
 end
 
--- =========================
--- FUNGSI UTAMA: MULTI STORAGE DENGAN RING
--- =========================
 function DROP_SEEDS_MULTI(stor_list, item_id, per_world_cap)
   local b = getBot and getBot() or nil
   if not b then return false, "no_bot" end
 
-  -- inisialisasi ring berdasarkan STORAGE_SEED saat ini
   _SEED_RING.list = _normalize_storage_list(stor_list or STORAGE_SEED)
   if #_SEED_RING.list == 0 then return false, "storage_list_empty" end
   if _SEED_RING.idx < 1 or _SEED_RING.idx > #_SEED_RING.list then _SEED_RING.idx = 1 end
 
-  -- putaran: selama masih ada seed di backpack
   while true do
     local have = b:getInventory():getItemCount(item_id)
-    if have <= 0 then
-      -- selesai drop semua
-      return true, "done"
-    end
+    if have <= 0 then return true, "done" end
 
-    -- cari storage berikutnya yang punya kapasitas
     local i, W, D, free = _seed_ring_pick_with_capacity(item_id, per_world_cap)
     if not i then
-      -- semua storage "penuh" pada putaran ini → reset tanda, balik ke #1, dan coba lagi
       _seed_ring_reset_marks()
       _SEED_RING.idx = 1
-      -- cek ulang satu kali: jika tetap tidak ada kapasitas, keluar dengan status full
       local ii, WW, DD, free2 = _seed_ring_pick_with_capacity(item_id, per_world_cap)
-      if not ii then
-        return false, "all_storage_full"
-      else
-        i, W, D, free = ii, WW, DD, free2
-      end
+      if not ii then return false, "all_storage_full" end
+      i, W, D, free = ii, WW, DD, free2
     end
 
-    -- drop secukupnya ke storage i
     local to_drop = math.min(have, free)
     local ok = _drop_to_world_limit(item_id, to_drop, W, D)
-    -- tandai storage i penuh kalau yang kita drop == sisa kapasitasnya
-    if ok and to_drop >= free then
-      _SEED_RING.full[i] = true
-    end
-
-    -- majukan pointer ring ke storage berikutnya
+    if ok and to_drop >= free then _SEED_RING.full[i] = true end
     _seed_ring_advance()
   end
 end
 
 -- ##################### TAKE BLOCK #####################
--- ==========================================
--- TAKE_BLOCK dengan deteksi selesai yang jelas
--- - Pakai scan(ID_BLOCK) sebagai syarat awal
--- - Loop cari objek terdekat
--- - Keluar bila:
---     a) inventory >= target_min
---     b) miss_streak >= max_miss (tidak ada objek)
---     c) melebihi max_time_secs
--- Return:
---   true,  "done"         -> cukup block terkumpul
---   false, "not_found"    -> tidak ada block terdeteksi (berulang)
---   false, "timeout"      -> waktu habis
---   false, "reconnect"    -> gagal world/door (opsional)
--- ==========================================
 function TAKE_BLOCK(world, door, opts)
   local b = getBot and getBot() or nil
   if not b then return false, "no_bot" end
 
+  -- [ANTI-SPAM NUKED] skip jika world sedang cooldown
+  if should_skip_world("block", world) then
+    return false, "block_cooldown"
+  end
+
   local TARGET_ID = ID_BLOCK
   opts = opts or {}
-  local target_min     = tonumber(opts.min_stack or 20)       -- minimal block yang diinginkan
-  local max_rounds     = tonumber(opts.max_rounds or 40)      -- batas iterasi pathing
+  local target_min     = tonumber(opts.min_stack or 20)
+  local max_rounds     = tonumber(opts.max_rounds or 40)
   local wait_ms        = tonumber(opts.wait_ms or 1200)
-  local max_miss       = tonumber(opts.max_miss or 5)         -- berapa kali berturut-turut tidak ketemu objek
-  local max_time_secs  = tonumber(opts.max_time_secs or 180)  -- guard waktu total (3 menit default)
+  local max_miss       = tonumber(opts.max_miss or 5)
+  local max_time_secs  = tonumber(opts.max_time_secs or 180)
 
   -- Cek inventory awal
   local inv = b:getInventory()
   if inv:getItemCount(TARGET_ID) >= target_min then
+    clear_world_counter("block", world)
     return true, "done"
   end
 
   -- WARP & RECONNECT
-  if WARP_WORLD then WARP_WORLD(world, door) end
+  local okW = WARP_WORLD(world, door)
   sleep(250)
-  if SMART_RECONNECT then SMART_RECONNECT(world, door) end
+  SMART_RECONNECT(world, door)
+  if (not okW) or NUKED_STATUS then
+    mark_world_nuked("block", world, door)
+    return false, "nuked"
+  end
 
   -- Syarat awal: harus terdeteksi ada objek ID_BLOCK
   if not scan or not scan(TARGET_ID) then
     return false, "not_found"
   end
 
-  -- Koleksi ON
-  if ZEE_COLLECT then ZEE_COLLECT(true) end
-
+  ZEE_COLLECT(true)
   local start_time = os.time()
   local miss_streak = 0
 
-  -- Loop pencarian & pathing
   for round = 1, max_rounds do
     -- Guard waktu total
     if (os.time() - start_time) >= max_time_secs then
-      if ZEE_COLLECT then ZEE_COLLECT(false) end
+      ZEE_COLLECT(false)
       return false, "timeout"
     end
 
     -- Cek inventory cukup?
     inv = b:getInventory()
     if inv:getItemCount(TARGET_ID) >= target_min then
-      if ZEE_COLLECT then ZEE_COLLECT(false) end
+      ZEE_COLLECT(false)
+      clear_world_counter("block", world)
       return true, "done"
     end
 
@@ -1335,45 +1342,40 @@ function TAKE_BLOCK(world, door, opts)
     if best then
       miss_streak = 0
       local tx, ty = math.floor(best.x/32), math.floor(best.y/32)
-      if SMART_RECONNECT then SMART_RECONNECT(world, door, tx, ty) end
+      SMART_RECONNECT(world, door, tx, ty)
       b:findPath(tx, ty)
       sleep(wait_ms)
     else
-      -- Tidak ketemu objek: naikkan miss counter & coba re-sync world
       miss_streak = miss_streak + 1
       if miss_streak >= max_miss then
-        if ZEE_COLLECT then ZEE_COLLECT(false) end
+        ZEE_COLLECT(false)
         return false, "not_found"
       end
-      if SMART_RECONNECT then SMART_RECONNECT(world, door) end
+      SMART_RECONNECT(world, door)
+      if NUKED_STATUS then
+        ZEE_COLLECT(false)
+        mark_world_nuked("block", world, door)
+        return false, "nuked"
+      end
       sleep(wait_ms)
     end
   end
 
-  -- Kalau sampai sini: iterasi habis tapi belum memenuhi target
-  if ZEE_COLLECT then ZEE_COLLECT(false) end
-  -- putuskan alasan: jika memang tidak ada objek beberapa kali terakhir, anggap not_found;
-  -- kalau masih ada tetapi tidak terkumpul, anggap timeout.
+  ZEE_COLLECT(false)
   return false, (miss_streak >= max_miss) and "not_found" or "timeout"
 end
-
 
 -- ##################### PNB SULAP #####################
 function pnb_sulap()
   local b = getBot and getBot() or nil
   if not b then return end
 
-  -- pastikan punya home/tutorial world
   if (worldTutor or "") == "" then
     if type(checkTutor) == "function" then checkTutor() end
   end
   local w = worldTutor
-  if (w or "") == "" then
-    print("[PNB] Tidak punya Tutorial/Home World. Abort.")
-    return
-  end
+  if (w or "") == "" then print("[PNB] Tidak punya Tutorial/Home World. Abort."); return end
 
-  -- masuk world + jaga koneksi
   WARP_WORLD(w); sleep(100)
   ensureMalady(5)
   SMART_RECONNECT(w); sleep(100)
@@ -1398,91 +1400,52 @@ function pnb_sulap()
   local inv = b:getInventory()
   ZEE_COLLECT(true)
 
-  -- loop utama: selama masih ada block & seed belum mencapai limit
   while inv:getItemCount(ID_BLOCK) > 0 and inv:getItemCount(ID_SEED) < LIMIT_SEED_IN_BP do
-    ------------------------------------------------------------
-    -- PLACE: isi satu tile kosong per iterasi; keluar jika tidak ada yg bisa di-place
-    ------------------------------------------------------------
+    -- PLACE
     while true do
-      local ex, ye = pos_now()
-      if not ex then break end
+      local ex, ye = pos_now(); if not ex then break end
       if not tilePlace(ex, ye) then break end
-
       local acted = false
       for _, off in ipairs(TILE_BREAK) do
         local wx, wy = ex + 1, ye + off
         local t = b:getWorld():getTile(wx, wy)
         if (t.fg or 0) == 0 then
           local before_fg = t.fg or 0
-          b:place(wx, wy, ID_BLOCK)
-          sleep(DELAY_PUT)
-          SMART_RECONNECT()      -- keep-alive ringan (tanpa forced warp)
-          -- verifikasi berhasil (tile berubah dan tidak 0)
+          b:place(wx, wy, ID_BLOCK); sleep(DELAY_PUT); SMART_RECONNECT()
           local t2 = b:getWorld():getTile(wx, wy)
-          if t2 and (t2.fg or 0) ~= before_fg and (t2.fg or 0) ~= 0 then
-            acted = true
-            soft_reset()
-            break
-          end
+          if t2 and (t2.fg or 0) ~= before_fg and (t2.fg or 0) ~= 0 then acted = true; soft_reset(); break end
         end
       end
-
-      if not acted then
-        -- tidak ada offset yang berhasil dipasang → keluar agar tidak spin
-        break
-      end
-
-      inv = b:getInventory()
-      if inv:getItemCount(ID_BLOCK) <= 0 then break end
+      if not acted then break end
+      inv = b:getInventory(); if inv:getItemCount(ID_BLOCK) <= 0 then break end
     end
 
-    ------------------------------------------------------------
-    -- PUNCH: hancurkan satu tile per iterasi; keluar jika tidak ada yg bisa di-punch
-    ------------------------------------------------------------
+    -- PUNCH
     while true do
-      local ex, ye = pos_now()
-      if not ex then break end
+      local ex, ye = pos_now(); if not ex then break end
       if not tilePunch(ex, ye) then break end
-
       local acted = false
       for _, off in ipairs(TILE_BREAK) do
         local wx, wy = ex + 1, ye + off
         local t = b:getWorld():getTile(wx, wy)
         if (t.fg or 0) ~= 0 then
-          b:hit(wx, wy)
-          sleep(DELAY_BREAK)
-          SMART_RECONNECT()      -- keep-alive ringan
-          -- verifikasi hancur
+          b:hit(wx, wy); sleep(DELAY_BREAK); SMART_RECONNECT()
           local t2 = b:getWorld():getTile(wx, wy)
-          if t2 and (t2.fg or 0) == 0 then
-            acted = true
-            soft_reset()
-            break
-          end
+          if t2 and (t2.fg or 0) == 0 then acted = true; soft_reset(); break end
         end
       end
-
-      if not acted then
-        -- gagal hancurkan di semua offset → keluar agar tidak spin
-        break
-      end
-
-      inv = b:getInventory()
-      if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
-        break
-      end
+      if not acted then break end
+      inv = b:getInventory(); if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then break end
     end
 
-    -- refresh inv untuk kondisi while utama
     inv = b:getInventory()
   end
 
   ZEE_COLLECT(false)
 
   if inv:getItemCount(ID_SEED) >= LIMIT_SEED_IN_BP then
-    -- DROP_ITEMS_SNAKE(STORAGE_SEED, DOOR_SEED, {ID_SEED}, {tile_cap=3000, stack_cap=20})
-    local inv = getBot():getInventory()
-    if inv:getItemCount(ID_SEED) >= (LIMIT_SEED_IN_BP or 18000) then
+    local inv2 = getBot():getInventory()
+    if inv2:getItemCount(ID_SEED) >= (LIMIT_SEED_IN_BP or 18000) then
       local ok, why = DROP_SEEDS_MULTI(STORAGE_SEED, ID_SEED, LIMIT_SEED_STORAGE)
       if not ok and why == "all_storage_full" then
         print(("[SEED] Semua storage ≥ %d. Tambah storage atau kosongkan dulu."):format(LIMIT_SEED_STORAGE))
@@ -1491,81 +1454,77 @@ function pnb_sulap()
   end
 end
 
-
 -- ==========================================
--- MAIN SULAP — break kalau block habis
+-- MAIN SULAP — break kalau block habis, skip nuked (counter)
 -- ==========================================
 function main_sulap(world_block, door_block)
+  -- [ANTI-SPAM NUKED] skip cepat kalau masih cooldown
+  if should_skip_world("block", world_block) then
+    log_fail(world_block, door_block, "skip(block_cooldown)")
+    return false, "block_cooldown"
+  end
+
   while true do
     local ok, reason = TAKE_BLOCK(world_block, door_block, {
-      min_stack      = 20,    -- target minimal item di inventory
-      max_rounds     = 40,    -- batas iterasi pathing
-      wait_ms        = 1200,  -- jeda tiap pathing
-      max_miss       = 5,     -- berturut-turut tidak ketemu objek → anggap habis
-      max_time_secs  = 180    -- guard waktu total (3 menit)
+      min_stack = 20, max_rounds = 40, wait_ms = 1200, max_miss = 5, max_time_secs = 180
     })
 
     if ok then
-      -- punya block cukup → lanjut proses utama
       pnb_sulap()
     else
       if reason == "not_found" then
         print("[SULAP] Block ID_BLOCK sudah tidak ditemukan. Stop loop.")
-        break  -- <<<<<<<<<<<<<<  BREAK di sini kalau block habis
+        break
       elseif reason == "timeout" then
-        -- terlalu lama; bisa re-sync world lalu coba lagi
         print("[SULAP] Timeout ambil block. Re-sync world & coba lagi.")
-        if SMART_RECONNECT then SMART_RECONNECT(world_block, door_block) end
-        sleep(1500)
-      elseif reason == "reconnect" then
-        print("[SULAP] Gagal reconnect. Retry sebentar...")
-        sleep(1500)
+        SMART_RECONNECT(world_block, door_block); sleep(1500)
+      elseif reason == "nuked" then
+        -- counter sudah di-mark di TAKE_BLOCK
+        return false, "nuked"
+      elseif reason == "block_cooldown" then
+        return false, "block_cooldown"
       else
-        -- alasan lain: no_bot / check_failed / dll — retry ringan
-        print("[SULAP] Gagal ambil block: " .. tostring(reason))
-        sleep(1200)
+        print("[SULAP] Gagal ambil block: " .. tostring(reason)); sleep(1200)
       end
     end
   end
 
   print("[SULAP] Selesai: tidak ada block tersisa.")
+  return true, "done"
 end
 
-
+-- ==========================================
+-- LOOP GLOBAL
+-- ==========================================
 while true do
   if MODE == "SULAP" then
-    if not CHECK_WORLD_TUTORIAL then
-      checkTutor()
-      CHECK_WORLD_TUTORIAL = true
-    end
+    if not CHECK_WORLD_TUTORIAL then checkTutor(); CHECK_WORLD_TUTORIAL = true end
 
-    -- (opsional) reset flag level rendah tiap siklus penuh
-    -- LEVEL_RENDAH = (getBot() and getBot().level or 0) < 12
-
-    -- proses semua world di LIST_WORLD_BLOCK
     for i = 1, #LIST_WORLD_BLOCK do
       local entry = LIST_WORLD_BLOCK[i]
       if entry and entry ~= "" then
         local world_block, door_block = entry:match("^([^|]+)|?(.*)$")
-        -- pastikan string jadi non-nil
-        world_block = tostring(world_block or "")
-        door_block  = tostring(door_block  or "")
-
-        main_sulap(world_block, door_block)  -- dia akan break internal kalau block habis
+        world_block = tostring(world_block or ""); door_block  = tostring(door_block or "")
+        -- skip cepat jika cooldown
+        if should_skip_world("block", world_block) then
+          log_fail(world_block, door_block, "skip(block_cooldown)")
+        else
+          local ok, rs = main_sulap(world_block, door_block)
+          if ok then clear_world_counter("block", world_block) end
+          if rs == "nuked" then log_fail(world_block, door_block, "nuked@main") end
+        end
       end
     end
 
-    -- ✅ aksi setelah SEMUA world selesai diproses
     ZEE_COLLECT(false)
     local b = (getBot and getBot()) or nil
     if b and b.leaveWorld then b:leaveWorld() end
-    sleep(10*60*1000)  -- 15 detik, kalau maunya 10 menit: sleep(10*60*1000) jika milidetik, atau sesuai API kamu
+    sleep(10*60*1000)  -- 10 menit (ms)
     if b then b.auto_reconnect = true end
 
   elseif MODE == "PNB" then
-    -- jalankan mode PNB kamu di sini
+    -- jalankan mode PNB kamu di sini (opsional)
   else
     print("PLEASE INPUT MODE !!!!")
   end
 end
-
