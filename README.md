@@ -94,35 +94,49 @@ local function _cooldown_secs(fails)
   return 900
 end
 
--- naikkan counter & pasang cooldown
+-- NAikkan counter & pasang cooldown (REPLACE versi lama)
 local function mark_world_nuked(kind, WORLD, DOOR)
   WORLD = tostring(WORLD or ""):upper()
   kind  = (kind == "seed") and "seed" or "block"
   local now = os.time()
-  local t = WORLD_COUNTER[kind][WORLD] or { fails=0, until=0 }
-  t.fails = math.min(99, (t.fails or 0) + 1)
-  t.until = now + _cooldown_secs(t.fails)
+  local t = WORLD_COUNTER[kind][WORLD] or { fails=0, until_ts=0 }  -- <== ganti
+  t.fails    = math.min(99, (t.fails or 0) + 1)
+  t.until_ts = now + _cooldown_secs(t.fails)                        -- <== ganti
   WORLD_COUNTER[kind][WORLD] = t
-  log_fail(WORLD, DOOR, string.format("nuked(%s)#%d cool=%ds", kind, t.fails, _cooldown_secs(t.fails)))
+  print(string.format("[WORLD] %s|%s -> nuked(%s)#%d cool=%ds",
+        WORLD, tostring(DOOR or ""), kind, t.fails, _cooldown_secs(t.fails)))
 end
 
--- apakah world sedang cooldown (skip)
+-- Apakah world sedang cooldown (REPLACE versi lama)
 local function should_skip_world(kind, WORLD)
   WORLD = tostring(WORLD or ""):upper()
   kind  = (kind == "seed") and "seed" or "block"
   local t = WORLD_COUNTER[kind][WORLD]
   if not t then return false end
   local now = os.time()
-  return now < (t.until or 0)
+  return now < (t.until_ts or 0)                                     -- <== ganti
 end
 
+
 -- clear counter saat sukses dipakai lagi (opsional)
+-- Clear counter saat sukses (REPLACE versi lama)
 local function clear_world_counter(kind, WORLD)
   WORLD = tostring(WORLD or ""):upper()
   kind  = (kind == "seed") and "seed" or "block"
-  local t = WORLD_COUNTER[kind][WORLD]
-  if t then WORLD_COUNTER[kind][WORLD] = { fails=0, until=0 } end
+  if WORLD_COUNTER[kind][WORLD] then
+    WORLD_COUNTER[kind][WORLD] = { fails=0, until_ts=0 }             -- <== ganti
+  end
 end
+
+local function remaining_cooldown(kind, WORLD)
+  WORLD = tostring(WORLD or ""):upper()
+  kind  = (kind == "seed") and "seed" or "block"
+  local t = WORLD_COUNTER[kind][WORLD]
+  if not t then return 0 end
+  local left = (t.until_ts or 0) - os.time()
+  return (left > 0) and left or 0
+end
+
 
 -- quick checker: nuked-only (memakai listener)
 function is_world_nuked(WORLD, DOOR)
