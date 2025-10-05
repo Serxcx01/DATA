@@ -32,7 +32,7 @@ DELAY_EXE                       = 2000
 
 -- ##################### BATAS SCRIPT #####################
 Bot = {}
-for slot=1,TOTAL_BOTS do Bot[slot] = {slot=slot} end
+for slot=1,8 do Bot[slot] = {slot=slot} end
 for nomor, bb in pairs(getBots()) do if getBot().name:upper() == bb.name:upper() then index = nomor end end
 MY_SLOT = Bot[index].slot
 sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
