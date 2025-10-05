@@ -27,8 +27,11 @@ DELAY_BAD_SERVER                = 120000
 DELAY_BREAK                     = 170
 DELAY_PUT                       = 115
 DELAY_WARP                      = 7000
+DELAY_EXE                       = 2000
+
 
 -- ##################### BATAS SCRIPT #####################
+sleep( DELAY_EXE * ( index - ( 1 - 1 ) ) )
 TILE_BREAK = {}
 worldTutor = ""
 ID_SEED = ID_BLOCK + 1
