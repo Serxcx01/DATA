@@ -809,72 +809,69 @@ end
 --   end
 -- end
 
+-- Drop-in: selalu selesai, anti-spam, dan ringkas
 local function _wait_until_clear_consecutive(N, recheck_ms, guard_secs)
   N = tonumber(N) or 2
   recheck_ms = math.max(100, tonumber(recheck_ms) or 500)
-  -- PENTING: kalau caller tak memberi guard, jangan nol → bikin infinite loop
-  guard_secs = tonumber(guard_secs) or 120       -- default guard 120s
-  local hard_cap = guard_secs + 30               -- sedikit buffer maksimum
+  guard_secs = math.max(1, tonumber(guard_secs) or 120)
 
   local start = os.time()
-  local ok_streak = 0
-
-  -- anti-macet: jika 'secs' tidak berubah cukup lama, keluar
-  local last_sleft, unchanged = nil, 0
-  -- anti-flap: jika sisa kecil, percepat polling
-  local function tune_delay(sleft)
-    if sleft and sleft <= 3 then
-      recheck_ms = math.min(recheck_ms, 250)
-    end
-  end
+  local ok_streak, checks = 0, 0
+  local last_secs, last_change_clock = nil, os.clock()
+  local max_checks = math.floor((guard_secs * 1000) / recheck_ms) + 10
+  local backoff = 1.25
 
   while true do
-    -- aman-kan pemanggilan _detect_malady_dual
     local ok, has, secs = pcall(_detect_malady_dual, 1, 100)
-    if not ok then
-      return false, "detect_error"
-    end
+    if not ok then return false, "detect_error" end
 
     local sleft = tonumber(secs or 0) or 0
 
-    -- CLEAR bila tidak ada atau sisa <= 0
-    if (not has) or sleft <= 0 then
-      ok_streak = ok_streak + 1
-      if ok_streak >= N then
-        return true
-      end
-    else
-      ok_streak = 0
-      tune_delay(sleft)
+    -- kalau sisa sangat panjang, jangan tunggu di sini
+    if has and sleft >= 600 then
+      return false, "too_long_left"
     end
 
-    -- deteksi macet: nilai tidak berubah-ubah terlalu lama
-    if last_sleft ~= nil and sleft == last_sleft then
-      unchanged = unchanged + 1
-      -- contoh: jika 8–10 detik tanpa perubahan, anggap stuck
-      if (unchanged * recheck_ms) >= 10000 then
+    if (not has) or sleft <= 0 then
+      ok_streak = ok_streak + 1
+      if ok_streak >= N then return true, "cleared" end
+    else
+      ok_streak = 0
+    end
+
+    -- nilai tidak berubah ≥15 dtk → anggap macet
+    if last_secs ~= nil and sleft == last_secs then
+      if (os.clock() - last_change_clock) >= 15 then
         return false, "stuck_value"
       end
     else
-      last_sleft, unchanged = sleft, 0
+      last_secs, last_change_clock = sleft, os.clock()
     end
 
-    -- GUARD & HARD CAP
-    local elapsed = os.time() - start
-    if elapsed >= hard_cap then
-      return false, "timeout_wait"
-    elseif elapsed >= guard_secs then
-      -- masih kasih kesempatan beberapa detik: bila sudah clear, lolos; kalau tidak, gagal
-      if ok_streak >= math.max(1, N - 1) then
-        return true
-      else
-        return false, "timeout_wait"
-      end
+    checks = checks + 1
+    if checks >= max_checks then return false, "max_checks" end
+    if (os.time() - start) >= guard_secs then return false, "timeout_wait" end
+
+    -- delay adaptif (anti-spam) + backoff ringan
+    if sleft >= 3600 then
+      recheck_ms = math.max(recheck_ms, 30000)      -- ≥1 jam → 30 dtk
+    elseif sleft >= 300 then
+      recheck_ms = math.max(recheck_ms, 5000)       -- ≥5 menit → 5 dtk
+    elseif sleft >= 60 then
+      recheck_ms = math.max(recheck_ms, 1000)       -- ≥1 menit → 1 dtk
+    elseif sleft >= 6 then
+      recheck_ms = math.max(recheck_ms, 500)        -- ≥6 dtk → 0.5 dtk
+    else
+      recheck_ms = math.min(recheck_ms, 300)        -- <6 dtk → cepat
+    end
+    if sleft >= 60 then
+      recheck_ms = math.min(math.floor(recheck_ms * backoff), 30000)
     end
 
     sleep(recheck_ms)
   end
 end
+
 
 
 
@@ -921,14 +918,97 @@ end
 -- hop_until_leave_exit(50)
 
 
+-- function ensureMalady(threshold_min, opts)
+--   local minutes     = tonumber(threshold_min or 5) or 5
+--   local THRESH_SECS = math.floor(minutes * 60)
+
+--   local b = getBot and getBot() or nil
+--   local w = b and b:getWorld() or nil
+--   hop_until_leave_exit(10)
+--   if not w or not w.name or tostring(w.name):upper() == "EXIT" then
+--     return false, "not_in_world"
+--   end
+
+--   if (not STORAGE_MALADY) or STORAGE_MALADY == "" then
+--     return false, "storage_not_set"
+--   end
+--   local useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
+
+--   -- 1) Baca konsensus awal (poll 4x) → robust
+--   local has, max_secs, code, nm = _detect_malady_dual(2, 1000)
+
+--   -- 2) Kalau masih ada & sisa > threshold → SKIP
+--   if has and (max_secs or 0) > THRESH_SECS then
+--     -- log kecil (opsional)
+--     if code and code>0 then
+--       print(string.format("[MALADY] Detected %s (code %d), sisa ~%ds > %d → skip.",
+--         nm or "Unknown", code, max_secs or -1, THRESH_SECS))
+--     end
+--     return false, "over_threshold"
+--   end
+
+--   -- 3) Kalau masih ada tetapi sisa ≤ threshold → WAJIB nunggu clear
+--   if has and (max_secs or 0) <= THRESH_SECS then
+--     print(string.format("[MALADY] Sisa %ds ≤ %d. Menunggu CLEAR dengan konfirmasi beruntun...",
+--       max_secs or 0, THRESH_SECS))
+--     local ok, why = _wait_until_clear_consecutive(3, 1000, math.max(THRESH_SECS + 120, 240))
+--     if not ok then
+--       return false, why or "timeout_wait"
+--     end
+--   end
+--   -- titik ini CLEAR (baik dari awal, atau setelah nunggu)
+
+--   -- 4) LOOP TAKE SAMPAI SUKSES (dengan absolute guard)
+--   local started = os.time()
+--   local attempt = 0
+--   local ABS_GUARD_SECS  = 600           -- 10 menit
+--   local REWARP_EVERY    = 5             -- re-warp tiap 5 attempt
+--   local BACKOFF_MS      = 600
+
+--   while true do
+--     attempt = attempt + 1
+--     if (attempt % REWARP_EVERY) == 1 then
+--       if SMART_RECONNECT then pcall(SMART_RECONNECT, useW, useD) end
+--       if WARP_WORLD then pcall(WARP_WORLD, useW, useD) end
+--       sleep(300)
+--     end
+
+--     local ok = take_malady(useW, useD, opts or { step_ms = 700, rewarp_every = 180 })
+--     if ok then
+--       return true, "taken"
+--     end
+
+--     sleep(BACKOFF_MS)
+--     if (os.time() - started) >= ABS_GUARD_SECS then
+--       return false, "take_timeout"
+--     end
+
+--     -- ekstra defensif: kalau tiba2 terdeteksi malady lagi (efek visual / lag), tunggu sebentar
+--     local h2, s2 = _detect_malady_dual(2, 800)
+--     if h2 and (s2 or 0) > 0 then
+--       -- bila ternyata muncul lagi & sisa kecil, tunggu clear lagi
+--       if (s2 or 0) <= THRESH_SECS then
+--         _wait_until_clear_consecutive(2, 1000, math.max(THRESH_SECS + 60, 180))
+--       else
+--         -- sisa besar → hentikan (caller bisa panggil ensureMalady lagi nanti)
+--         return false, "over_threshold"
+--       end
+--     end
+--   end
+-- end
+
+
 function ensureMalady(threshold_min, opts)
+  opts = opts or {}
   local minutes     = tonumber(threshold_min or 5) or 5
   local THRESH_SECS = math.floor(minutes * 60)
 
-  local b = getBot and getBot() or nil
+  -- pastikan tidak di EXIT (dan refresh w setelah hop)
+  if hop_until_leave_exit then pcall(hop_until_leave_exit, 10) end
+  local b = (getBot and getBot()) or nil
   local w = b and b:getWorld() or nil
-  hop_until_leave_exit(10)
-  if not w or not w.name or tostring(w.name):upper() == "EXIT" then
+  local wname = (w and w.name) and tostring(w.name):upper() or ""
+  if wname == "" or wname == "EXIT" then
     return false, "not_in_world"
   end
 
@@ -937,68 +1017,75 @@ function ensureMalady(threshold_min, opts)
   end
   local useW, useD = STORAGE_MALADY, (DOOR_MALADY or "")
 
-  -- 1) Baca konsensus awal (poll 4x) → robust
-  local has, max_secs, code, nm = _detect_malady_dual(2, 1000)
+  -- 1) Konsensus awal (robust & cepat)
+  local okDetect, has, max_secs, code, nm = pcall(_detect_malady_dual, 2, 500)
+  if not okDetect then
+    return false, "detect_error"
+  end
+  max_secs = tonumber(max_secs or 0) or 0
 
-  -- 2) Kalau masih ada & sisa > threshold → SKIP
-  if has and (max_secs or 0) > THRESH_SECS then
-    -- log kecil (opsional)
-    if code and code>0 then
-      print(string.format("[MALADY] Detected %s (code %d), sisa ~%ds > %d → skip.",
-        nm or "Unknown", code, max_secs or -1, THRESH_SECS))
+  -- 2) Jika sisa > threshold → SKIP (jangan tunggu panjang di sini)
+  if has and max_secs > THRESH_SECS then
+    if code and code > 0 then
+      print(string.format("[MALADY] %s (code %d) ~%ds > %d → skip.",
+        nm or "Unknown", code, max_secs, THRESH_SECS))
     end
     return false, "over_threshold"
   end
 
-  -- 3) Kalau masih ada tetapi sisa ≤ threshold → WAJIB nunggu clear
-  if has and (max_secs or 0) <= THRESH_SECS then
-    print(string.format("[MALADY] Sisa %ds ≤ %d. Menunggu CLEAR dengan konfirmasi beruntun...",
-      max_secs or 0, THRESH_SECS))
-    local ok, why = _wait_until_clear_consecutive(3, 1000, math.max(THRESH_SECS + 120, 240))
-    if not ok then
+  -- 3) Jika sisa ≤ threshold → tunggu CLEAR singkat (guard kecil supaya tidak nyangkut)
+  if has and max_secs <= THRESH_SECS then
+    print(string.format("[MALADY] Sisa %ds ≤ %d. Menunggu clear singkat...",
+      max_secs, THRESH_SECS))
+    local okWait, why = _wait_until_clear_consecutive(2, 400, math.max(THRESH_SECS + 30, 45))
+    if not okWait then
       return false, why or "timeout_wait"
     end
   end
-  -- titik ini CLEAR (baik dari awal, atau setelah nunggu)
+  -- titik ini dianggap CLEAR (dari awal atau setelah wait singkat)
 
-  -- 4) LOOP TAKE SAMPAI SUKSES (dengan absolute guard)
-  local started = os.time()
-  local attempt = 0
-  local ABS_GUARD_SECS  = 600           -- 10 menit
-  local REWARP_EVERY    = 5             -- re-warp tiap 5 attempt
-  local BACKOFF_MS      = 600
+  -- 4) Coba TAKE (bounded attempts; tidak pakai while true)
+  local MAX_TRY       = tonumber(opts.max_try or 12)  -- ~12 percobaan
+  local REWARP_EVERY  = tonumber(opts.rewarp_every or 4)
+  local BACKOFF_MS    = tonumber(opts.backoff_ms or 600)
+  local started       = os.time()
+  local ABS_GUARD_SECS= tonumber(opts.take_guard_secs or 120) -- guard total ambil (2 menit)
 
-  while true do
-    attempt = attempt + 1
+  for attempt = 1, MAX_TRY do
     if (attempt % REWARP_EVERY) == 1 then
       if SMART_RECONNECT then pcall(SMART_RECONNECT, useW, useD) end
-      if WARP_WORLD then pcall(WARP_WORLD, useW, useD) end
-      sleep(300)
+      if WARP_WORLD      then pcall(WARP_WORLD,      useW, useD) end
+      sleep(250)
     end
 
-    local ok = take_malady(useW, useD, opts or { step_ms = 700, rewarp_every = 180 })
-    if ok then
+    local okTake = false
+    local okCall, whyCall = pcall(function()
+      okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
+    end)
+    if okCall and okTake then
       return true, "taken"
     end
 
-    sleep(BACKOFF_MS)
-    if (os.time() - started) >= ABS_GUARD_SECS then
-      return false, "take_timeout"
-    end
-
-    -- ekstra defensif: kalau tiba2 terdeteksi malady lagi (efek visual / lag), tunggu sebentar
-    local h2, s2 = _detect_malady_dual(2, 800)
-    if h2 and (s2 or 0) > 0 then
-      -- bila ternyata muncul lagi & sisa kecil, tunggu clear lagi
-      if (s2 or 0) <= THRESH_SECS then
-        _wait_until_clear_consecutive(2, 1000, math.max(THRESH_SECS + 60, 180))
+    -- jika tiba-tiba terdeteksi malady lagi, putuskan cepat (jangan loop lama)
+    local okD2, h2, s2 = pcall(_detect_malady_dual, 2, 500)
+    if okD2 and h2 and (s2 or 0) > 0 then
+      s2 = tonumber(s2 or 0) or 0
+      if s2 <= THRESH_SECS then
+        _wait_until_clear_consecutive(2, 400, math.max(THRESH_SECS + 30, 45))
       else
-        -- sisa besar → hentikan (caller bisa panggil ensureMalady lagi nanti)
         return false, "over_threshold"
       end
     end
+
+    if (os.time() - started) >= ABS_GUARD_SECS then
+      return false, "take_timeout"
+    end
+    sleep(BACKOFF_MS)
   end
+
+  return false, "take_exhausted"
 end
+
 
 -------------------- SMART DROP SNAKE & MULTI STORAGE --------------------
 WORLD_MAX_X, WORLD_MAX_Y = WORLD_MAX_X or 99, WORLD_MAX_Y or 23
