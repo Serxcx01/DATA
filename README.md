@@ -78,17 +78,20 @@ function ensureMalady(threshold_min, opts)
     end
 
     -- Asumsi: sudah ada status_malady (bool), ttl_secs (detik), THRESH_SECS (detik), minutes (ambang menit)
+    -- ===== ensureMalady() (loop nunggu) =====
     if status_malady then
         if ttl_secs <= THRESH_SECS then
-            -- NUNGGU karena masih dalam jangkauan threshold
             print(("[MALADY] %s sisa %s (≤ %d menit) → nunggu selesai...")
-                :format(name_malady or "Unknown", fmt_hms(ttl_secs), minutes))
+            :format(name_malady or "Unknown", fmt_hms(ttl_secs), minutes))
 
-            local recheck_every = 5   -- detik: frekuensi cek ulang /status
+            local recheck_every = 5
             local last_check = os.time()
 
             while ttl_secs > 0 do
-            -- cek ulang tiap beberapa detik agar adaptif
+            -- TIDUR 1s supaya countdown realtime + CPU aman
+            sleep(1000)
+
+            -- recheck tiap beberapa detik agar adaptif
             if os.time() - last_check >= recheck_every then
                 last_check = os.time()
                 local ok, new_secs, new_name = checkMalady()
@@ -96,20 +99,19 @@ function ensureMalady(threshold_min, opts)
                 ttl_secs = tonumber(new_secs or 0) or 0
                 name_malady = new_name or name_malady
                 else
-                -- kalau gagal baca /status, asumsi terus mundur 1s per loop
+                -- fallback: kurangi sesuai interval recheck
                 ttl_secs = math.max(0, ttl_secs - recheck_every)
                 end
             else
-                -- tanpa recheck, tetap kurangi 1 detik
+                -- kurangi 1s untuk siklus ini
                 ttl_secs = math.max(0, ttl_secs - 1)
             end
             end
+
             print("\n[MALADY] Selesai (0s). Lanjut.")
-            -- lanjut ke step berikutnya...
         else
-            -- JANGAN nunggu, karena sisa masih panjang di atas threshold
             print(("[MALADY] %s sisa %s (> %d menit) → skip nunggu.")
-                :format(name_malady or "Unknown", fmt_hms(ttl_secs), minutes))
+            :format(name_malady or "Unknown", fmt_hms(ttl_secs), minutes))
             return false, "malady_too_long"
         end
     else
