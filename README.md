@@ -1742,6 +1742,7 @@ end
 -- ==========================================
 while true do
   if MODE == "SULAP" then
+    ensureMalady(6, { wait_confirmations = 2, recheck_ms = 500, guard_secs = 120 })
     if not CHECK_WORLD_TUTORIAL then checkTutor(); CHECK_WORLD_TUTORIAL = true end
     
     for i = 1, #LIST_WORLD_BLOCK do
@@ -1753,8 +1754,6 @@ while true do
         if should_skip_world("block", world_block) then
           log_fail(world_block, door_block, "skip(block_cooldown)")
         else
-          ensureMalady(6, { wait_confirmations = 2, recheck_ms = 500, guard_secs = 120 })
-
           local ok, rs = main_sulap(world_block, door_block)
           if ok then clear_world_counter("block", world_block) end
           if rs == "nuked" then log_fail(world_block, door_block, "nuked@main") end
