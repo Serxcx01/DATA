@@ -18,7 +18,7 @@ STORAGE_MALADY, DOOR_MALADY     = "COKANJI", "XX1"
 SHOW_PUNCH                      = false
 RANDOM_WORLD_AFTER_CHANGE_WORLD = true
 JUMLAH_RANDOM_WORLD             = 6
-LIMIT_SEED_STORAGE              = 54000  -- kapasitas per world
+LIMIT_SEED_STORAGE              = 81000  -- kapasitas per world
 ID_BLOCK                        = 8640
 LIMIT_SEED_IN_BP                = 190
 JUMLAH_TILE_BREAK               = 3
@@ -226,7 +226,6 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     sleep(DELAY_RECONNECT)
     if STATUS_BOT_NEW().status=="online" then
       ensureMalady(6, { wait_confirmations = 2, recheck_ms = 500, guard_secs = 120 })
-
     end
   end
 
@@ -568,7 +567,7 @@ function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
       attempts_here=attempts_here+1
       local before=inv:getItemCount(item_id)
       b:drop(item_id, drop_try)         -- use numeric id
-      sleep(STEP_MS); SMART_RECONNECT();
+      sleep(STEP_MS); SMART_RECONNECT(storageW,storageD);
       inv = b:getInventory()            -- refresh inv
       local after=inv:getItemCount(item_id)
       if after<before then
@@ -1656,7 +1655,7 @@ function pnb_sulap()
         local t = b:getWorld():getTile(wx, wy)
         if (t.fg or 0) == 0 then
           local before_fg = t.fg or 0
-          b:place(wx, wy, ID_BLOCK); sleep(DELAY_PUT); SMART_RECONNECT()
+          b:place(wx, wy, ID_BLOCK); sleep(DELAY_PUT); SMART_RECONNECT(w)
           local t2 = b:getWorld():getTile(wx, wy)
           if t2 and (t2.fg or 0) ~= before_fg and (t2.fg or 0) ~= 0 then acted = true; soft_reset(); break end
         end
@@ -1674,7 +1673,7 @@ function pnb_sulap()
         local wx, wy = ex + 1, ye + off
         local t = b:getWorld():getTile(wx, wy)
         if (t.fg or 0) ~= 0 then
-          b:hit(wx, wy); sleep(DELAY_BREAK); SMART_RECONNECT()
+          b:hit(wx, wy); sleep(DELAY_BREAK); SMART_RECONNECT(w)
           local t2 = b:getWorld():getTile(wx, wy)
           if t2 and (t2.fg or 0) == 0 then acted = true; soft_reset(); break end
         end
@@ -1767,7 +1766,7 @@ while true do
     ZEE_COLLECT(false)
     local b = (getBot and getBot()) or nil
     if b and b.leaveWorld then b:leaveWorld() end
-    sleep(10*60*1000)  -- 10 menit (ms)
+    sleep(15*60*1000)  -- 10 menit (ms)
     if b then b.auto_reconnect = true end
 
   elseif MODE == "PNB" then
