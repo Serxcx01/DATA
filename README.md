@@ -816,15 +816,52 @@ end
 -- 3) Tidak ada malady dari awal       => langsung TAKE
 -- 4) TAKE: while true sampai sukses, tapi tetap ada absolute guard
 ----------------------------------------------------------------
+local function hop_until_leave_exit(max_try)
+  max_try = tonumber(max_try) or 50
+  local tries = 0
+
+  while true do
+    local b = (getBot and getBot()) or nil
+    local w = b and b:getWorld() or nil
+    local name = (w and w.name) and tostring(w.name):upper() or ""
+
+    -- kalau sudah bukan EXIT, selesai
+    if name ~= "EXIT" and name ~= "" then
+      return true
+    end
+
+    -- batas percobaan biar gak infinite
+    if tries >= max_try then
+      print("[WARN] Maks percobaan tercapai, masih di EXIT.")
+      if b.disconnect then b:disconnect() elseif type(disconnect)=="function" then disconnect() end
+      SMART_RECONNECT(); sleep(100)
+      local tries = 0
+      -- return false
+    end
+
+    local wr = random_kata(4, true)
+    WARP_WORLD(wr); sleep(100)
+    SMART_RECONNECT(wr); sleep(100)
+
+    tries = tries + 1
+  end
+end
+
+-- pakai:
+-- hop_until_leave_exit(50)
+
+
 function ensureMalady(threshold_min, opts)
   local minutes     = tonumber(threshold_min or 5) or 5
   local THRESH_SECS = math.floor(minutes * 60)
 
   local b = getBot and getBot() or nil
   local w = b and b:getWorld() or nil
+  hop_until_leave_exit(10)
   if not w or not w.name or tostring(w.name):upper() == "EXIT" then
     return false, "not_in_world"
   end
+
   if (not STORAGE_MALADY) or STORAGE_MALADY == "" then
     return false, "storage_not_set"
   end
@@ -1542,7 +1579,7 @@ end
 while true do
   if MODE == "SULAP" then
     if not CHECK_WORLD_TUTORIAL then checkTutor(); CHECK_WORLD_TUTORIAL = true end
-
+    
     for i = 1, #LIST_WORLD_BLOCK do
       local entry = LIST_WORLD_BLOCK[i]
       if entry and entry ~= "" then
@@ -1552,6 +1589,7 @@ while true do
         if should_skip_world("block", world_block) then
           log_fail(world_block, door_block, "skip(block_cooldown)")
         else
+          ensureMalady(6)
           local ok, rs = main_sulap(world_block, door_block)
           if ok then clear_world_counter("block", world_block) end
           if rs == "nuked" then log_fail(world_block, door_block, "nuked@main") end
