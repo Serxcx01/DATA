@@ -218,7 +218,8 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
     if STATUS_BOT_NEW().status=="online" then
-      ensureMalady(6)
+      ensureMalady(6, { wait_confirmations = 2, recheck_ms = 500, guard_secs = 120 })
+
     end
   end
 
@@ -787,26 +788,55 @@ end
 -- Tunggu clear dengan konfirmasi berturut-turut (anti false clear)
 -- syarat_clear: butuh N konfirmasi berurutan "tidak ada malady"
 ----------------------------------------------------------------
+-- local function _wait_until_clear_consecutive(N, recheck_ms, guard_secs)
+--   N = N or 3
+--   recheck_ms = recheck_ms or 1000
+--   local start = os.time()
+--   local ok_streak = 0
+
+--   while true do
+--     local has, secs = _detect_malady_dual(1, 100)  -- single poll cepat
+--     if (not has) or (secs or 0) <= 0 then
+--       ok_streak = ok_streak + 1
+--       if ok_streak >= N then return true end
+--     else
+--       ok_streak = 0
+--     end
+--     sleep(recheck_ms)
+--     if guard_secs and (os.time() - start) >= guard_secs then
+--       return false, "timeout_wait"
+--     end
+--   end
+-- end
+
 local function _wait_until_clear_consecutive(N, recheck_ms, guard_secs)
-  N = N or 3
-  recheck_ms = recheck_ms or 1000
+  N = N or 2
+  recheck_ms = recheck_ms or 500
   local start = os.time()
   local ok_streak = 0
 
   while true do
-    local has, secs = _detect_malady_dual(1, 100)  -- single poll cepat
-    if (not has) or (secs or 0) <= 0 then
+    local has, secs = _detect_malady_dual(1, 100)  -- 1 poll cepat
+    local sleft = tonumber(secs or 0) or 0
+
+    -- treat nilai <= 0 atau nil sebagai CLEAR
+    if (not has) or sleft <= 0 then
       ok_streak = ok_streak + 1
       if ok_streak >= N then return true end
     else
       ok_streak = 0
+      -- TIP: kalau sisa > 0 tapi kecil (<=3s), kecilkan jeda supaya cepat “nyentuh” 0
+      if sleft <= 3 then recheck_ms = math.min(recheck_ms, 300) end
     end
+
     sleep(recheck_ms)
+
     if guard_secs and (os.time() - start) >= guard_secs then
       return false, "timeout_wait"
     end
   end
 end
+
 
 ----------------------------------------------------------------
 -- ENSURE MALADY — versi stabil (deteksi ganda + counter)
@@ -1457,7 +1487,8 @@ function pnb_sulap()
   if (w or "") == "" then print("[PNB] Tidak punya Tutorial/Home World. Abort."); return end
 
   WARP_WORLD(w); sleep(100)
-  ensureMalady(6)
+  ensureMalady(6, { wait_confirmations = 2, recheck_ms = 500, guard_secs = 120 })
+
   SMART_RECONNECT(w); sleep(100)
 
   local function pos_now()
@@ -1589,7 +1620,8 @@ while true do
         if should_skip_world("block", world_block) then
           log_fail(world_block, door_block, "skip(block_cooldown)")
         else
-          ensureMalady(6)
+          ensureMalady(6, { wait_confirmations = 2, recheck_ms = 500, guard_secs = 120 })
+
           local ok, rs = main_sulap(world_block, door_block)
           if ok then clear_world_counter("block", world_block) end
           if rs == "nuked" then log_fail(world_block, door_block, "nuked@main") end
