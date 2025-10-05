@@ -810,32 +810,72 @@ end
 -- end
 
 local function _wait_until_clear_consecutive(N, recheck_ms, guard_secs)
-  N = N or 2
-  recheck_ms = recheck_ms or 500
+  N = tonumber(N) or 2
+  recheck_ms = math.max(100, tonumber(recheck_ms) or 500)
+  -- PENTING: kalau caller tak memberi guard, jangan nol → bikin infinite loop
+  guard_secs = tonumber(guard_secs) or 120       -- default guard 120s
+  local hard_cap = guard_secs + 30               -- sedikit buffer maksimum
+
   local start = os.time()
   local ok_streak = 0
 
+  -- anti-macet: jika 'secs' tidak berubah cukup lama, keluar
+  local last_sleft, unchanged = nil, 0
+  -- anti-flap: jika sisa kecil, percepat polling
+  local function tune_delay(sleft)
+    if sleft and sleft <= 3 then
+      recheck_ms = math.min(recheck_ms, 250)
+    end
+  end
+
   while true do
-    local has, secs = _detect_malady_dual(1, 100)  -- 1 poll cepat
+    -- aman-kan pemanggilan _detect_malady_dual
+    local ok, has, secs = pcall(_detect_malady_dual, 1, 100)
+    if not ok then
+      return false, "detect_error"
+    end
+
     local sleft = tonumber(secs or 0) or 0
 
-    -- treat nilai <= 0 atau nil sebagai CLEAR
+    -- CLEAR bila tidak ada atau sisa <= 0
     if (not has) or sleft <= 0 then
       ok_streak = ok_streak + 1
-      if ok_streak >= N then return true end
+      if ok_streak >= N then
+        return true
+      end
     else
       ok_streak = 0
-      -- TIP: kalau sisa > 0 tapi kecil (<=3s), kecilkan jeda supaya cepat “nyentuh” 0
-      if sleft <= 3 then recheck_ms = math.min(recheck_ms, 300) end
+      tune_delay(sleft)
+    end
+
+    -- deteksi macet: nilai tidak berubah-ubah terlalu lama
+    if last_sleft ~= nil and sleft == last_sleft then
+      unchanged = unchanged + 1
+      -- contoh: jika 8–10 detik tanpa perubahan, anggap stuck
+      if (unchanged * recheck_ms) >= 10000 then
+        return false, "stuck_value"
+      end
+    else
+      last_sleft, unchanged = sleft, 0
+    end
+
+    -- GUARD & HARD CAP
+    local elapsed = os.time() - start
+    if elapsed >= hard_cap then
+      return false, "timeout_wait"
+    elseif elapsed >= guard_secs then
+      -- masih kasih kesempatan beberapa detik: bila sudah clear, lolos; kalau tidak, gagal
+      if ok_streak >= math.max(1, N - 1) then
+        return true
+      else
+        return false, "timeout_wait"
+      end
     end
 
     sleep(recheck_ms)
-
-    if guard_secs and (os.time() - start) >= guard_secs then
-      return false, "timeout_wait"
-    end
   end
 end
+
 
 
 ----------------------------------------------------------------
