@@ -2,10 +2,10 @@
 
 
 function GATE()
-    getBot().malady
+    -- getBot().malady
     malady = getBot().auto_malady
-    malady.enablged = false
-    malady.auto_surery_station = false
+    malady.enabled = false
+    malady.auto_surgery_station = false
     malady.auto_vial = false
     malady.auto_chicken_feet = false
     malady.auto_grumbleteeth = false
