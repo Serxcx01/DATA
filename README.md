@@ -17,6 +17,7 @@ local MALADY_CODES = {
   [11] = "Fatty Liver"
 }
 
+
 function _malady_status(status_take)
     malady = getBot().auto_malady
     malady.enabled = AUTO_MALADY
@@ -29,45 +30,48 @@ function _malady_status(status_take)
     malady.vial = MALADY_NAME
 end
 
-local function current_malady_code()
-  -- Asumsi getBot().malady mengembalikan integer: 0 = sehat, >0 = kode
-  local b = getBot and getBot() or nil
-  if not b then return 0 end
-  local code = tonumber(b.malady) or 0
-  return code
-end
+-- function untill_malady()
+--     status_malady = getBot().malady
+--     if status_malady == 0 then
+--         for i =1,#Malady do
+--             local split_data_malady = {}
+--             for w in Malady[i]:gmatch("([^|]+)") do 
+--                 table.insert(split_data_malady, w) 
+--             end
+--             if status_malady == split_data_malady[1] then
+--                 return false
+--             end
+--         end
+--         return true
+--     else
+--         return false
+--     end
+-- end
 
-local function current_malady_name()
-  local code = current_malady_code()
-  return MALADY_CODES[code], code
-end
-
-function check_malady_now()
-    if AUTO_MALADY then
-        _malady_status(false)
-        local name, code = current_malady_name()
-        while name and code > 0 do
-            sleep(2000)
-            print("waiting malady")
+function untill_malady()
+    local b = getBot and getBot() or nil
+    local m = b.malady
+    if m == 0 then
+        if m == MALADY_CODES[m] then 
+            return false
         end
-
-
-
-
-
-        -- if 
-        -- if code == 0 then
-        --     print("Malady Status : Notfound")
-        -- end
-
-        -- if untill_malady() then
-        --     while untill_malady() do
-        --         sleep(2000)
-        --         _malady_status(true)
-        --     end
-        -- end
-        -- _malady_status(false)
+        return true
     end
+    return false
 end
 
-check_malady_now()
+-- function check_malady_now()
+--     if untill_malady() then
+--         while untill_malady() do
+--             sleep(2000)
+--             _malady_status(true)
+--         end
+--     end
+--     _malady_status(false)
+-- end
+
+if untill_malady() then
+    print("malady")
+else
+    print("no malady")
+end
