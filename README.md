@@ -46,18 +46,28 @@ function check_malady_now()
     if AUTO_MALADY then
         _malady_status(false)
         local name, code = current_malady_name()
-        if code == 0 then
-            print("Malady Status : Notfound")
+        while name and code > 0 do
+            sleep(2000)
+            print("waiting malady")
         end
 
-        if untill_malady() then
-            while untill_malady() do
-                sleep(2000)
-                _malady_status(true)
-            end
-        end
-        _malady_status(false)
+
+
+
+
+        -- if 
+        -- if code == 0 then
+        --     print("Malady Status : Notfound")
+        -- end
+
+        -- if untill_malady() then
+        --     while untill_malady() do
+        --         sleep(2000)
+        --         _malady_status(true)
+        --     end
+        -- end
+        -- _malady_status(false)
     end
 end
 
-print(current_malady_name())
+check_malady_now()
