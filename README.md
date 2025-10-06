@@ -31,17 +31,6 @@ DELAY_PUT                       = 115
 DELAY_WARP                      = 7000
 DELAY_EXE                       = 2000
 
-getBot().malady
-malady = getBot().auto_malady
-malady.enabled = true/false
-malady.auto_surery_station = true/false
-malady.auto_vial = true/false
-malady.auto_chicken_feet = true/false
-malady.auto_grumbleteeth = true/false
-malady.auto_refresh = true/false
-malady.storage = "COKANJI|XX1"
-malady.vial = 8 -- Chaos Infection (By Menu Order)
-
 -- ##################### BATAS SCRIPT #####################
 Bot = {}
 for slot=1,8 do Bot[slot] = {slot=slot} end
