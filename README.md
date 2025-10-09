@@ -36,13 +36,6 @@ local function configureAndAddBot(bot)
     end
 
     bot.connect = connectBot
-    local tutorial = bot.auto_tutorial
-    tutorial.enabled = true
-    tutorial.auto_quest = true
-    tutorial.set_as_home = true
-    tutorial.set_high_level = true
-    tutorial.set_random_skin = false
-    tutorial.set_random_profile = false
     if type(calculateBackpackCost) == "function" then
         if useProxy then
             bot.proxy = "auto"
@@ -59,6 +52,15 @@ local function configureAndAddBot(bot)
 
     if addBot(bot) then
         print("Bot has been added: " .. (bot.name or "Unknown"))
+        bot:getConsole().enabled = true
+        bot.auto_ban = true
+        tutorial = bot.auto_tutorial
+        tutorial.enabled = true
+        tutorial.auto_quest = true
+        tutorial.set_as_home = true
+        tutorial.set_high_level = true
+        tutorial.set_random_skin = false
+        tutorial.set_random_profile = false
     end
 end
 
