@@ -1,6 +1,8 @@
--- SC LOGI LIN STORE
+-- SC LOGI LIN STORE (versi aman)
 
-
+-- Contoh format per baris (tanpa spasi):
+-- token:ABCD123|platform:2|name:MyBot|proxy:auto
+-- Minimal: token:<isi>
 local tokens = [[
 mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023D4453A1047BFF041E198F61AA68E4|name:tamemapct|cbits:1536|playerAge:25|token:U+e8XpHTuHQ724UKoGshjGxTkRYyjYm7R6HBnHaY2UXGCyDVY1TyiN2gsR2QXeujHXRBN3EM+E9QyBfFkFLzc6z9SjtTKY1q15kjQTiPi7wbUuEoRuxyxLLmjm/Bul+1LXy6/fSt7bfdzUy2Br8mGOUko1AZUYv11+AUHcqy2GDo+NEPdEShZcxCWmLaU682AQ7iXU8VY/HyW4mvh1FWmWiRD5/ciewocUxmjGpAR58VQzDmfMFhp9fXHTadyQKk3FJAcyb4CmEfhWQh0rnHii4Y4gW9iTdh2BEcgU3OX//on9V9Y9Yy82RsPMY792IUT5pUj0cx2aROeIUf8UQB3HnUxPThWbnXQoT0zKDUikAmLLW2W7elxTsnNPcOtbcCH4Gda4imWTUP3JrhVh/LIW8lCzwBuGm6zALOjbjtiwTNNugTm3CmW9b1fsjg0gp0SOqRVMg7bVAICo5obQ466vEeiuZ4PmD7hUUQ8OkMSiOjAuao0KtLI/lob4gaXgIT|vid:3E4C2B36-F546-4E55-A989-092D4888861A
 mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023D444EDF6F0B4E05F049F50F7AA014|name:wetwwjicy|cbits:1536|playerAge:25|token:U+e8XpHTuHQ724UKoGshjIBaEm9aWiBXQHCW68W5vzG2V4PJL3BXkPoUcyp8/hdRBhCI1AeNF37OcQ0pbOSQLW1tMdmjHFX2GaSwr/Ic8Vk83IADlSvPuexyqaeek452JVfn/BLhcIemP1v8Uo7rtk9KN+ATZ3cugjkb5HPO/diIeSgdUkFJ8/e57cd8rv4+ZnEqrHl5oRxi3C1lAQWqIL+/rpMFNPtLccDchCTQ8w2RhxeaQJkHE0PvKzN7goOYrfS0PME2ysssyP4Sx2tIdfR0Iblgppr7x7xh7nRR1HxSPcnnYR9F5shN3geZ54ewaYWsSNEOCY/xLl41BjvyDBIuXfc55J9qAQmpGDELfPdUrt0JJxUwD4/3OmeDHLcX9/NE0Si8ruWzAeSb3oEONRBmieo8MymiHuj1QwCURulV6k9Ot4iM52TDvO+akSxDqMlHClN49mdcXeJwOlcrcv7LCH+DgL7GygB7vATxzpAHAJK5UazpT1DJWkhY0XDQ|vid:20F44A9E-4E9A-4CD7-939A-B5DE234BD9EB
@@ -8,63 +10,101 @@ mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023D4455A410626500876A39AC4AA6B8|n
 mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023D444BF9E724A901A94E2CBF00192D|name:hardlsaown|cbits:1536|playerAge:25|token:U+e8XpHTuHQ724UKoGshjL2LPdEipnxA3PwfbYx8pJUwJvbJuWdfAFhu06D3BK/Suwwa5Kp7dc7lFKQfq2N9UXserDu8ejAruHQdYudL2mljnZtsJxEwGPOmycWZnAWUHU/tqp95Xl33wADv7C1NvfATMPjplNsLCwuIsfFKvt2LS3RXFe5T4YuF3piEi5+ABIMOQ+EM3I80v6oBumciUn9SRu4t7U/HJnnElFqOOu1JibrEyF2w6YNHP2GjUczq/CbiwGUI280mRL5460q3VyuouMYz0YJqD+WO0KjDTu8JgqyB7o8K8tYsMtCn69RSRZUZPvDWuqU5HgrKxXFRbSI80rrX2WSHFcvGnEHreqjSXqMiXzvI59jIDd7KnpbT17tyyVcq7QQcOXqSdiezg5AWVdhn+R98U2b8Jui9VcRSO4ufnGBBSFors0VJRVUXVeZKmZAgDrjJqOqUX3DZbVq+mhB77QuUoyNYrpNrkPay89cpxsNaoQn06WoKDeg/|vid:62F5A40A-9F33-4229-B165-E4843268E8B6
 mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023D4450DB19371908EA4CF8E8605ADF|name:aoxspinday|cbits:1536|playerAge:25|token:U+e8XpHTuHQ724UKoGshjKgdxY3k8o9II0HAcWBovXDB3PFb6h2ZLeEEm9x+KlU+XJnjEbkZtX5hMXTwWts+z+fO+O5GbH4vNFfW06q8t7iq1nvDVX3dV2OBXFa7RDRsHLE9Mw/jYDLWvN3rARgYf4kXLPwRLsSrWT/Y05MLE4fmPEwO2cqOzoOLUYbXphQ6Y8vUxJDphYg6Ba9e4jRWN/pYtNkIjJicSTwRiLyrMDXkwsHpYLfR2THtIWIvlbE04SFoCc+XFtJcpdpTj5oadg+uS1cDLyeDJmmZS4YIjY4va9MpScqpJenjaaa2wG2uG8PNQwdd2dBz1rv2yvrqWOI3hZhGQD45Fa6fR4UPpLFIbO8ENdIj2JTj/J/c5eNDqU8XZ+1dHIQyTLXx8NI2uIkiFV8+9Hz1YllUtO2ExbdzABWUz1K1VBS5mm4A9v4ZubAqU3h8UCanG2pMZi2YaIubzpR9A7izP3gtlgddoom8xRLT3bGmzxImr2yhartT|vid:CC668BAE-8F8A-419B-A0CA-07F0A05A4B4F
 
-
-
-
 ]]
 
-local useProxy = false 
-
+local useProxy   = false
 local connectBot = true
 
+-- util trim
+local function trim(s)
+  return (s:gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
 local function parseTokenLine(line)
-    local bot = {}
-    
-    for key_value in line:gmatch("[^|]+") do
-        local key, value = key_value:match("([^:]+):(.+)")
-        if key and value then
-            bot[key] = value
-        end
+  line = trim(line or "")
+  if line == "" then return nil end
+
+  local bot = {}
+  for key_value in line:gmatch("[^|]+") do
+    local key, value = key_value:match("([^:]+):(.+)")
+    if key and value then
+      key = trim(key)
+      value = trim(value)
+      bot[key] = value
     end
-    
-    return bot
+  end
+  -- minimal harus punya token
+  if not bot.token or trim(bot.token) == "" then
+    return nil
+  end
+  return bot
 end
 
-local function configureAndAddBot(bot)
-    if not bot.token then
-        return
-    end
+local function configureAndAddBot(src)
+  -- salin supaya nggak ngubah sumber
+  local bot = {}
+  for k, v in pairs(src) do bot[k] = v end
 
-    bot.connect = connectBot
-    if type(calculateBackpackCost) == "function" then
-        if useProxy then
-            bot.proxy = "auto"
-        end
-        bot.type = TOKEN
+  bot.connect = connectBot
+
+  -- Opsi proxy otomatis
+  if useProxy and not bot.proxy then
+    bot.proxy = "auto"
+  end
+
+  -- Penentuan mode: jika environment punya calculateBackpackCost → asumsi mode TOKEN
+  if type(calculateBackpackCost) == "function" then
+    if rawget(_G, "TOKEN") ~= nil then
+      bot.type = TOKEN
     else
-        bot.name = bot.token
-        bot.platform = tonumber(bot.platform)
+      bot.type = "TOKEN"  -- fallback aman
     end
+    -- name opsional; jika tak ada, pakai token sebagai identitas tampilan
+    bot.name = bot.name or bot.token
+  else
+    -- mode biasa: wajib ada name + platform (opsional)
+    bot.name = bot.name or bot.token
+    bot.platform = tonumber(bot.platform) or bot.platform
+  end
 
-    for key, value in pairs(bot) do
-        print(key .. ": " .. tostring(value))
-    end
+  -- (Opsional) debug print — hati-hati menampilkan token ke log
+  -- for k, v in pairs(bot) do print(k .. ": " .. tostring(v)) end
 
-    if addBot(bot) then
-        print("Bot has been added: " .. (bot.name or "Unknown"))
-        bot:getConsole().enabled = true
-        bot.auto_ban = true
-        tutorial = bot.auto_tutorial
-        tutorial.enabled = true
-        tutorial.auto_quest = true
-        tutorial.set_as_home = true
-        tutorial.set_high_level = true
-        tutorial.set_random_skin = false
-        tutorial.set_random_profile = false
+  -- Tambahkan bot dan ambil handle
+  local handle = addBot(bot)
+  if not handle then
+    print("[WARN] Gagal menambahkan bot: " .. (bot.name or "Unknown"))
+    return
+  end
+
+  print("Bot has been added: " .. (handle.name or bot.name or "Unknown"))
+
+  -- Enable console jika ada
+  if type(handle.getConsole) == "function" then
+    local c = handle:getConsole()
+    if c then
+      c.enabled = true
     end
+  end
+
+  -- Pengaturan keamanan & tutorial (cek nil)
+  handle.auto_ban = true
+
+  local t = handle.auto_tutorial
+  if t then
+    t.enabled           = true
+    t.auto_quest        = true
+    t.set_as_home       = true
+    t.set_high_level    = true
+    t.set_random_skin   = false
+    t.set_random_profile= true
+  end
 end
 
+-- Proses setiap baris token
 for line in tokens:gmatch("[^\r\n]+") do
-    local bot = parseTokenLine(line)
-    configureAndAddBot(bot)
+  local parsed = parseTokenLine(line)
+  if parsed then
+    configureAndAddBot(parsed)
+  end
 end
