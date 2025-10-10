@@ -574,6 +574,92 @@ function untill_malady()
     return false
 end
 
+function _drop_malady()
+  local TARGET_ID = 8542
+  local storageW  = (STORAGE_MALADY and STORAGE_MALADY ~= "") and STORAGE_MALADY or nil
+  local storageD  = (DOOR_MALADY    and DOOR_MALADY    ~= "") and DOOR_MALADY    or nil
+
+  local b = (getBot and getBot()) or nil
+  if not b or USE_MALADY == false then return false, "bot_unavailable_or_disabled" end
+
+  -- hitung jumlah item (refresh tiap panggilan)
+  local function count()
+    local inv = b:getInventory()
+    return inv and inv:getItemCount(TARGET_ID) or 0
+  end
+
+  if count() <= 0 then return false, "no_item" end
+
+  -- kalau ada storage, pastikan benar di sana; jika tak ada, drop di tempat
+  local function ensureAtStorage(max_try)
+    if not storageW then return true end  -- artinya drop di world saat ini
+    max_try = max_try or 5
+    for i = 1, max_try do
+      local w = b:getWorld()
+      local name = w and w.name or ""
+      if name:upper() == tostring(storageW):upper() then
+        return true
+      end
+      WARP_WORLD(storageW, storageD); sleep(350)
+      SMART_RECONNECT(storageW, storageD); sleep(500)
+    end
+    return false
+  end
+
+  if not ensureAtStorage(6) then
+    return false, "failed_warp_storage"
+  end
+
+  -- matikan auto-collect sekali, nanti dikembalikan
+  local restore_collect = nil
+  if type(ZEE_COLLECT) == "function" then
+    restore_collect = true
+    pcall(ZEE_COLLECT, false)
+  end
+  if type(faceSide2) == "function" then pcall(faceSide2) end
+
+  local safety, last = 0, -1
+  while true do
+    local n = count()
+    if n <= 0 then break end
+
+    -- pastikan masih di storage jika storageW ada
+    if storageW then
+      local w = b:getWorld()
+      if (not w) or (not w.name) or (w.name:upper() ~= storageW:upper()) then
+        if not ensureAtStorage(2) then
+          if restore_collect ~= nil then pcall(ZEE_COLLECT, restore_collect) end
+          return false, "lost_world_and_failed_return"
+        end
+      end
+    end
+
+    -- lakukan drop (sekali aksi; kalau perlu pecah batch, ganti math.min(n, 200))
+    local ok = pcall(function()
+      b:drop(TARGET_ID, n)
+    end)
+    sleep(250)
+
+    local now = count()
+    if (not ok) or (now >= n) then
+      safety = safety + 1
+      if safety >= 10 then
+        if restore_collect ~= nil then pcall(ZEE_COLLECT, restore_collect) end
+        return false, "no_progress_drop_timeout"
+      end
+      -- coba 1x reconnect ringan kalau storage ada
+      if storageW then SMART_RECONNECT(storageW, storageD); sleep(400) end
+    else
+      safety = 0
+    end
+    last = now
+  end
+
+  if restore_collect ~= nil then pcall(ZEE_COLLECT, restore_collect) end
+  return true, "dropped_all"
+end
+
+
 function ensureMalady()
     _malady_status(false)
     while untill_malady() do
@@ -582,6 +668,7 @@ function ensureMalady()
         SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(100)
     end
     _malady_status(false)
+    _drop_malady()
 end
 
 
