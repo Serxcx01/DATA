@@ -4,7 +4,7 @@
 -- token:ABCD123|platform:2|name:MyBot|proxy:auto
 -- Minimal: token:<isi>
 local tokens = [[
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95F1C83AA04A01005AE2EF0B375A|name:icydewkabn|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ65nkwTjaPqSk0DNgoAND5w7R4VvNvl/IPChVqZFddc1WNdpCTMgvfvrdH01FQcBLCFIk2zwvWCDSol3WSWobA4PKRaoZq9u6ntZVCYdjAXQeMfIEiJnqmcnGVaahfi46p2xy+hybRJBdXnZ0zUa1JtHkUxh9hQpIOfGQpkNHfe53kH7OLOTjpPKhB4VzSJc2k5AN18LpTXOzq/axa2QwwRxcO+7I8LBfdWi6PVVUu2SvE639EBjdyNflgWmaBOTZyHF8JzGJJG2KsSkQ41I9LWzGJUbGXlf5CA57ulyNBgze3QMl8cHC2w8Ag78TiSQcw2O4y9fhifmeQ9N928NygMHzXFtWZ1H/nXbaoR1OKprV4cCE1hyTLSyqIVAYXp3/T/Is9SYce14/wNqvVFegKEDdaXHFda0VM6RXnqglEfXbN1iwRXMkZoynP0B6Uld4UZ/SN9e4WdVWwtJi0UHsWSPmwGgl8xw0gWgp6HilgleD|vid:24C059E7-7CC8-4833-874D-660A4AE312AC
+mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023D4450DB19371908EA4CF8E8605ADF|name:aoxspinday|cbits:1536|playerAge:25|token:U+e8XpHTuHQ724UKoGshjKgdxY3k8o9II0HAcWBovXDB3PFb6h2ZLeEEm9x+KlU+XJnjEbkZtX5hMXTwWts+z+fO+O5GbH4vNFfW06q8t7iq1nvDVX3dV2OBXFa7RDRsHLE9Mw/jYDLWvN3rARgYf4kXLPwRLsSrWT/Y05MLE4fmPEwO2cqOzoOLUYbXphQ6Y8vUxJDphYg6Ba9e4jRWN/pYtNkIjJicSTwRiLyrMDXkwsHpYLfR2THtIWIvlbE04SFoCc+XFtJcpdpTj5oadg+uS1cDLyeDJmmZS4YIjY4va9MpScqpJenjaaa2wG2uG8PNQwdd2dBz1rv2yvrqWOI3hZhGQD45Fa6fR4UPpLFIbO8ENdIj2JTj/J/c5eNDqU8XZ+1dHIQyTLXx8NI2uIkiFV8+9Hz1YllUtO2ExbdzABWUz1K1VBS5mm4A9v4ZubAqU3h8UCanG2pMZi2YaIubzpR9A7izP3gtlgddoom8xRLT3bGmzxImr2yhartT|vid:CC668BAE-8F8A-419B-A0CA-07F0A05A4B4F
 
 ]]
 
@@ -93,7 +93,7 @@ local function configureAndAddBot(src)
     t.set_as_home       = true
     t.set_high_level    = true
     t.set_random_skin   = false
-    t.set_random_profile= true
+    t.set_random_profile= false
   end
 end
 
