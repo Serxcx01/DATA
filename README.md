@@ -42,7 +42,7 @@ worldTutor = ""
 ID_SEED = ID_BLOCK + 1
 CHECK_WORLD_TUTORIAL = false
 NUKED_STATUS         = false
-TIME_MALADY = 150
+TIME_MALADY = 100
 WORLD_MAX_X = WORLD_MAX_X or 99
 WORLD_MAX_Y = WORLD_MAX_Y or 59
 local FULL_CACHE, BAD_CACHE = {}, {}
@@ -663,7 +663,6 @@ end
 
 function ensureMalady()
     if (TIME_MALADY or 0) >= 100 then
-      TIME_MALADY = 0
 
       local b = (getBot and getBot()) or nil
       if not b then
@@ -683,6 +682,7 @@ function ensureMalady()
 
       if b.say then b:say("/status") end
       sleep(100) -- opsional, biar konsol sempat update
+      TIME_MALADY = 0
     end
     _malady_status(false)
     while untill_malady() do
