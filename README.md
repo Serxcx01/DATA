@@ -1,117 +1,192 @@
---- SC LOGIN ANDRE (versi diperbaiki & fleksibel)
--- mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95F1C83AA04A01005AE2EF0B375A|name:icydewkabn|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ65nkwTjaPqSk0DNgoAND5w7R4VvNvl/IPChVqZFddc1WNdpCTMgvfvrdH01FQcBLCFIk2zwvWCDSol3WSWobA4PKRaoZq9u6ntZVCYdjAXQeMfIEiJnqmcnGVaahfi46p2xy+hybRJBdXnZ0zUa1JtHkUxh9hQpIOfGQpkNHfe53kH7OLOTjpPKhB4VzSJc2k5AN18LpTXOzq/axa2QwwRxcO+7I8LBfdWi6PVVUu2SvE639EBjdyNflgWmaBOTZyHF8JzGJJG2KsSkQ41I9LWzGJUbGXlf5CA57ulyNBgze3QMl8cHC2w8Ag78TiSQcw2O4y9fhifmeQ9N928NygMHzXFtWZ1H/nXbaoR1OKprV4cCE1hyTLSyqIVAYXp3/T/Is9SYce14/wNqvVFegKEDdaXHFda0VM6RXnqglEfXbN1iwRXMkZoynP0B6Uld4UZ/SN9e4WdVWwtJi0UHsWSPmwGgl8xw0gWgp6HilgleD|vid:24C059E7-7CC8-4833-874D-660A4AE312AC
+---========================== [[[ OHDEAR SCRIPT ]]] ==========================---
 
-local accounts = [[
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95EBE2A534C002B3234D807B5913|name:combsadrs|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ63z6DUSbWX/eB2JAjCyixhWeccQa450qJfGGXn+3fUKY0qqvUFA57ewA62Zt2Q7aKi8cdK0Cqr/d2HfXPBNh2s3ytrsRNjXDIbVnlhZ18wCzdyhUOn1cvZggvUlpRNzN3qU8wRJcrDYwR0KlwQvB5GyXHIRCq2TLq7XzJpekN0qpyQSqvrn1tjaD2kszQPOzeShHa0mJG7BPjI+dYzf+v/2f6Z/mf5dJIKkH/X2UgcpArILAJJfxlrtO8Lsl/eB6gPuePiHQNufvU0SiE9Woou6qAoSC1K+SWW5gsQx0OK11BcZQWJVQxgBjg1oZdYY+X3ZJWp8FqC1sXsZ4stiH739X2JLVHyf04EEhSgc2lGkulb+iYrT4GkPGopT838WiUoXWn5mNRuTAo7IY+1y2HKNqOD25B/7Fn27ZWn7GqZnBFFlsiqNwRx1LzWgNZh+HMlQivbBU7mpRyjcXPS3DUMQdWzTJ6T/jFaHgi39RIUF2|vid:FE524324-2C8F-491C-A5E2-3D0499CCC875
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95F48535EA8B08DCF71EAEEC40BC|name:ioiusipnew|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ61CUTLffaxF9T6lt/oZogX1OXpOy+JMeIUSTFwUxB8aLJtnXC7+lRCMGTpgv6FfMvTJUdaWqJ8IEac8QBRk0gNb1ETqZ4xfiquGZEhexeqcNipUhAovP0mu5SwKwiMbxX9h1zHGNx4bb8hNXPqY1gNW1nCQGx0bmjY090n4QqShyWdum/OJij9fTOhUNgIKFmfZ8enyAu3wuIkZG2aWvqs41fUshKhPmMmu4z5KBlDwKooMHOSo19CkZWG7j8uxN08MXHvBDMa0SXCtubyTsEA4Y/z5I7/H0OevR4QPRE/GlovWBKvhXR26F0/RtleHW3dqWyk5kH5alvSQ8mDdPxeDkvNDF0KVCnf5bCtXy/6lMb0GlneigFKw3Uv9BNqRIMonkwb8sKfzmneWYdd8CartUbNR6qjwcstbxobF+MM0Kk1O3YgScRzUvJK5sgzqHYpMEv++r4MYnGOcAguep05QEiH4vx8P4lr4Aq/utlU7S|vid:15901100-9F4F-4349-A5A8-0789A1F710C1
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95F681CE4C0F088010D5EC63BFC7|name:redhubiyno|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ65gkNT7532CiiWotk99/LhB5WlMehoVWA7cmU5OUiW/PzJlfaktu0GawljYsqOjmPYEFBSdXk2MifvCMkzJjN/dDlwnELgvct2saaC4osk9X64jh5co4EZmpQ8ybpxPZNp+8cSYfihYKeiBEojjyLEIcOKtNGMp2Hgj0GuBxApP/h5aaaomQqs+LUDNUjZ5D9C9o96nRU/jF3zCpMk1ap36bwGmMBBL4HGou0XCQKXB8xYWhzU9S2PErNgulkbVtV3OYv1gVI3IxkiLqncq8f470kkGqnSZSOpHFA4XT+foWVU8V/I41l2a7ZXcMbDghT5JJgaZkXpOuuKkZxth/bIsbHSiIXF/qT6NgR3AoCQkXIoVpagGG2aw14EV/KRS0koFuKkIlPkBWKZ2GMvUrwtVhok/wNUCKqIb9I7/yuLVfwacfEA4TbjGLC1xyY1VCi4YlbyWMa4oNHvGK8IQMsSaN0cJn/UHgOIPe2cNPn+JK|vid:C648F777-D6A2-4244-8288-443653B02EC1
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95F519CC03330552D006BDC4146C|name:meohatelox|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ6yDi9xZXQSc8Tmqgbsn5etYBdZzsPY3DT3QCG5HvZteHbHqLdqaTZ/RD2BBTVXEbzTlXfPXYrSX2j46dubxkDHm6oR7wMqmSgNCVV/A4F5wS8eAWTbeQH7wd7BNZG3gQLx7E483cMCMw5Y1vZxK1siI2TdcFP50/Sheay8RS/3Qz26ZTc4oz9raC+TyY/64ayWcMWjS8p2X4xYCpGuoNITKaZZQ+7kuydcCMPM3Ke2Wyq0S+WjRijtDAz9UbE7PwKNXUfgCh3xtfmBL2QL8cpvb4HwsyJvGYgMPuDry7upwCoZxsjbe5PuHockZh8VQ+T9LAb47cqOHtb/YKgrmT59O58htyeZ7Wu2rNBTZCrZnkXdEGUsqp6VHpuQVjP0OM5711DKWzIE6psrsgKZ5LzlM+fH5U2aovHgxM9DLws0nCrO4V/Iq79WFFhn5mADH7Y8clSx3wG7MHjIb/boFxM+cAO9ocv/MhtbdECyt3sSZC|vid:0542F439-21F2-4CA6-9631-25044F372D6C
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95FA797A300A012B4FEF4EDA17C3|name:typefirdc|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ646BGSidmrWCCHLo6n9egQpLCCIKw5WplS5v/8VmY3oxiX1dnGalYYsVR3EbeVH1jJ8+SHRQtnUCmQdqA5bkGmjcBpLzWaIS6An9hPvqrcV3uKWQQT+N33tWZ1cUlPP7ktvgpCCgHAYSo2FzLhCBDigaiMrk3VV90oVTZ1iWlwsfQg85s9ZbAks3nhYP0YDvAGBcnkCG0mI2CRk5YWGXAgVCAOl0pbwm4jeFTjXhEnZUoK12fvesAUHmk4y4AVbWiYzgNzBQCP67IHuwZn9YTD4YL8mkKzf7qQP3XVcSsB5528hOnh0QstNPTEpM+/l99gQPwVUrjBF4JdwNozfXh99C5o98PDmNhODi6XK2vWJp/iuY48TSS0zCjNB1mJqzNgSIRMWQDfOhDx/nmCUltEMNA7vC+ltDrSNFDipy6P1yVt2DESIPRWh0g9tT1mYMmZUtZ2WBC65HxG3zxFean1Xl7DmlPiSlM/LMwHEYSQFS|vid:C5B2DDF6-D1A2-4974-AEE9-CF688C8450E9
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95DC91960A3703A49EE5EFD64573|name:layoclhsip|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ63wWDrvyp9CJ5SP6rHuDhZxC2Szl7NxyfyodszqvHPuB+79uY6VDfhZ2XM8/t58So4xIff/cf1OEtzqEbMb+pl/4Hczc9TKryH1k4KIxyYyZ8sScBvvfppF6sS6Qs7lENpWiRPenIH2K3xgXP65Y8nv3qaX6x0B/i1GT5pRgfyzrUH7mXhX1V2CymQf6YNa1pks2vekrO/4BeHCIOhcQHdeJ2CB+SgtJ78+fcCPVQa3tDFohVzXApOkpZpUCSphBx8TNJ5n/DKaIPx3S0CI87A1ocpzEoOpyOCvcBjg+hfywL9hrYjumnq9AUIdHsmrrh3LB+zWad8gM7kGSVxWw61FNpkMnFzt5v6mO8bVrIjOidrXFcReou2gWN5lJOioY6oZ1Fjn5Ubs+qoBexf550sc3J4niTIW8Nuh1R6IAyfa3GVcPEdsHhZ5jgLydasVfeBnGJlHbTPDKzsygEuhQGRj5Z6JuwtAZLBb7tcFy/OfA|vid:D03BBA9E-3823-47A1-B7A0-E0A31FCFB892
-mac:02:00:00:00:00:00|wk:NONE0|platform:1|rid:023E95FB9D4E9CE8083502FCAB4EBA68|name:deboarwet|cbits:1536|playerAge:25|token:3sIBYx38skHwW52TbCaJ6zoUhjFQo4FPfkz007UwCCkn7lS3OWE5r9c4QsEa1LFvZqTcOMVBfvXrZ0rmAG5qOlGjusDB/CX3nTsqQrc4j+26pgEu1nYLHMKdGGe6oT86OjO2aF7E9KTt037QPmQAUMQfE5JlGZOJ/3R3cWk9FeEfmFRbycpnk5XOMKjZ8321dbeRwME4q95CdmkjaOjFg7MSmmpFqqBZvX9itCVxccxQjgFvNLQ96jQ35sReaN5Aafmg1pSgs/JLcpNwCgc8nKhTppeMcKtn/3QONBY61tX7hxlFByo3DkxFLQzomBT/Arh2rYth87Vuz0Vr8vROZ6twGWFII6bvTjPmUrmGyeQF2rH7SoH1Pde32dOSzUt8LIxH4f67ee4l+3/2nMo7k3EQ3vkzSHCkvz5iDWyGIk05O4Z8c72w5NySKut9b3xYFW1hcTnpk1rvTU+Tnea/1OdxsHXuDwWnPP9zBJ0fetYhNX2oWl3uJwV6QWxVhbDX|vid:AC3F70D0-2180-4ED0-A727-094E1BA5687F
+--------=========== BUYER SETTINGS ===========--------
+DiscordID = "867849626072907776"    -- Put Your User Discord Here! (Ex : 4226705284830330)
+Token = "qUMIBu3MuexO"              -- Put Your Token Here!
 
+---===== FOLDER SETTINGS [NONTON SHOWCASE BIAR LEBIH PAHAM] =====---
+worldPath = "C:/Users/Administrator/Desktop/ANDRE/List-World/"        -- Untuk Mengambil World Farm, Secondary Farm, Plant, Storage Pack, Seed, Special Item
+extraFilePath = "C:/Users/Administrator/Desktop/ANDRE/Extra-File/"    -- Untuk Me-load Script yang diperlukan
+PnbWorldPath = "C:/Users/Administrator/Desktop/ANDRE/List-PNB/"       -- Untuk Mengambil / Menyimpan World PNB Other Semua Bot
+jsonPath = "C:/Users/Administrator/Desktop/ANDRE/JSON/"               -- Untuk Me-load/Save JSON File [NEW]
 
-]]
+--------=========== MALADY SETTINGS ===========-------- 
+AutoCure = true             -- If true, bot will automatically cure from Torn/Gem Malady
+TalkTooMuch = false         -- If true, auto find Greemble / Chicken Maladies [Only Work if AutoCure true]
+Custom_Malady = "All"       -- Choose Malady: Grumble / Chicken / All [it means Grumble+Chicken]
+idVial = 8542               -- ID Item to use Vilevial, Bot will take vial Items on WorldTools
+maladyTimeout = true        -- Apabila true, botnya akan menunggu sampai Malady Expired habis [10 Menit Kebawah]
+MaxBotSurg = 3              -- Max Bot in World Surg/Station
+SurgPrice = 3               -- How much price for Auto Surg Machine [Put High Price]
+MinMaladyDuration = 300     -- Minimum Duration for Waiting Malady Expired [Make sure maladyTimeout is true]
 
--- util
-local function trim(s) return (s and s:gsub("^%s+",""):gsub("%s+$","")) or "" end
+--------=========== BOT SETTINGS ===========--------
+JedaExe = 7000              -- Delay after Running Script > (Index Bot * Ms)
+HW_Exit = true              -- If true, Bot will afk in EXIT when Hardwarp else afk with offline
+JedaHW = 5                  -- Hard warp rest in X Minutes when Hardwarp
+NewUpdate = true            -- If your bot does not require a minimum level requirement for farming!
+Leveling = true            -- If true, bot will leveling with Secondary Farm else Leveling by Harvesting Main Farm
+MoveRange = 7               -- Maximum Range for each findpath
+MoveInterval = 120          -- Interval for each findpath
+CollectInterval = 0         -- Interval for Auto Collect
+ObjectCollectDelay = 0      -- Object Delay for Auto Collect
+TargetLevel = 125           -- Bot Will Terminated when reached X level
+SpamText = false            -- If true, bot will saying random text every harvesting, pnb, etc.
+IgnoreGems = false          -- Bot will ignoring gems on farm World (Only Work for Soil Rotation)
+IgnoreGems_PTHT = false     -- Bot will ignoring gems while Planting / Harvesting
+TimeRelogBotMatung = 5     -- Bot will auto reconnect when AFK during X minutes
+nextrandom = false          -- If true, Bot will join random world after each rotation
+storagerandom = false       -- If true, Bot will join random world after drop pack/seed
+delayrandomworld = 15000    -- Delay Warp
+randomworld = {
+    "BUYPARTYBOX", "SELLPARTYBOX"
+}                               -- List of world to joining random world
+WhiteList = {
+    "Hamumu"
+}                           -- Bot Didn't Banning Whitelist Name while doing PNB!
 
--- parser format 1: key:value|key:value...
-local function parse_kv_line(line)
-  local t = {}
-  for seg in line:gmatch("[^|]+") do
-    local k,v = seg:match("([^:]+):(.+)")
-    if k and v then t[trim(k:lower())] = trim(v) end
-  end
-  if next(t) then
-    return {
-      email   = t.email,                 -- opsional di format ini (kalau ada)
-      mac     = t.mac,
-      rid     = t.rid,
-      wk      = t.wk,
-      ltoken  = t.token or t.name or t.ltoken, -- pakai 'token' sebagai ltoken
-      platform= tonumber(t.platform),
-    }
-  end
+--------=========== PNB SETTINGS ===========--------
+PutJammer = false            -- Bot will automatically buying Signal Jammer and Auto Place in PNB World
+SetLevelWorld = 120         -- Bot will automatically set world level in PNB World
+DurasiWorldPNB = 100        -- Auto Change PNB World when Limit Duration
+TilePNB = 3                 -- (1 - 5)
+nLettPNB = 12               -- How Much Letter Name for PNB World
+PNBinFarm = true           -- PNB didalam Farm
+CoordPNB = {
+    x = 16,
+    y = 1
+}                           -- CUSTOM COORD PNB [BERLAKU UNTUK PNB IN FARM]
+
+--------=========== MAIN FARM SETTINGS ===========--------
+StopLooping = false         -- if True, bot will stopped after all Farm finished [NEW]
+SeedID = 4585               -- Put your Seed ID Here
+MainMinimumLevel = 12       -- Bot will leveling until reach X MainMinimumLevel [make sure NewUpdate is true] [NEW]
+SisaTree = 3                -- Bot will next world if X Ready Harvest Tree or less 
+PerBotWorldCount = 8       -- Farm each bot | it means every bot get 2 farming world
+BersihkanFloat = true       -- Bot will take floating farmable in farm world
+BotStart = {
+    1,
+    1,
+}                           -- Write down the numbers from which world you want to start
+JmlPenyusup = 3             -- Maximum Stranger in Farm, bot will do action if Random Ppl Entered the Farm
+Exit = true                 -- If true, Bot Will Leave World for X Seconds [delaykabur]
+delaykabur = 30000          -- How long bot waiting before go back to farm
+
+--------=========== SECONDARY FARM SETTINGS ===========--------
+SecondaryMinimumLevel = 7   -- Bot will Harvesting Secondary Farm until reach X SecondaryMinimumLevel [make sure NewUpdate and Leveling is true] [NEW]
+MaxBotInFarm = 1            -- Limit Bot per Farm [Secondary Farm]
+SecondarySeedID = 955       -- IDItem Seed for Leveling Bot
+
+--------=========== TOOLS SETTINGS ===========--------
+TakePickaxe = true              -- Bot will take pickaxe before farming and after leveling
+PadamkanApi = false              -- If your farm get burn, the bot will take the firehose at WorldTools and then put out the fire
+KillGhost = false               -- MEMBUTUHKAN NEUTRON POWER GLOVE [DROP KE WORLDTOOLS]
+
+--------=========== EXTRA SETTINGS ===========--------
+UrlToEditData = ""    -- You can set config without re-exe in this link! use http or https!
+ControlViaDC = false                             -- Bot will be offline when u sending (!od off) in Insert Token Channel 
+RestSchedule = false                            -- Istirahat Terjadwal
+JadwalOff = {
+    "04.20 - 10.00"
+    -- "12.45 - 15.25",
+    -- "01.15 - 02.45",
+    -- "06.55 - 08.00"
+}                                                 -- Masukkan Jam dan Menit On Offnya 
+Rest_Settings = {
+    enable = false,                              -- Bot will Resting if true
+    interval = 120,                             -- Every 120 Minutes [2 Hours] the Bot will enter Rest Mode [Disconnect]
+    rest = 10                                    -- The bot will rest for 5 minutes
+}
+AutoG4G = true                                  -- Auto Claim G4G apabila Poinnya mencukupi [Akan di cek secara berkala setiap membeli pack]
+JedaBanwave = 10                                -- Apabila Status Bot berubah Menjadi "Banwave Detected", botnya akan Berhenti sejenak selama x Menit
+Mods_List = {}--{"caitriona", "hamumu", "seth"}     -- Bot akan otomatis Offline selama Salah satu mods dari List masih Online
+ModEntered = true                               -- If Status Mod Entered, All Bots will Disconnect              
+JedaModEntered = 5                              -- Rest X Minutes if Mod Entered
+MaxPlayerOnline = 100000 --80000                         -- Bot Will Disconnect if Players Online Reach X MaxPlayersOnline [Make it false or 0 if u dont needed]
+
+--------=========== WEBHOOK SETTINGS ===========--------
+SimplePinghook = true                                       -- If true, No more embeds on PingHook
+UTC_Time = 7                                                -- Put your Timezone here
+PingHook = "https://discord.com/api/webhooks/1383503120738287666/hb-dbsvaiYxY7QTORxxdkJyL7vwdef0x5JeLs8lgXv6A-7RsJfao6kqm_aAQkTuHc39V"       -- WebhookUrl for disconnected info, important, etc.
+NukedHook = "https://discord.com/api/webhooks/1383503224476008498/NU9ZZFnwfMyntPRZPtBJ5GZ4wSTeWdYl8bL6O8ttXSacN8knIqgC5HxfbuhJRM-gaNo3"             -- WebhookUrl for Nuked Farm
+WebhookPlant = "https://discord.com/api/webhooks/"          -- URL Webhook for Planting Info
+AllBotHook = "https://discord.com/api/webhooks/1383502607892615201/oM00mS6eKWheOLuvSSe0fZb-z1_NtcsfpDAvTDllUiyPwtFrV1Dm6Tv7Vnn_2hyGa9Ce"            -- URL Webhook for All Bots Info
+HookIDBot = "1383511692260020361"                                       -- id Message Webhook Info
+
+PackHook = "https://discord.com/api/webhooks/1383503282261200988/xe1o8p0ST4ktasNtvUxVHf0Sd96Mg3VPhUS3IBjDnlNZTXrBSc81h9kRIlXFyCtq6ape"
+HookIDPack = "1383503491074490472"
+SeedHook = "https://discord.com/api/webhooks/1383503282261200988/xe1o8p0ST4ktasNtvUxVHf0Sd96Mg3VPhUS3IBjDnlNZTXrBSc81h9kRIlXFyCtq6ape"
+HookIDSeed = "1383503604404584500"
+SpecHook = "https://discord.com/api/webhooks/1383503538407080060/7T6kiScnCGI9iP6u8cFiBYMimiXAkjHfPGVUzalBP604d3euAVZ2L2Xpf7Nx28Lf4pl1"
+HookIDSpec = "1383503830003486832"
+ToolsHook = "https://discord.com/api/webhooks/1383503368328183840/X1mXO84TG7t9cKWgAhTButwx25wXMLgAEVTYWCklHWGV9_kcqdeKrCIjN4sFg1lELY63"
+HookIDTools = "1383503752710848562"
+
+--------=========== SEED SETTINGS ===========--------
+setoran = 100                -- minimum seeds so that the bot drops the seeds into storage
+AcuanSeed = 3               -- Target ID Foreground or Background for Drop Main Farm Seed
+DropSecondarySeed = true    -- Bot will drop profitan secondary farm seeds into storage
+AcuanSecondarySeed = 15     -- Target ID Foreground or Background for Drop Secondary Farm Seed
+LanjutPlant = false         -- If true, Bot will planting profit seeds in (Plant.txt) else drop seed in storage
+
+--------=========== PACK SETTINGS ===========--------
+autobuypack = true              -- Automatically buying a pack
+-- hargapack = 20000               -- Pack Price
+-- MinGems = 20000             -- Minimum Gems for Buying Pack
+-- namapack = "world_lock_10_pack" -- Pack Name
+-- MinItemPack = 10                -- Bot will dropping the pack when he have X MinItemPack or more
+-- iditempack = {242}              -- Put all your id item pack in here
+hargapack = 1000               -- Pack Price
+MinGems = 10000             -- Minimum Gems for Buying Pack
+namapack = "ssp_10_pack" -- Pack Name
+MinItemPack = 100                -- Bot will dropping the pack when he have X MinItemPack or more
+iditempack = {5706}              -- Put all your id item pack in here
+-- namapack = "summer_pack"
+-- MinItemPack = 1
+-- iditempack = {830,834,836,11044}
+maxbuy = 10                      -- Bot will try to buying X times if have more gems
+ID_AcuanDrop_Pack = 3           -- ID Foreground or Background for Drop Pack
+-- ssp:ssp_10_pack:1000:5706
+--------=========== EVENT SETTINGS ===========--------
+SpecialItem = {}                -- Put all your id item special in here
+minSpec = 30                    -- Bot will dropping the item when he have X minSpec or more
+ID_AcuanDrop_Spec = 3           -- ID Foreground or Background for Drop Special Item
+
+--------=========== EMOTICON SETTINGS ===========--------
+Emoji = {
+    Online = "<a:Onlen:1206807819370758204>",   -- Emoji for online status
+    Offline = "<a:Oflen:1206807838996045844>",  -- Emoji for offline status
+    Banned = "<a:warning:1270653635641999443>", -- Emoji for banned status
+    Pack = "<:packcrate:1156971687062032394>",  -- Emoji for seed item
+    Spec = "<a:arrow1:1346186032000929882>",    -- Emoji for Special Item
+    Tools = "<:gpick:1091356094749757471>",     -- Emoji for Tools Hook
+    Gems = "<:gems:1089014830561759345>",       -- Emoji for PNB/gem display
+} -- [NEW]
+
+--------=========== MORE SETTINGS ===========--------
+DynamicDelay = true             -- Dynamic Delay for High Ping
+DelayRecon = 20000              -- Interval Reconnecting
+DelayBadServer = 120000         -- Interval Reconnecting if Server Issue / Bad Gateway
+delayht = 150                   -- Interval Harvesting
+delayplant = 150                -- Interval Planting
+delaypnb = 175                  -- Interval Punch
+delayplace = 115                -- Interval Place
+delayworld = 5000               -- Interval Warping World
+delaydrop = 1000                -- Interval Droping Item
+delaytrash = 100                -- Interval Trashing Item
+targettrash = 100               -- Auto trashing item when reach X target
+target_block = 190              -- Bot Will doing pnb when reach X block
+target_seed = 1                 -- Bot Will doing planting when reach X seed
+DontTrash = {}                  -- Extra Whitelist item, bot doesn't trash ur item here. Include pick, pack, farmable, etc.
+AbaikanTile = {12, 886}         -- Bot will ignoring tile while doing planting
+
+--------=========== ENCRYPT SETTINGS ===========--------
+extraFilePath = (extraFilePath or "C:/Users/Administrator/Desktop/Extra-File/"):gsub("[/\\]?$", "/")
+extraFilePaths = extraFilePath .. "?.lua" -- [NEW]
+
+function dofileCustom(fileName) -- [NEW]
+    local filePath = extraFilePaths:gsub("?", fileName)  -- Ganti ? dengan nama file
+    dofile(filePath)
 end
 
--- parser format 2: email|mac:rid:wk:ltoken[:platform]
-local function parse_compact_line(line)
-  local email, rest = line:match("^([^|]+)|(.+)$")
-  if not email or not rest then return nil end
-  local parts = {}
-  for p in rest:gmatch("[^:]+") do parts[#parts+1] = p end
-  -- parts: mac (boleh berisi ':'), rid, wk, ltoken, [platform]
-  if #parts < 4 then return nil end
-  local mac  = parts[1]
-  local rid  = parts[2]
-  local wk   = parts[3]
-  local ltok = table.concat(parts, ":", 4, #parts-((#parts>=5 and tonumber(parts[#parts])~=nil) and 1 or 0))
-  local plat = tonumber((#parts>=5 and parts[#parts]) or nil)
-  return {
-    email   = trim(email),
-    mac     = trim(mac),
-    rid     = trim(rid),
-    wk      = trim(wk),
-    ltoken  = trim(ltok),
-    platform= plat
-  }
-end
-
-local function parse_account(line)
-  line = trim(line)
-  if line == "" or line:sub(1,2) == "--" then return nil end
-  if line:find(":%S") and line:find("|") then
-    -- ada pola k:v| → coba parser kv
-    local t = parse_kv_line(line)
-    if t and (t.mac or t.rid or t.ltoken) then return t end
-  end
-  -- fallback coba compact
-  return parse_compact_line(line)
-end
-
-for account in accounts:gmatch("[^\r\n]+") do
-  local p = parse_account(account)
-  if p and p.ltoken and p.rid and p.mac then
-    local details = {
-      -- SESUAI PERMINTAAN:
-      ["display"]  = p.email or "",      -- wajib: email → kalau tak ada di data, jadi ""
-      ["secret"]   = p.email or "",      -- sama dengan display
-      ["name"]     = p.ltoken,           -- isinya token
-      ["rid"]      = p.rid,
-      ["mac"]      = p.mac,
-      ["wk"]       = p.wk or "NONE0",
-      ["platform"] = tonumber(p.platform) or 0, -- platform dari data; fallback 0
-    }
-
-    local bot = addBot(details)
-    if bot then
-      -- aktifkan console aman
-      if type(bot.getConsole) == "function" then
-        local c = bot:getConsole()
-        if c then c.enabled = true end
-      end
-
-      -- bypass opsional
-      if rawget(_G, "bot_bypass") and bot_bypass == true then
-        bot.bypass_logon = true
-      end
-
-      -- tutorial aman
-      local tutorial = bot.auto_tutorial
-      if tutorial then
-        tutorial.enabled            = true
-        tutorial.auto_quest         = true
-        tutorial.set_as_home        = true
-        tutorial.set_high_level     = true
-        tutorial.set_random_skin    = true
-        tutorial.set_random_profile = true
-      end
-
-      bot.dynamic_delay = true
-      -- print("Bot added: "..(bot.name or details.name or "Unknown"))  -- hindari print token/email bila sensitif
-    else
-      print("[WARN] addBot gagal untuk rid="..tostring(p.rid))
-    end
-  end
-end
+dofileCustom("Main-Script") -- [NEW]
