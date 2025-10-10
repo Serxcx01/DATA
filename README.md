@@ -42,6 +42,7 @@ worldTutor = ""
 ID_SEED = ID_BLOCK + 1
 CHECK_WORLD_TUTORIAL = false
 NUKED_STATUS         = false
+TIME_MALADY = 150
 WORLD_MAX_X = WORLD_MAX_X or 99
 WORLD_MAX_Y = WORLD_MAX_Y or 59
 local FULL_CACHE, BAD_CACHE = {}, {}
@@ -661,6 +662,28 @@ end
 
 
 function ensureMalady()
+    if (TIME_MALADY or 0) >= 100 then
+      TIME_MALADY = 0
+
+      local b = (getBot and getBot()) or nil
+      if not b then
+        return false, "no_bot"
+      end
+
+      -- Pastikan bot benar-benar berada di world
+      if (b.isInWorld and not b:isInWorld()) then
+        return false, "not_in_world"
+      end
+
+      local w = (b.getWorld and b:getWorld()) or nil
+      local wname = (w and w.name) and tostring(w.name):upper() or ""
+      if wname == "" or wname == "EXIT" then
+        return false, "not_in_world"
+      end
+
+      if b.say then b:say("/status") end
+      sleep(100) -- opsional, biar konsol sempat update
+    end
     _malady_status(false)
     while untill_malady() do
         sleep(2000)
@@ -669,6 +692,7 @@ function ensureMalady()
     end
     _malady_status(false)
     _drop_malady()
+    TIME_MALADY = TIME_MALADY + 1
 end
 
 
