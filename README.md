@@ -1393,7 +1393,7 @@ function pnb_sulap()
           _take_item_x(STORAGE_JAMMER, DOOR_JAMMER, 226)
         end
         SMART_RECONNECT(w)
-        while getTile(ex-1, ye-1).fg == 0 and findItem(226) > 0 do
+        while getTile(ex-1, ye-1).fg == 0 and b:getInventory():getItemCount(226) > 0 do
             b:place(ex-1, ye-1, 226)
             sleep(500); SMART_RECONNECT(w)
         end
