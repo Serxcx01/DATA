@@ -13,23 +13,23 @@ STORAGE_SEED = {
   "FENCEMM100|NOWXX123",
 }
 
-MODE                            = "SULAP"   -- SULAP | PNB
-STORAGE_MALADY, DOOR_MALADY     = "COKANJI", "XX1"
-AUTO_MALADY                     = true
-MALADY_NAME                     = 2               -- 1=Moldy Guts, 2=Brainworms, 3=Lupus, 4=Ecto-Bones, 5=Fatty Liver
-SHOW_PUNCH                      = false
-RANDOM_WORLD_AFTER_CHANGE_WORLD = true
-JUMLAH_RANDOM_WORLD             = 4
-LIMIT_SEED_STORAGE              = 81000  -- kapasitas per world
-ID_BLOCK                        = 8640
-LIMIT_SEED_IN_BP                = 190
-JUMLAH_TILE_BREAK               = 3
-DELAY_RECONNECT                 = 20000
-DELAY_BAD_SERVER                = 120000
-DELAY_BREAK                     = 180
-DELAY_PUT                       = 120
-DELAY_WARP                      = 7000
-DELAY_EXE                       = 2000
+MODE                                     = "SULAP"   -- SULAP | PNB
+STORAGE_MALADY, DOOR_MALADY, AUTO_MALADY = "COKANJI", "XX1", true
+STORAGE_JAMMER, DOOR_JAMMER, AUTO_JAMMER = "COKANJI", "XX1", true
+MALADY_NAME                              = 2               -- 1=Moldy Guts, 2=Brainworms, 3=Lupus, 4=Ecto-Bones, 5=Fatty Liver
+SHOW_PUNCH                               = false
+RANDOM_WORLD_AFTER_CHANGE_WORLD          = true
+JUMLAH_RANDOM_WORLD                      = 4
+LIMIT_SEED_STORAGE                       = 81000  -- kapasitas per world
+ID_BLOCK                                 = 8640
+LIMIT_SEED_IN_BP                         = 190
+JUMLAH_TILE_BREAK                        = 3
+DELAY_RECONNECT                          = 20000
+DELAY_BAD_SERVER                         = 120000
+DELAY_BREAK                              = 180
+DELAY_PUT                                = 120
+DELAY_WARP                               = 7000
+DELAY_EXE                                = 2000
 
 -- ##################### BATAS SCRIPT #####################
 Bot = {}
@@ -234,19 +234,26 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
   if POSX and POSY then local b=getBot and getBot() or nil; if b and b.findPath then b:findPath(POSX,POSY) end end
 end
 
-function ZEE_COLLECT(state)
-  local b=getBot and getBot() or nil; if not b then return end
-  if state then b.auto_collect=true; b.ignore_gems=true; b.collect_range=5; b.object_collect_delay=200
-  else b.auto_collect=false end
-  if SHOW_PUNCH then b.legit_mode=true else b.legit_mode=false end
-  malady = b.auto_malady
-  malady.enabled = true
-  malady.auto_refresh = true
-  malady.auto_grumbleteeth = false
-  malady.auto_chicken_feet = false
-  malady.auto_surgery_station = false
-  malady.auto_vial = false
+function ZEE_COLLECT(state, Range_Collect)
+  local b = (getBot and getBot()) or nil
+  if not b then return end
+
+  -- default 5 kalau tidak diisi (atau tidak bisa dikonversi ke number)
+  local range = (Range_Collect ~= nil and tonumber(Range_Collect)) or 5
+  if range < 1 then range = 1 end  -- opsional: jaga-jaga biar gak 0/negatif
+
+  if state then
+    b.auto_collect = true
+    b.ignore_gems = true
+    b.collect_range = range
+    b.object_collect_delay = 200
+  else
+    b.auto_collect = false
+  end
+
+  b.legit_mode = SHOW_PUNCH and true or false
 end
+
 
 function scan(id)
   local count = 0
@@ -694,7 +701,150 @@ function ensureMalady()
     _drop_malady()
     TIME_MALADY = TIME_MALADY + 1
 end
+------------------------------- AUTO JAMMER ------------------------------
+function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
+  local b=getBot and getBot() or nil; if not b then return end
+  keep=keep or 1; opts=opts or {}
+  local CHUNK=opts.chunk or 400; local STEP_MS=opts.step_ms or 700; local PATH_TRY=opts.path_try or 10
+  local TILE_CAP=opts.tile_cap or 4000; local STACK_CAP=opts.stack_cap or 20; local RETRIES_TL=opts.tile_retries or 2
 
+  local inv=b:getInventory(); local have=inv:getItemCount(item_id)
+  if have<=keep then return end
+  if (storageW or "")~="" then WARP_WORLD(storageW,storageD); sleep(150); SMART_RECONNECT(storageW,storageD) end
+  reset_caches(); ZEE_COLLECT(false)
+  local me=b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+  local sx,sy= (me and math.floor(me.posx/32) or 1), (me and math.floor(me.posy/32) or 1)
+  local cursor={x=math.min(sx+1,WORLD_MAX_X), y=math.max(0, math.min(sy, WORLD_MAX_Y))}
+  local extras=have-keep
+  while extras>0 do
+    ::seek_slot::
+    local candX,candY; candX,candY,cursor=_nextDropTileSnake_auto(sx,sy,cursor,TILE_CAP,STACK_CAP)
+    if not candX then print("[MAGNI] Storage area penuh/jangkauan habis."); return end
+    local stanceX,stanceY=candX-1,candY
+    if (stanceX<0) or (not _is_in_bounds(stanceX,stanceY)) or (not _is_walkable(stanceX,stanceY)) then
+      mark_bad(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot
+    end
+    if not _gotoExact(storageW,storageD,stanceX,stanceY,PATH_TRY,STEP_MS) then
+      mark_bad(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot
+    end
+    faceSide2()
+    local total,stacks=_countOnTile(candX,candY)
+    if (total>=TILE_CAP) or (stacks>=STACK_CAP) then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot end
+    local cap=math.max(0,TILE_CAP-total); local drop_try=math.min(extras,CHUNK,cap); if drop_try<=0 then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot end
+    local attempts_here=0
+    while drop_try>0 and extras>0 do
+      attempts_here=attempts_here+1
+      local before=inv:getItemCount(item_id)
+      b:drop(item_id, drop_try)         -- use numeric id
+      sleep(STEP_MS); SMART_RECONNECT(storageW,storageD);
+      inv = b:getInventory()            -- refresh inv
+      local after=inv:getItemCount(item_id)
+      if after<before then
+        local dropped=before-after; extras=math.max(0, extras-dropped)
+        local t2,s2=_countOnTile(candX,candY)
+        if (t2>=TILE_CAP) or (s2>=STACK_CAP) then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); break end
+        local sisa_cap=TILE_CAP-t2; if sisa_cap<=0 then mark_full(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); break end
+        drop_try=math.min(extras,CHUNK,sisa_cap); attempts_here=0
+      else
+        if attempts_here>=RETRIES_TL then mark_bad(candX,candY); cursor.x=math.min(candX+1,WORLD_MAX_X); goto seek_slot end
+        drop_try=math.max(1, math.floor(drop_try/2))
+      end
+    end
+  end
+end
+
+function _take_item_x(WORLD, DOOR, TARGET_ID, opts)
+  local b = getBot and getBot() or nil
+  if not b or (USE_MALADY == false) then return false end
+
+  opts = opts or {}
+  local STEP_MS       = tonumber(opts.step_ms or 800)
+  local REWARP_EVERY  = tonumber(opts.rewarp_every or 180)
+  local LOG_PREFIX    = "[TAKE-ITEM-ID-"..TARGET_ID.."]"
+  local storageW      = (STORAGE_MALADY and STORAGE_MALADY ~= "") and STORAGE_MALADY or ""
+  local storageD      = (DOOR_MALADY    and DOOR_MALADY    ~= "") and DOOR_MALADY    or ""
+
+  local function _same_world(targetW)
+    local w = b.getWorld and b:getWorld() or nil
+    local cw = (w and (w.name or (w.getName and w:getName()))) or ""
+    return tostring(cw):upper() == tostring(targetW or ""):upper()
+  end
+  local function _ensure_in_world(w, d)
+    if (not b:isInWorld()) or (not _same_world(w)) then
+      WARP_WORLD(w, d); sleep(250); SMART_RECONNECT(w, d)
+      faceSide2()
+    end
+  end
+  local function _nearest_target_tile()
+    local objs = (getObjects and getObjects()) or {}
+    local me   = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+    local best, bestd2 = nil, 1e18
+    for _, o in pairs(objs) do
+      if o.id == TARGET_ID then
+        local tx, ty = math.floor(o.x/32), math.floor(o.y/32)
+        if me then
+          local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
+          local d2 = (tx - mx)*(tx - mx) + (ty - my)*(ty - my)
+          if d2 < bestd2 then best, bestd2 = {x = tx, y = ty}, d2 end
+        else
+          best, bestd2 = {x = tx, y = ty}, 0
+        end
+      end
+    end
+    return best
+  end
+
+  local inv = b:getInventory()
+  local last_warp = os.time()
+
+  print(string.format("%s Menunggu item %d di %s ...", LOG_PREFIX, TARGET_ID, tostring(WORLD)))
+
+  while true do
+    _ensure_in_world(WORLD, DOOR)
+
+    inv = b:getInventory()
+    if inv:getItemCount(TARGET_ID) > 0 then
+      local sw, sd = storageW, storageD
+      if (sw or "") == "" then sw, sd = WORLD, DOOR end
+      _ensure_single_item_in_storage(TARGET_ID, 1, sw, sd,
+        {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2})
+
+      inv = b:getInventory()
+      if inv:getItemCount(TARGET_ID) > 0 then
+        sleep(250)
+        print(string.format("%s Dapat item %d. Selesai.", LOG_PREFIX, TARGET_ID))
+        ZEE_COLLECT(false)
+        return true
+      end
+      -- kalau ke-drop semua saat normalize → lanjut tunggu
+    end
+
+    local tgt = _nearest_target_tile()
+    if tgt then
+      SMART_RECONNECT(WORLD, DOOR, tgt.x, tgt.y)
+      b:findPath(tgt.x, tgt.y)
+      ZEE_COLLECT(true, 1)
+      sleep(STEP_MS)
+    else
+      ZEE_COLLECT(true, 1)
+      SMART_RECONNECT(WORLD, DOOR)
+      faceSide2()
+      sleep(STEP_MS)
+    end
+
+    if (os.time() - last_warp) >= REWARP_EVERY then
+      WARP_WORLD(WORLD, DOOR); sleep(200); SMART_RECONNECT(WORLD, DOOR)
+      faceSide2()
+      last_warp = os.time()
+    end
+
+    if opts.stop_flag and _G[opts.stop_flag] then
+      print(string.format("%s Dihentikan oleh flag %s", LOG_PREFIX, tostring(opts.stop_flag)))
+      ZEE_COLLECT(false)
+      return false
+    end
+  end
+end
 
 -------------------- SMART DROP SNAKE & MULTI STORAGE --------------------
 WORLD_MAX_X, WORLD_MAX_Y = WORLD_MAX_X or 99, WORLD_MAX_Y or 23
@@ -1232,6 +1382,32 @@ function pnb_sulap()
     if not me then return nil, nil end
     return math.floor((me.posx or 0)/32), math.floor((me.posy or 0)/32)
   end
+
+  if AUTO_JAMMER then
+    local ex, ye = pos_now(); if not ex then break end
+    local wb = (b.getWorld and b:getWorld()) or nil
+    local wname = (wb and wb.name) and tostring(wb.name):upper() or ""
+    if wname == "" or wname == w then
+      if getTile(ex-1, ye-1).fg == 0 then
+        if b:getInventory():getItemCount(226) == 0 then
+          _take_item_x(STORAGE_JAMMER, DOOR_JAMMER, 226)
+        end
+        SMART_RECONNECT(w)
+        while getTile(ex-1, ye-1).fg == 0 and findItem(226) > 0 do
+            b:place(ex-1, ye-1, 226)
+            sleep(500); SMART_RECONNECT(w)
+        end
+        sleep(1000)
+        local jammerFlags = getTile(ex-1, ye-1).flags
+        sleep(500)
+        while getTile(ex-1, ye-1).flags == jammerFlags and getTile(ex-1, ye-1).fg == 226 do
+            b:hit(ex-1, ye-1)
+            sleep(2000); SMART_RECONNECT(w)
+        end
+      end
+    end
+  end
+
 
   local counter, COUNTER_MAX = 0, 150
   local function soft_reset()
