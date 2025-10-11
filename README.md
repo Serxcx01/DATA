@@ -715,7 +715,7 @@ function ensureMalady()
         SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(100)
     end
     _malady_status(false)
-    if USE_MALADY then
+    if AUTO_MALADY then
       _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
     end
     TIME_MALADY = TIME_MALADY + 1
