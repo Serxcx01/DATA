@@ -16,6 +16,7 @@ STORAGE_SEED = {
 MODE                                     = "SULAP"   -- SULAP | PNB
 STORAGE_MALADY, DOOR_MALADY, AUTO_MALADY = "COKANJI", "XX1", true
 STORAGE_JAMMER, DOOR_JAMMER, AUTO_JAMMER = "COKANJI", "XX1", true
+POS_DROP_MALADY, POS_DROP_JAMMER         = 3, 15 -- POS BG
 MALADY_NAME                              = 2               -- 1=Moldy Guts, 2=Brainworms, 3=Lupus, 4=Ecto-Bones, 5=Fatty Liver
 SHOW_PUNCH                               = false
 RANDOM_WORLD_AFTER_CHANGE_WORLD          = true
@@ -582,13 +583,11 @@ function untill_malady()
     return false
 end
 
-function _drop_malady()
-  local TARGET_ID = 8542
-  local storageW  = (STORAGE_MALADY and STORAGE_MALADY ~= "") and STORAGE_MALADY or nil
-  local storageD  = (DOOR_MALADY    and DOOR_MALADY    ~= "") and DOOR_MALADY    or nil
+function _drop_item_more(world, door, TARGET_ID, pos_droped)
+  local storageW  = (world and world ~= "") and world or nil
+  local storageD  = (door  and door    ~= "") and door or nil
 
   local b = (getBot and getBot()) or nil
-  if not b or USE_MALADY == false then return false, "bot_unavailable_or_disabled" end
 
   -- hitung jumlah item (refresh tiap panggilan)
   local function count()
@@ -643,6 +642,14 @@ function _drop_malady()
     end
 
     -- lakukan drop (sekali aksi; kalau perlu pecah batch, ganti math.min(n, 200))
+    for _,t in pairs(getTiles()) do
+        if t.fg == pos_droped or t.bg == pos_droped then
+            local pos_x = t.x
+            local pos_y = t.y
+        end
+    end
+    b:findPath(pos_x, pos_y)
+    SMART_RECONNECT(storageW, storageD, pos_x, pos_y); sleep(100)
     local ok = pcall(function()
       b:drop(TARGET_ID, n)
     end)
@@ -698,7 +705,9 @@ function ensureMalady()
         SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(100)
     end
     _malady_status(false)
-    _drop_malady()
+    if USE_MALADY then
+      _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
+    end
     TIME_MALADY = TIME_MALADY + 1
 end
 ------------------------------- AUTO JAMMER ------------------------------
@@ -755,7 +764,6 @@ end
 
 function _take_item_x(WORLD, DOOR, TARGET_ID, opts)
   local b = getBot and getBot() or nil
-  if not b or (USE_MALADY == false) then return false end
 
   opts = opts or {}
   local STEP_MS       = tonumber(opts.step_ms or 800)
@@ -864,11 +872,9 @@ function ensure_jammer_left_top(target_world)
   local function reconnect()
     if target_world and target_world ~= "" then
       SMART_RECONNECT(target_world)
-      sleep(300)
       b = (getBot and getBot()) or b
     else
       SMART_RECONNECT(get_world_name())
-      sleep(300)
       b = (getBot and getBot()) or b
     end
   end
@@ -900,7 +906,7 @@ function ensure_jammer_left_top(target_world)
   end
 
   -- Pastikan punya item 226
-  if count_jammer() == 0 then
+  if count_jammer() == 0 and getTile(tx, ty).fg == 0 then
     if _take_item_x then
       _take_item_x(STORAGE_JAMMER, DOOR_JAMMER, 226)
       reconnect()
@@ -1480,6 +1486,7 @@ function pnb_sulap()
 
   if AUTO_JAMMER then
     ensure_jammer_left_top(w)
+    _drop_item_more(STORAGE_JAMMER, DOOR_JAMMER, 226, POS_DROP_JAMMER)
   end
 
   -- if AUTO_JAMMER then
