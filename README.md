@@ -873,6 +873,13 @@ function ensure_jammer_left_top(target_world)
     end
   end
 
+  local function pos_now()
+    local me = b:getWorld() and b:getWorld():getLocal() or nil
+    if not me then return nil, nil end
+    return math.floor((me.posx or 0)/32), math.floor((me.posy or 0)/32)
+  end
+
+
   local x, y = pos_now()
   if not x then return false, "no_position" end
   local tx, ty = x-1, y-1
