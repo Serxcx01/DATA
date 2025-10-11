@@ -846,6 +846,94 @@ function _take_item_x(WORLD, DOOR, TARGET_ID, opts)
   end
 end
 
+
+-- letakkan / aktifkan jammer (item 226) di tile (x-1, y-1)
+function ensure_jammer_left_top(target_world)
+  local b = (getBot and getBot()) or nil
+  if not b then return false, "no_bot" end
+
+  local function get_world_name()
+    local wb = (b.getWorld and b:getWorld()) or nil
+    return (wb and wb.name) and tostring(wb.name):upper() or ""
+  end
+
+  local function tile_ok(x, y)
+    return x and y and x >= 0 and y >= 0 and x < 200 and y < 100
+  end
+
+  local function reconnect()
+    if target_world and target_world ~= "" then
+      SMART_RECONNECT(target_world)
+      sleep(300)
+      b = (getBot and getBot()) or b
+    else
+      SMART_RECONNECT(get_world_name())
+      sleep(300)
+      b = (getBot and getBot()) or b
+    end
+  end
+
+  local x, y = pos_now()
+  if not x then return false, "no_position" end
+  local tx, ty = x-1, y-1
+  if not tile_ok(tx, ty) then return false, "tile_oob" end
+
+  local wname = get_world_name()
+  local want  = (target_world and target_world ~= "") and target_world:upper() or wname
+  if wname == "" or wname ~= want then
+    reconnect()
+    wname = get_world_name()
+    if wname ~= want then return false, "wrong_world" end
+  end
+
+  local inv = b.getInventory and b:getInventory() or nil
+  local function count_jammer()
+    inv = b.getInventory and b:getInventory() or nil
+    return inv and inv.getItemCount and inv:getItemCount(226) or 0
+  end
+
+  -- Pastikan punya item 226
+  if count_jammer() == 0 then
+    if _take_item_x then
+      _take_item_x(STORAGE_JAMMER, DOOR_JAMMER, 226)
+      reconnect()
+    end
+  end
+  if count_jammer() == 0 then return false, "no_item_226" end
+
+  -- Jika tile kosong, tempatkan
+  if (getTile(tx, ty).fg or 0) == 0 then
+    local place_tries = 0
+    while (getTile(tx, ty).fg or 0) == 0 and count_jammer() > 0 and place_tries < 8 do
+      b:place(tx, ty, 226)
+      sleep(450)
+      reconnect()
+      place_tries = place_tries + 1
+    end
+    if (getTile(tx, ty).fg or 0) ~= 226 then
+      return false, "place_failed"
+    end
+  end
+
+  -- Opsional: aktifkan (toggle) dengan hit sekali-dua kali sampai flag berubah
+  local old_flags = getTile(tx, ty).flags
+  local hit_tries = 0
+  while hit_tries < 6 do
+    b:hit(tx, ty)
+    sleep(700)
+    reconnect()
+    local now_flags = getTile(tx, ty).flags
+    if now_flags ~= old_flags then
+      return true, "toggled"
+    end
+    hit_tries = hit_tries + 1
+  end
+
+  -- Jika tidak berubah, anggap sudah aktif atau tidak perlu toggle
+  return true, "placed_or_already_active"
+end
+
+
 -------------------- SMART DROP SNAKE & MULTI STORAGE --------------------
 WORLD_MAX_X, WORLD_MAX_Y = WORLD_MAX_X or 99, WORLD_MAX_Y or 23
 function REFRESH_WORLD_BOUNDS()
@@ -1384,29 +1472,33 @@ function pnb_sulap()
   end
 
   if AUTO_JAMMER then
-    local ex, ye = pos_now(); if not ex then break end
-    local wb = (b.getWorld and b:getWorld()) or nil
-    local wname = (wb and wb.name) and tostring(wb.name):upper() or ""
-    if wname == "" or wname == w then
-      if getTile(ex-1, ye-1).fg == 0 then
-        if b:getInventory():getItemCount(226) == 0 then
-          _take_item_x(STORAGE_JAMMER, DOOR_JAMMER, 226)
-        end
-        SMART_RECONNECT(w)
-        while getTile(ex-1, ye-1).fg == 0 and b:getInventory():getItemCount(226) > 0 do
-            b:place(ex-1, ye-1, 226)
-            sleep(500); SMART_RECONNECT(w)
-        end
-        sleep(1000)
-        local jammerFlags = getTile(ex-1, ye-1).flags
-        sleep(500)
-        while getTile(ex-1, ye-1).flags == jammerFlags and getTile(ex-1, ye-1).fg == 226 do
-            b:hit(ex-1, ye-1)
-            sleep(2000); SMART_RECONNECT(w)
-        end
-      end
-    end
+    ensure_jammer_left_top(w)
   end
+
+  -- if AUTO_JAMMER then
+  --   local ex, ye = pos_now(); if not ex then break end
+  --   local wb = (b.getWorld and b:getWorld()) or nil
+  --   local wname = (wb and wb.name) and tostring(wb.name):upper() or ""
+  --   if wname == "" or wname == w then
+  --     if getTile(ex-1, ye-1).fg == 0 then
+  --       if b:getInventory():getItemCount(226) == 0 then
+  --         _take_item_x(STORAGE_JAMMER, DOOR_JAMMER, 226)
+  --       end
+  --       SMART_RECONNECT(w)
+  --       while getTile(ex-1, ye-1).fg == 0 and b:getInventory():getItemCount(226) > 0 do
+  --           b:place(ex-1, ye-1, 226)
+  --           sleep(500); SMART_RECONNECT(w)
+  --       end
+  --       sleep(1000)
+  --       local jammerFlags = getTile(ex-1, ye-1).flags
+  --       sleep(500)
+  --       while getTile(ex-1, ye-1).flags == jammerFlags and getTile(ex-1, ye-1).fg == 226 do
+  --           b:hit(ex-1, ye-1)
+  --           sleep(2000); SMART_RECONNECT(w)
+  --       end
+  --     end
+  --   end
+  -- end
 
 
   local counter, COUNTER_MAX = 0, 150
