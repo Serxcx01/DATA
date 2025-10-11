@@ -1488,32 +1488,7 @@ function pnb_sulap()
     ensure_jammer_left_top(w)
     _drop_item_more(STORAGE_JAMMER, DOOR_JAMMER, 226, POS_DROP_JAMMER)
   end
-
-  -- if AUTO_JAMMER then
-  --   local ex, ye = pos_now(); if not ex then break end
-  --   local wb = (b.getWorld and b:getWorld()) or nil
-  --   local wname = (wb and wb.name) and tostring(wb.name):upper() or ""
-  --   if wname == "" or wname == w then
-  --     if getTile(ex-1, ye-1).fg == 0 then
-  --       if b:getInventory():getItemCount(226) == 0 then
-  --         _take_item_x(STORAGE_JAMMER, DOOR_JAMMER, 226)
-  --       end
-  --       SMART_RECONNECT(w)
-  --       while getTile(ex-1, ye-1).fg == 0 and b:getInventory():getItemCount(226) > 0 do
-  --           b:place(ex-1, ye-1, 226)
-  --           sleep(500); SMART_RECONNECT(w)
-  --       end
-  --       sleep(1000)
-  --       local jammerFlags = getTile(ex-1, ye-1).flags
-  --       sleep(500)
-  --       while getTile(ex-1, ye-1).flags == jammerFlags and getTile(ex-1, ye-1).fg == 226 do
-  --           b:hit(ex-1, ye-1)
-  --           sleep(2000); SMART_RECONNECT(w)
-  --       end
-  --     end
-  --   end
-  -- end
-
+  SMART_RECONNECT(w); sleep(100)
 
   local counter, COUNTER_MAX = 0, 150
   local function soft_reset()
