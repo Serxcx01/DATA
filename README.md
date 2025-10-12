@@ -44,7 +44,7 @@ worldTutor = ""
 ID_SEED = ID_BLOCK + 1
 CHECK_WORLD_TUTORIAL = false
 NUKED_STATUS         = false
-TIME_MALADY = 100
+TIME_MALADY = 0
 WORLD_MAX_X = WORLD_MAX_X or 99
 WORLD_MAX_Y = WORLD_MAX_Y or 59
 local FULL_CACHE, BAD_CACHE = {}, {}
@@ -756,40 +756,56 @@ function _drop_item_more(world, door, TARGET_ID, pos_droped)
 end
 
 
-function ensureMalady()
-    if (TIME_MALADY or 0) >= 20 then
+-- TIME_MALADY dihitung seperti "tick counter"
 
-      local b = (getBot and getBot()) or nil
-      if not b then
-        return false, "no_bot"
-      end
-
-      -- Pastikan bot benar-benar berada di world
-      if (b.isInWorld and not b:isInWorld()) then
-        return false, "not_in_world"
-      end
-
-      local w = (b.getWorld and b:getWorld()) or nil
-      local wname = (w and w.name) and tostring(w.name):upper() or ""
-      if wname == "" or wname == "EXIT" then
-        return false, "not_in_world"
-      end
-
-      if b.say then b:say("/status") end
-      TIME_MALADY = 0
-    end
-    _malady_status(false)
-    while untill_malady() do
-        sleep(2000)
-        _malady_status(true)
-        SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(100)
-    end
-    _malady_status(false)
-    if AUTO_MALADY then
-      _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
-    end
-    TIME_MALADY = TIME_MALADY + 1
+local function _in_world_ok(b)
+  if not b then return false end
+  if b.isInWorld and (not b:isInWorld()) then return false end
+  local w = (b.getWorld and b:getWorld()) or nil
+  local wname = (w and w.name) and tostring(w.name):upper() or ""
+  if wname == "" or wname == "EXIT" then return false end
+  return true
 end
+
+function ensureMalady(faster)
+  local STEP = (faster == true) and 5 or 50
+  local t = tonumber(TIME_MALADY or 0) or 0
+
+  -- Hanya panggil /status saat mencapai ambang STEP
+  if t >= STEP then
+    local b = (getBot and getBot()) or nil
+    if not b then return false, "no_bot" end
+    if not _in_world_ok(b) then return false, "not_in_world" end
+
+    if b.say then b:say("/status") end
+    TIME_MALADY = 0
+  end
+
+  -- Cek malady & tunggu sampai hilang (jika ada)
+  _malady_status(false)
+  while untill_malady() do
+    sleep(2000)
+    _malady_status(true)
+    if type(SMART_RECONNECT) == "function" then
+      SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY)
+      sleep(100)
+    end
+  end
+  _malady_status(false)
+
+  -- Setelah aman, auto drop/pakai item malady jika diaktifkan
+  if AUTO_MALADY then
+    _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
+  end
+
+  -- Naikkan counter (pakai modulo biar tidak overflow)
+  TIME_MALADY = ((TIME_MALADY or 0) + 1) % 1000000
+
+  return true
+end
+
+
+
 ------------------------------- AUTO JAMMER ------------------------------
 function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
   local b=getBot and getBot() or nil; if not b then return end
@@ -1595,7 +1611,7 @@ function pnb_sulap()
         local t = b:getWorld():getTile(wx, wy)
         if (t.fg or 0) == 0 then
           local before_fg = t.fg or 0
-          b:place(wx, wy, ID_BLOCK); sleep(DELAY_PUT); ensureMalady(); SMART_RECONNECT(w)
+          b:place(wx, wy, ID_BLOCK); sleep(DELAY_PUT); ensureMalady(true); SMART_RECONNECT(w)
           local t2 = b:getWorld():getTile(wx, wy)
           if t2 and (t2.fg or 0) ~= before_fg and (t2.fg or 0) ~= 0 then acted = true; soft_reset(); break end
         end
@@ -1613,7 +1629,7 @@ function pnb_sulap()
         local wx, wy = ex + 1, ye + off
         local t = b:getWorld():getTile(wx, wy)
         if (t.fg or 0) ~= 0 then
-          b:hit(wx, wy); sleep(DELAY_BREAK); ensureMalady(); SMART_RECONNECT(w)
+          b:hit(wx, wy); sleep(DELAY_BREAK); ensureMalady(true); SMART_RECONNECT(w)
           local t2 = b:getWorld():getTile(wx, wy)
           if t2 and (t2.fg or 0) == 0 then acted = true; soft_reset(); break end
         end
