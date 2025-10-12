@@ -21,6 +21,7 @@ MALADY_NAME                              = 2               -- 1=Moldy Guts, 2=Br
 SHOW_PUNCH                               = false
 RANDOM_WORLD_AFTER_CHANGE_WORLD          = true
 JUMLAH_RANDOM_WORLD                      = 4
+DELAY_AFK_AFTER_ALL_WORLD                = 10 -- MENITE
 LIMIT_SEED_STORAGE                       = 81000  -- kapasitas per world
 ID_BLOCK                                 = 8640
 LIMIT_SEED_IN_BP                         = 190
@@ -410,6 +411,19 @@ function checkNukeds(variant, _)
   end
 end
 
+-- Tambahan kecil yang dipakai berulang
+local function _force_reconnect()
+  local b = (getBot and getBot()) or nil
+  if b and b.disconnect then
+    print("[WARP_WORLD] 4x gagal. Force disconnect -> reconnect...")
+    pcall(function() b:disconnect() end)
+    sleep(1200)
+  end
+  if type(SMART_RECONNECT) == "function" then
+    SMART_RECONNECT()
+  end
+end
+
 function WARP_WORLD(WORLD, DOOR)
   WORLD=(WORLD or ""):upper(); if WORLD=="" then return false end
   local tryDoor=(DOOR or "")~=""
@@ -422,64 +436,120 @@ function WARP_WORLD(WORLD, DOOR)
   if _current_world_upper()==WORLD then
     local pub=_world_public_safe(); if pub~=nil then WORLD_IS_PUBLIC=pub end
     local fg=_current_tile_fg_safe(5,80)
-    if not tryDoor or (fg~=6) then CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET= tryDoor and DOOR or nil; _cleanup(); return true end
+    if not tryDoor or (fg~=6) then
+      CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET= tryDoor and DOOR or nil; _cleanup(); return true
+    end
   end
 
   local cycles=0
   while cycles<(MAX_RECOLL_CYCLES or 1) do
     cycles=cycles+1
-    local attempt, ok=0,false
+    local attempt, ok = 0, false
+    local fail_streak = 0  -- <== counter 4x gagal untuk warp world
+
     while attempt<(MAX_WARP_RETRY or 10) do
       if _current_world_upper()==WORLD then ok=true; break end
       attempt=attempt+1
+
       local b=getBot and getBot() or nil
-      if b and b.warp then if tryDoor then b:warp(WORLD.."|"..DOOR) else b:warp(WORLD) end
-      else print("[WARP_WORLD] getBot() not available."); _cleanup(); return false end
+      if b and b.warp then
+        if tryDoor and DOOR~="" then b:warp(WORLD.."|"..DOOR) else b:warp(WORLD) end
+      else
+        print("[WARP_WORLD] getBot() not available."); _cleanup(); return false
+      end
+
       if type(listenEvents)=="function" then listenEvents(5) end
       if NUKED_STATUS then print("[WARP_WORLD] Nuked saat warp."); _cleanup(); return false end
-      sleep(DELAY_WARP); SMART_RECONNECT()
+
+      sleep(DELAY_WARP); if type(SMART_RECONNECT)=="function" then SMART_RECONNECT() end
       if _current_world_upper()==WORLD then ok=true; break end
+
+      -- == LOGIKA COUNTER 4x GAGAL ==
+      fail_streak = fail_streak + 1
+      if fail_streak >= 4 then
+        _force_reconnect()
+        fail_streak = 0 -- reset setelah forced reconnect
+      end
+      -- ===============================
     end
+
     if ok then break end
   end
 
-  if _current_world_upper()~=WORLD then print("[WARP_WORLD] Gagal warp."); _cleanup(); return false end
+  if _current_world_upper()~=WORLD then
+    print("[WARP_WORLD] Gagal warp."); _cleanup(); return false
+  end
 
   local pub=_world_public_safe(); if pub~=nil then WORLD_IS_PUBLIC=pub; print(pub and "[WARP] PUBLIC" or "[WARP] PRIVATE/LOCKED") end
 
   if tryDoor then
     local fg=_current_tile_fg_safe(15,120)
-    if fg>=0 and fg~=6 then CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true end
+    if fg>=0 and fg~=6 then
+      CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true
+    end
 
+    -- Door tidak kebaca (fg<0) → ulangi dengan counter 4x juga
     if fg<0 then
+      local fail_streak_door = 0
       for _=1,(MAX_DOOR_RETRY or 5) do
-        local b=getBot and getBot() or nil; if b and b.warp then b:warp(WORLD.."|"..DOOR) end
+        local b=getBot and getBot() or nil
+        if b and b.warp then b:warp(WORLD.."|"..DOOR) end
         if type(listenEvents)=="function" then listenEvents(5) end
         if NUKED_STATUS then print("[WARP_WORLD] Nuked door."); _cleanup(); return false end
-        sleep(DELAY_WARP); SMART_RECONNECT()
+        sleep(DELAY_WARP); if type(SMART_RECONNECT)=="function" then SMART_RECONNECT() end
+
         fg=_current_tile_fg_safe(8,120)
-        if fg>=0 and fg~=6 then CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true end
+        if fg>=0 and fg~=6 then
+          CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true
+        end
+
+        -- == LOGIKA COUNTER 4x GAGAL DI DOOR ==
+        fail_streak_door = fail_streak_door + 1
+        if fail_streak_door >= 4 then
+          _force_reconnect()
+          fail_streak_door = 0
+        end
+        -- ======================================
       end
       _cleanup(); return false
     end
 
+    -- Masih di white door (fg==6) → coba lagi, dengan counter 4x juga
     if fg==6 then
+      local fail_streak_door = 0
       for dtry=1,(MAX_DOOR_RETRY or 5) do
-        local b=getBot and getBot() or nil; if b and b.warp then b:warp(WORLD.."|"..DOOR) end
+        local b=getBot and getBot() or nil
+        if b and b.warp then b:warp(WORLD.."|"..DOOR) end
         if type(listenEvents)=="function" then listenEvents(5) end
         if NUKED_STATUS then print("[WARP_WORLD] Nuked door."); _cleanup(); return false end
-        sleep(DELAY_WARP); SMART_RECONNECT()
+        sleep(DELAY_WARP); if type(SMART_RECONNECT)=="function" then SMART_RECONNECT() end
+
         fg=_current_tile_fg_safe(8,120)
-        if fg>=0 and fg~=6 then CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true end
+        if fg>=0 and fg~=6 then
+          CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true
+        end
+
         print(string.format("[WARP_WORLD] Door attempt %d/%d fail.", dtry,(MAX_DOOR_RETRY or 5)))
+
+        -- == LOGIKA COUNTER 4x GAGAL DI DOOR ==
+        fail_streak_door = fail_streak_door + 1
+        if fail_streak_door >= 4 then
+          _force_reconnect()
+          fail_streak_door = 0
+        end
+        -- ======================================
       end
-      if _nudge_and_warp(WORLD,DOOR,3) then CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true end
+
+      if _nudge_and_warp and _nudge_and_warp(WORLD,DOOR,3) then
+        CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET=DOOR; _cleanup(); return true
+      end
       print("[WARP_WORLD] Bad door (masih di white door)."); _cleanup(); return false
     end
   end
 
   CURRENT_WORLD_TARGET=WORLD; CURRENT_DOOR_TARGET= tryDoor and DOOR or nil; _cleanup(); return true
 end
+
 
 -- ===========================================================
 -- TAKE MALADY / checkMalady / ensureMalady
@@ -1266,7 +1336,7 @@ end
 -- pick storage dengan kapasitas (pakai anti-spam)
 local function _seed_ring_pick_with_capacity(item_id, per_world_cap)
   _seed_ring_init()
-  local cap_max = tonumber(per_world_cap or LIMIT_SEED_STORAGE) or 54000
+  local cap_max = tonumber(per_world_cap or LIMIT_SEED_STORAGE) or 81000
   local n = #_SEED_RING.list
   if n == 0 then return nil end
 
@@ -1634,8 +1704,8 @@ while true do
     ZEE_COLLECT(false)
     local b = (getBot and getBot()) or nil
     if b and b.leaveWorld then b:leaveWorld() end
-    sleep(20*60*1000)  -- 20 menit (ms)
     if b then b.auto_reconnect = true end
+    sleep(DELAY_AFK_AFTER_ALL_WORLD*60*1000)  -- 20 menit (ms)
 
   elseif MODE == "PNB" then
     -- jalankan mode PNB kamu di sini (opsional)
