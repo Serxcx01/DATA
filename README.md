@@ -30,4 +30,4 @@ function checkTutor()
   sleep(100); removeEvent(Event.variantlist)
 end
 
-checkTutor()
+print(checkTutor())
