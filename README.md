@@ -804,7 +804,7 @@ function checkMalady()
 
                     totalSeconds = (maladyHours * 3600) + (maladyMins * 60) + maladySecs
 
-                    printLog("Malady: " .. (maladyName or "None") .. ". Time Left: " .. maladyHours .. " hours, " .. maladyMins .. " mins, " .. maladySecs .. " secs")
+                    print("Malady: " .. (maladyName or "None") .. ". Time Left: " .. maladyHours .. " hours, " .. maladyMins .. " mins, " .. maladySecs .. " secs")
                     return true
                 end
             end
