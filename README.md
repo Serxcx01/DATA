@@ -59,7 +59,7 @@ function checkMalady()
         if b.say then b:say("/status") end
         sleep(200)
 
-        if type(findStatus)=="function" and findStatus() and b.getConsole then
+        if findStatus() then
             local conso = b:getConsole()
             if conso and conso.contents then
                 for _, con in pairs(conso.contents) do
