@@ -774,7 +774,7 @@ function ensureMalady()
       if not b then
         return false, "no_bot"
       end
-      
+
       -- Pastikan bot benar-benar berada di world
       if (b.isInWorld and not b:isInWorld()) then
         return false, "not_in_world"
@@ -791,9 +791,8 @@ function ensureMalady()
     end
     _malady_status(false)
     while untill_malady() do
-        sleep(2000)
         _malady_status(true)
-        SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(100)
+        SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(2000)
     end
     _malady_status(false)
     if AUTO_MALADY then
