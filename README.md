@@ -23,17 +23,15 @@ function checkMalady()
                         local name = con:match("[Mm]alady:%s*([^!]+)")
                         if name then name = name:gsub("%s+$","") end
 
-                        local h = tonumber(con:match("(%d+)%s*hours?")) or 0
-                        local m = tonumber(con:match("(%d+)%s*mins?"))  or 0
-                        local s = tonumber(con:match("(%d+)%s*secs?"))  or 0
+                        -- cari hanya di bagian dalam tanda kurung
+                        local time_part = con:match("%(([%d%sa-zA-Z,]+)%)") or ""
+                        local h = tonumber(time_part:match("(%d+)%s*hour")) or 0
+                        local m = tonumber(time_part:match("(%d+)%s*min")) or 0
+                        local s = tonumber(time_part:match("(%d+)%s*sec")) or 0
+
                         local total = h * 3600 + m * 60 + s
-
-                        maladyName, maladyHours, maladyMins, maladySecs, totalSeconds =
-                            name, h, m, s, total
-
                         print(("Malady: %s. Time Left: %d hours, %d mins, %d secs")
                             :format(name or "None", h, m, s))
-                        return true, total, name
                     end
                 end
             end
