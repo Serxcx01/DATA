@@ -814,11 +814,13 @@ function checkMalady()
 end
 
 function ensureMalady()
+  if not AUTO_MALADY then return end
   if TIME_MALADY >= 100 then
     maladyFound = checkMalady()
     TIME_MALADY = 0
   else
     _malady_status(false)
+    _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
   end
   while maladyFound and totalSeconds < 500 do
     while untill_malady() do
