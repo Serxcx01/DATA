@@ -756,6 +756,100 @@ function _drop_item_more(world, door, TARGET_ID, pos_droped)
 end
 
 
+function take_malady(WORLD, DOOR, opts)
+  local b = getBot and getBot() or nil
+  if not b or (USE_MALADY == false) then return false end
+
+  opts = opts or {}
+  local TARGET_ID     = 8542
+  local STEP_MS       = tonumber(opts.step_ms or 800)
+  local REWARP_EVERY  = tonumber(opts.rewarp_every or 180)
+  local LOG_PREFIX    = "[TAKE_MALADY-BLOCK]"
+  local storageW      = (STORAGE_MALADY and STORAGE_MALADY ~= "") and STORAGE_MALADY or ""
+  local storageD      = (DOOR_MALADY    and DOOR_MALADY    ~= "") and DOOR_MALADY    or ""
+
+  local function _same_world(targetW)
+    local w = b.getWorld and b:getWorld() or nil
+    local cw = (w and (w.name or (w.getName and w:getName()))) or ""
+    return tostring(cw):upper() == tostring(targetW or ""):upper()
+  end
+  local function _ensure_in_world(w, d)
+    if (not b:isInWorld()) or (not _same_world(w)) then
+      WARP_WORLD(w, d); sleep(250); SMART_RECONNECT(w, d)
+      faceSide2()
+    end
+  end
+  local function _nearest_target_tile()
+    local objs = (getObjects and getObjects()) or {}
+    local me   = b.getWorld and b:getWorld() and b:getWorld():getLocal() or nil
+    local best, bestd2 = nil, 1e18
+    for _, o in pairs(objs) do
+      if o.id == TARGET_ID then
+        local tx, ty = math.floor(o.x/32), math.floor(o.y/32)
+        if me then
+          local mx, my = math.floor(me.posx/32), math.floor(me.posy/32)
+          local d2 = (tx - mx)*(tx - mx) + (ty - my)*(ty - my)
+          if d2 < bestd2 then best, bestd2 = {x = tx, y = ty}, d2 end
+        else
+          best, bestd2 = {x = tx, y = ty}, 0
+        end
+      end
+    end
+    return best
+  end
+
+  local inv = b:getInventory()
+  local last_warp = os.time()
+
+  print(string.format("%s Menunggu item %d di %s ...", LOG_PREFIX, TARGET_ID, tostring(WORLD)))
+
+  while true do
+    _ensure_in_world(WORLD, DOOR)
+
+    inv = b:getInventory()
+    if inv:getItemCount(TARGET_ID) > 0 then
+      local sw, sd = storageW, storageD
+      if (sw or "") == "" then sw, sd = WORLD, DOOR end
+      _ensure_single_item_in_storage(TARGET_ID, 1, sw, sd,
+        {chunk=200, step_ms=600, path_try=10, tile_cap=4000, stack_cap=20, tile_retries=2})
+
+      inv = b:getInventory()
+      if inv:getItemCount(TARGET_ID) > 0 then
+        b:use(TARGET_ID); sleep(250)
+        print(string.format("%s Dapat & pakai item %d. Selesai.", LOG_PREFIX, TARGET_ID))
+        ZEE_COLLECT(false)
+        return true
+      end
+      -- kalau ke-drop semua saat normalize → lanjut tunggu
+    end
+
+    local tgt = _nearest_target_tile()
+    if tgt then
+      ZEE_COLLECT(true)
+      SMART_RECONNECT(WORLD, DOOR, tgt.x, tgt.y)
+      b:findPath(tgt.x, tgt.y)
+      sleep(STEP_MS)
+    else
+      ZEE_COLLECT(true)
+      SMART_RECONNECT(WORLD, DOOR)
+      faceSide2()
+      sleep(STEP_MS)
+    end
+
+    if (os.time() - last_warp) >= REWARP_EVERY then
+      WARP_WORLD(WORLD, DOOR); sleep(200); SMART_RECONNECT(WORLD, DOOR)
+      faceSide2()
+      last_warp = os.time()
+    end
+
+    if opts.stop_flag and _G[opts.stop_flag] then
+      print(string.format("%s Dihentikan oleh flag %s", LOG_PREFIX, tostring(opts.stop_flag)))
+      ZEE_COLLECT(false)
+      return false
+    end
+  end
+end
+
 -- TIME_MALADY dihitung seperti "tick counter"
 function clearConsole()
     local b = (getBot and getBot()) or nil
@@ -814,39 +908,58 @@ end
 function ensureMalady(faster)
   if not AUTO_MALADY then return end
 
-  local maladyFound, time_malady, name_malady = false, 0, nil
+  -- pastikan counter ada
+  MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER or 0) or 0
 
-  if faster then
+  -- ambil storage/door yang dipakai
+  local useW, useD = STORAGE_MALADY, DOOR_MALADY
+
+  -- SELALU tarik status awal; mode "faster" hanya mem-bypass throttle
+  local maladyFound, time_malady, name_malady = checkMalady()
+
+  if (not faster) and MALADY_NOT_FASTER < 250 then
+    -- tidak refresh agresif; lanjut pakai status awal
+  else
     maladyFound, time_malady, name_malady = checkMalady()
-  elseif MALADY_NOT_FASTER >= 250 then
-    maladyFound, time_malady, name_malady = checkMalady()
-    MALADY_NOT_FASTER = 0
+    if not faster then MALADY_NOT_FASTER = 0 end
   end
 
-  -- Kalau belum cek (mode lambat) dan tidak ada malady terdeteksi, cukup naikkan counter & keluar
-  if not maladyFound and not faster then
-    MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
-    return
-  end
-
-  -- Mode tunggu cepat: refresh status tiap 12s sampai >350s atau malady hilang
-  while maladyFound and time_malady < 350 do
-    print("Bot Waiting for ".. time_malady .." Second Til Malady is Gone")
+  -- tunggu cepat sampai durasi sisa >=300 detik (komentar & nilai konsisten)
+  while maladyFound and time_malady < 300 do
+    print("Bot waiting ".. time_malady .."s until malady is gone")
     sleep(12000)
     maladyFound, time_malady, name_malady = checkMalady()
   end
 
-  -- Safety wait sampai benar2 clear, dengan timeout 5 menit
-  local t0 = os.time()
-  while untill_malady() do
-    _malady_status(true)
-    if type(SMART_RECONNECT)=="function" then SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY) end
-    sleep(5000)
-    if os.time() - t0 > 300 then break end
+  -- refresh status sebelum tindakan
+  maladyFound, time_malady, name_malady = checkMalady()
+
+  -- kalau masih ada malady → ambil/gunakan penawar
+  if maladyFound then
+    local tries, okTake = 0, false
+    while maladyFound and tries < 5 do
+      tries = tries + 1
+      local okCall, whyCall = pcall(function()
+        okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
+      end)
+      if okCall and okTake then
+        print("Bot success take malady cure (try "..tries..")")
+      elseif not okCall then
+        print("take_malady error: "..tostring(whyCall))
+      end
+      sleep(1500)
+      maladyFound, time_malady, name_malady = checkMalady()
+    end
+  end
+
+  -- drop sisa item (opsional; pastikan POS_DROP_MALADY terdefinisi)
+  if STORAGE_MALADY and DOOR_MALADY and POS_DROP_MALADY then
+    _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
   end
 
   MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
 end
+
 
 
 
