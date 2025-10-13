@@ -44,7 +44,8 @@ worldTutor = ""
 ID_SEED = ID_BLOCK + 1
 CHECK_WORLD_TUTORIAL = false
 NUKED_STATUS         = false
-TIME_MALADY = 0
+TIME_MALADY = 100
+totalSeconds = 0
 WORLD_MAX_X = WORLD_MAX_X or 99
 WORLD_MAX_Y = WORLD_MAX_Y or 59
 local FULL_CACHE, BAD_CACHE = {}, {}
@@ -757,87 +758,77 @@ end
 
 
 -- TIME_MALADY dihitung seperti "tick counter"
+function clearConsole()
+    local b = (getBot and getBot()) or nil
+    if not b then
+      return false, "no_bot"
+    end
+    for i = 1, 50 do
+        b:getConsole():append("")
+    end
+end
 
-local function _in_world_ok(b)
-  if not b then return false end
-  if b.isInWorld and (not b:isInWorld()) then return false end
-  local w = (b.getWorld and b:getWorld()) or nil
-  local wname = (w and w.name) and tostring(w.name):upper() or ""
-  if wname == "" or wname == "EXIT" then return false end
-  return true
+function findStatus()
+    local b = (getBot and getBot()) or nil
+    if not b then
+      return false, "no_bot"
+    end
+    for _, con in pairs(b:getConsole().contents) do
+        if con:find("Status:") and b.status == BotStatus.online then
+            return true
+        end
+    end
+    return false
+end
+
+function checkMalady()
+    local b = (getBot and getBot()) or nil
+    if not b then
+      return false, "no_bot"
+    end
+    if b:isInWorld() and b.status == BotStatus.online then
+        clearConsole()
+        b:say("/status")
+        if findStatus() then
+            for _, con in pairs(b:getConsole().contents) do
+                if con:lower():find("malady:") then
+                    maladyName = con:match("Malady:%s*([%S%s]+)%s*!")
+
+                    local hoursMatch = con:match("(%d+) hours?")
+                    local minsMatch = con:match("(%d+) mins?")
+                    local secsMatch = con:match("(%d+) secs?")
+
+                    maladyHours = tonumber(hoursMatch) or 0
+                    maladyMins = tonumber(minsMatch) or 0
+                    maladySecs = tonumber(secsMatch) or 0
+
+                    totalSeconds = (maladyHours * 3600) + (maladyMins * 60) + maladySecs
+
+                    printLog("Malady: " .. (maladyName or "None") .. ". Time Left: " .. maladyHours .. " hours, " .. maladyMins .. " mins, " .. maladySecs .. " secs")
+                    return true
+                end
+            end
+        end 
+    end
+    return false
 end
 
 function ensureMalady()
-    if (TIME_MALADY or 0) >= 5 then
-
-      local b = (getBot and getBot()) or nil
-      if not b then
-        return false, "no_bot"
-      end
-
-      -- Pastikan bot benar-benar berada di world
-      if (b.isInWorld and not b:isInWorld()) then
-        return false, "not_in_world"
-      end
-
-      local w = (b.getWorld and b:getWorld()) or nil
-      local wname = (w and w.name) and tostring(w.name):upper() or ""
-      if wname == "" or wname == "EXIT" then
-        return false, "not_in_world"
-      end
-
-      if b.say then b:say("/status") end
-      TIME_MALADY = 0
-    end
+  if TIME_MALADY >= 100 then
+    maladyFound = checkMalady()
+    TIME_MALADY = 0
+  else
     _malady_status(false)
+  end
+  while maladyFound and totalSeconds < 500 do
     while untill_malady() do
-        _malady_status(true)
-        SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(2000)
+      _malady_status(true)
+      SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY); sleep(5000)
     end
-    _malady_status(false)
-    if AUTO_MALADY then
-      _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
-    end
-    TIME_MALADY = TIME_MALADY + 1
+    SMART_RECONNECT(); sleep(2000)
+  end
+  TIME_MALADY = TIME_MALADY + 1
 end
-
-
--- function ensureMalady(faster)
---   local STEP = (faster == true) and 5 or 50
---   local t = tonumber(TIME_MALADY or 0) or 0
-
---   -- Hanya panggil /status saat mencapai ambang STEP
---   if t >= STEP then
---     local b = (getBot and getBot()) or nil
---     if not b then return false, "no_bot" end
---     if not _in_world_ok(b) then return false, "not_in_world" end
-
---     if b.say then b:say("/status") end
---     TIME_MALADY = 0
---   end
-
---   -- Cek malady & tunggu sampai hilang (jika ada)
---   _malady_status(false)
---   while untill_malady() do
---     sleep(2000)
---     _malady_status(true)
---     if type(SMART_RECONNECT) == "function" then
---       SMART_RECONNECT(STORAGE_MALADY, DOOR_MALADY)
---       sleep(100)
---     end
---   end
---   _malady_status(false)
-
---   -- Setelah aman, auto drop/pakai item malady jika diaktifkan
---   if AUTO_MALADY then
---     _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
---   end
-
---   -- Naikkan counter (pakai modulo biar tidak overflow)
---   TIME_MALADY = ((TIME_MALADY or 0) + 1) % 1000000
-
---   return true
--- end
 
 
 
