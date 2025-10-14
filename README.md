@@ -877,7 +877,7 @@ function checkMalady()
         clearConsole()
         sleep(100)
         if b.say then b:say("/status") end
-        sleep(500)
+        sleep(800)
         if type(findStatus)=="function" and findStatus() and b.getConsole then
             local conso = b:getConsole()
             if conso and conso.contents then
