@@ -358,7 +358,7 @@ function WorldMenu(var, netid)
     if var:get(0):getString() == "OnDialogRequest" then
         if var:get(1):getString():find("myWorldsUiTab") then
             nilai = var:get(1):getString():match("add_button|(%w+)|")
-            worldTutor = nilai; print("Tutorial World: " .. worldTutor)
+            if nilai then nilai = nilai:gsub("%s", ""); worldTutor = nilai; print("Tutorial World: " .. worldTutor) end
         end
     end
 end
