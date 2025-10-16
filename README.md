@@ -771,6 +771,7 @@ function untill_malady()
     return false
 end
 
+
 function _drop_item_more(world, door, TARGET_ID, pos_droped)
   local storageW  = (world and world ~= "") and world or nil
   local storageD  = (door  and door    ~= "") and door or nil
@@ -871,6 +872,16 @@ function _drop_item_more(world, door, TARGET_ID, pos_droped)
   if restore_collect ~= nil then pcall(ZEE_COLLECT, restore_collect) end
   return true, "dropped_all"
 end
+
+function droped_all_more()
+  if STORAGE_JAMMER and DOOR_JAMMER and POS_DROP_JAMMER then
+    _drop_item_more(STORAGE_JAMMER, DOOR_JAMMER, 226, POS_DROP_JAMMER)
+  end
+  if STORAGE_MALADY and DOOR_MALADY and POS_DROP_MALADY then
+    _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
+  end
+end
+
 
 
 function take_malady(WORLD, DOOR, opts)
@@ -1022,37 +1033,81 @@ function checkMalady()
 end
 
 
+-- function ensureMalady(faster)
+--   if not AUTO_MALADY then return end
+
+--   -- pastikan counter ada
+--   MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER or 0) or 0
+
+--   -- ambil storage/door yang dipakai
+--   local useW, useD = STORAGE_MALADY, DOOR_MALADY
+
+--   -- SELALU tarik status awal; mode "faster" hanya mem-bypass throttle
+--   local maladyFound, time_malady, name_malady = checkMalady()
+
+--   if (not faster) and MALADY_NOT_FASTER < 250 then
+--     -- tidak refresh agresif; lanjut pakai status awal
+--   else
+--     maladyFound, time_malady, name_malady = checkMalady()
+--     if not faster then MALADY_NOT_FASTER = 0 end
+--   end
+
+--   -- tunggu cepat sampai durasi sisa >=300 detik (komentar & nilai konsisten)
+--   while maladyFound and time_malady < 300 do
+--     print("Bot waiting ".. time_malady .."s until malady is gone")
+--     sleep(12000)
+--     maladyFound, time_malady, name_malady = checkMalady()
+--   end
+
+--   -- refresh status sebelum tindakan
+--   maladyFound, time_malady, name_malady = checkMalady()
+
+--   -- kalau masih ada malady → ambil/gunakan penawar
+--   if not maladyFound then
+--     local tries, okTake = 0, false
+--     while maladyFound and tries < 5 do
+--       tries = tries + 1
+--       local okCall, whyCall = pcall(function()
+--         okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
+--       end)
+--       if okCall and okTake then
+--         print("Bot success take malady cure (try "..tries..")")
+--       elseif not okCall then
+--         print("take_malady error: "..tostring(whyCall))
+--       end
+--       sleep(1500)
+--       maladyFound, time_malady, name_malady = checkMalady()
+--     end
+--   end
+
+--   -- drop sisa item (opsional; pastikan POS_DROP_MALADY terdefinisi)
+--   droped_all_more()
+
+--   MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
+-- end
+
 function ensureMalady(faster)
   if not AUTO_MALADY then return end
-
-  -- pastikan counter ada
-  MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER or 0) or 0
-
-  -- ambil storage/door yang dipakai
-  local useW, useD = STORAGE_MALADY, DOOR_MALADY
-
-  -- SELALU tarik status awal; mode "faster" hanya mem-bypass throttle
-  local maladyFound, time_malady, name_malady = checkMalady()
-
-  if (not faster) and MALADY_NOT_FASTER < 250 then
-    -- tidak refresh agresif; lanjut pakai status awal
-  else
-    maladyFound, time_malady, name_malady = checkMalady()
-    if not faster then MALADY_NOT_FASTER = 0 end
+  maladyFound, time_malady, name_malady = nil, nil, nil
+  dable_cek, malady_run = false, false
+  if not faster then
+    MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
   end
-
-  -- tunggu cepat sampai durasi sisa >=300 detik (komentar & nilai konsisten)
+  if faster or MALADY_NOT_FASTER >= 250 then
+    maladyFound, time_malady, name_malady = checkMalady()
+    malady_run = true
+  end
   while maladyFound and time_malady < 300 do
     print("Bot waiting ".. time_malady .."s until malady is gone")
     sleep(12000)
     maladyFound, time_malady, name_malady = checkMalady()
+    dable_cek = true
+
   end
-
-  -- refresh status sebelum tindakan
-  maladyFound, time_malady, name_malady = checkMalady()
-
-  -- kalau masih ada malady → ambil/gunakan penawar
-  if not maladyFound then
+  if dable_cek then
+    maladyFound, time_malady, name_malady = checkMalady()
+  end
+  if not maladyFound and malady_run then
     local tries, okTake = 0, false
     while maladyFound and tries < 5 do
       tries = tries + 1
@@ -1068,18 +1123,8 @@ function ensureMalady(faster)
       maladyFound, time_malady, name_malady = checkMalady()
     end
   end
-
-  -- drop sisa item (opsional; pastikan POS_DROP_MALADY terdefinisi)
-  if STORAGE_MALADY and DOOR_MALADY and POS_DROP_MALADY then
-    _drop_item_more(STORAGE_MALADY, DOOR_MALADY, 8542, POS_DROP_MALADY)
-  end
-
-  MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
+  droped_all_more()
 end
-
-
-
-
 
 ------------------------------- AUTO JAMMER ------------------------------
 function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
@@ -1857,7 +1902,7 @@ function pnb_sulap()
 
   if AUTO_JAMMER then
     ensure_jammer_left_top(w)
-    _drop_item_more(STORAGE_JAMMER, DOOR_JAMMER, 226, POS_DROP_JAMMER)
+    droped_all_more()
   end
   SMART_RECONNECT(w); sleep(100)
 
