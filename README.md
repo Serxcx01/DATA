@@ -363,26 +363,26 @@ function WorldMenu(var, netid)
     end
 end
 
-function checkTutor()
-  local bot=getBot and getBot()
-  worldTutor = ""; noHomeWorld = false
-  while not bot:isInWorld() then
-    local wr = random_kata(4, true)
-    WARP_WORLD(wr) ; sleep(100)
-    SMART_RECONNECT(wr) ; sleep(7000)
-  end
-  if bot:isInWorld() then
-    addEvent(Event.variantlist, WorldMenu)
-    SMART_RECONNECT(wr)
-    bot:sendPacket(2, "action|wrench\n|netid|"..getLocal().netid)
-    sleep(1000)
-    bot:sendPacket(2, "action|dialog_return\ndialog_name|popup\nnetID|"..getLocal().netid.."|\nbuttonClicked|my_worlds")
-    listenEvents(5)
-    sleep(10000)
-    if worldTutor == "" then printCrit("Doesn't Have Tutorial/Home World!"); callNotif("Doesn't Have Tutorial/Home World!", true); noHomeWorld = true end
-    sleep(100); removeEvent(Event.variantlist)
-  end
-end
+-- function checkTutor()
+--   local bot=getBot and getBot()
+--   worldTutor = ""; noHomeWorld = false
+--   while not bot:isInWorld() then
+--     local wr = random_kata(4, true)
+--     WARP_WORLD(wr) ; sleep(100)
+--     SMART_RECONNECT(wr) ; sleep(7000)
+--   end
+--   if bot:isInWorld() then
+--     addEvent(Event.variantlist, WorldMenu)
+--     SMART_RECONNECT(wr)
+--     bot:sendPacket(2, "action|wrench\n|netid|"..getLocal().netid)
+--     sleep(1000)
+--     bot:sendPacket(2, "action|dialog_return\ndialog_name|popup\nnetID|"..getLocal().netid.."|\nbuttonClicked|my_worlds")
+--     listenEvents(5)
+--     sleep(10000)
+--     if worldTutor == "" then printCrit("Doesn't Have Tutorial/Home World!"); callNotif("Doesn't Have Tutorial/Home World!", true); noHomeWorld = true end
+--     sleep(100); removeEvent(Event.variantlist)
+--   end
+-- end
 
 function checkTutor()
   local bot = (type(getBot) == "function") and getBot() or nil
