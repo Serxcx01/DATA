@@ -439,8 +439,8 @@ function checkTutor()
 
   -- Tunggu event masuk (WorldMenu seharusnya mengisi worldTutor)
   listenEvents(5)
-  sleep(10000)
-
+  sleep(5000)
+  print("ini nilai world tutorial"..worldTutor)
   if worldTutor == "" then
     printCrit("Doesn't Have Tutorial/Home World!")
     if type(callNotif) == "function" then
