@@ -354,14 +354,101 @@ function findHomeWorld(variant, netid)
   end
 end
 
+
+-- GLOBAL storage (dipakai handler & checker)
+worldTutor = ""
+noHomeWorld = false
+
+-- Handler dialog "My Worlds"
 function WorldMenu(var, netid)
-    if var:get(0):getString() == "OnDialogRequest" then
-        if var:get(1):getString():find("myWorldsUiTab") then
-            nilai = var:get(1):getString():match("add_button|(%w+)|")
-            if nilai then nilai = nilai:gsub("%s", ""); worldTutor = nilai; print("Tutorial World: " .. worldTutor) end
-        end
+  local v0 = var and var:get(0)
+  if not v0 or v0:getString() ~= "OnDialogRequest" then return end
+
+  local v1 = var:get(1)
+  if not v1 then return end
+
+  local s = v1:getString() or ""
+  -- cari tab myWorlds (case-insensitive, tanpa pola regex berat)
+  if s:lower():find("myworldsuitab", 1, true) then
+    -- ambil label tombol pertama "add_button|<WORLD>|..."
+    local nilai = s:match("add_button|([^|]+)|")
+    if nilai then
+      nilai = (nilai:gsub("%s+", ""))  -- bersihkan spasi
+      worldTutor = nilai
+      print("Tutorial World: " .. worldTutor)
     end
+  end
 end
+
+function checkTutor()
+  local bot = (type(getBot) == "function") and getBot() or nil
+  if not bot then
+    printCrit("Bot object not available"); return false, "no_bot"
+  end
+
+  -- reset global sebelum listen event
+  worldTutor  = ""
+  noHomeWorld = false
+
+  local MAX_TRY_ENTER = 15
+  local tries = 0
+
+  -- Masuk ke world apa saja sampai in-world
+  while (not bot:isInWorld()) and tries < MAX_TRY_ENTER do
+    local wr = random_kata(4, true)
+    WARP_WORLD(wr)
+    sleep(100)
+    if type(SMART_RECONNECT) == "function" then SMART_RECONNECT(wr) end
+    sleep(7000)
+    tries = tries + 1
+  end
+
+  if not bot:isInWorld() then
+    printCrit("Failed to enter any world after retries")
+    return false, "enter_world_failed"
+  end
+
+  -- Pasang listener dan pastikan dilepas
+  addEvent(Event.variantlist, WorldMenu)
+  local function _cleanup()
+    pcall(removeEvent, Event.variantlist)
+  end
+
+  -- Kirim paket untuk buka dialog "My Worlds"
+  local lc = (type(getLocal) == "function") and getLocal() or nil
+  if not lc or not lc.netid then
+    _cleanup()
+    printCrit("Local player not ready")
+    return false, "local_not_ready"
+  end
+
+  bot:sendPacket(2, "action|wrench\n|netid|" .. tostring(lc.netid))
+  sleep(1000)
+  bot:sendPacket(2,
+    "action|dialog_return\ndialog_name|popup\nnetID|" ..
+    tostring(lc.netid) .. "|\nbuttonClicked|my_worlds"
+  )
+
+  -- Tunggu event mengisi worldTutor
+  listenEvents(5)
+  sleep(5000)
+
+  print("ini nilai world tutorial: " .. (worldTutor or ""))
+
+  if worldTutor == "" then
+    printCrit("Doesn't Have Tutorial/Home World!")
+    if type(callNotif) == "function" then
+      callNotif("Doesn't Have Tutorial/Home World!", true)
+    end
+    noHomeWorld = true
+  end
+
+  _cleanup()
+  return (not noHomeWorld), (worldTutor ~= "" and worldTutor or nil)
+end
+
+
+
 
 -- function checkTutor()
 --   local bot=getBot and getBot()
@@ -383,76 +470,6 @@ end
 --     sleep(100); removeEvent(Event.variantlist)
 --   end
 -- end
-
-function checkTutor()
-  local bot = (type(getBot) == "function") and getBot() or nil
-  if not bot then
-    printCrit("Bot object not available"); return false, "no_bot"
-  end
-
-  local worldTutor    = ""
-  local noHomeWorld   = false
-  local MAX_TRY_ENTER = 15   -- batas percobaan biar gak infinite loop
-  local tries         = 0
-
-  -- Masuk ke world apa saja dulu sampai status in-world
-  while (not bot:isInWorld()) and tries < MAX_TRY_ENTER do
-    local wr = random_kata(4, true)
-    WARP_WORLD(wr)
-    sleep(100)
-    if SMART_RECONNECT then SMART_RECONNECT(wr) end
-    sleep(7000)
-    tries = tries + 1
-  end
-
-  if not bot:isInWorld() then
-    printCrit("Failed to enter any world after retries")
-    return false, "enter_world_failed"
-  end
-
-  -- Tambah event & pastikan nanti di-remove
-  addEvent(Event.variantlist, WorldMenu)
-  local function _cleanup()
-    pcall(removeEvent, Event.variantlist)
-  end
-
-  -- (Opsional) Jangan reconnect ke 'wr' di sini: wr mungkin world random
-  -- Kalau kamu memang mau “stabilkan” koneksi, cukup panggil tanpa arg (jika API mendukung)
-  if SMART_RECONNECT and (debug and debug.getinfo and debug.getinfo(SMART_RECONNECT).nparams or 0) == 0 then
-    SMART_RECONNECT()  -- aman hanya kalau fungsi tanpa arg diperbolehkan
-  end
-
-  -- Kirim paket buka dialog "My Worlds" (cek getLocal dulu)
-  local lc = (type(getLocal) == "function") and getLocal() or nil
-  if not lc or not lc.netid then
-    _cleanup()
-    printCrit("Local player not ready")
-    return false, "local_not_ready"
-  end
-
-  bot:sendPacket(2, "action|wrench\n|netid|" .. tostring(lc.netid))
-  sleep(1000)
-  bot:sendPacket(2,
-    "action|dialog_return\ndialog_name|popup\nnetID|" ..
-    tostring(lc.netid) .. "|\nbuttonClicked|my_worlds"
-  )
-
-  -- Tunggu event masuk (WorldMenu seharusnya mengisi worldTutor)
-  listenEvents(5)
-  sleep(5000)
-  print("ini nilai world tutorial"..worldTutor)
-  if worldTutor == "" then
-    printCrit("Doesn't Have Tutorial/Home World!")
-    if type(callNotif) == "function" then
-      callNotif("Doesn't Have Tutorial/Home World!", true)
-    end
-    noHomeWorld = true
-  end
-
-  _cleanup()
-  return (not noHomeWorld), (worldTutor ~= "" and worldTutor or nil)
-end
-
 
 
 -- function checkTutor()
