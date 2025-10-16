@@ -1096,6 +1096,9 @@ function ensureMalady(faster)
   if faster or MALADY_NOT_FASTER >= 250 then
     maladyFound, time_malady, name_malady = checkMalady()
     malady_run = true
+    if MALADY_NOT_FASTER >= 250 then
+      MALADY_NOT_FASTER = 0
+    end
   end
   while maladyFound and time_malady < 300 do
     print("Bot waiting ".. time_malady .."s until malady is gone")
