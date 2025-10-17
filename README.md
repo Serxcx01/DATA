@@ -1130,7 +1130,7 @@ function ensureMalady(faster)
   secs = tonumber(secs) or 0
 
   -- treat sebagai no-malady jika parser ragu
-  if (not found) or secs <= 0 then
+  if (not found) and secs <= 0 then
     do_take(useW, useD, 5)
     pcall(droped_all_more)
     return true, "no_malady_take"
@@ -1172,7 +1172,7 @@ function ensureMalady(faster)
       end
     end
     secs = tonumber(secs) or 0
-    if (not found) or secs <= 0 then
+    if (not found) and secs <= 0 then
       do_take(useW, useD, 5)
       pcall(droped_all_more)
       return true, "waited_then_take"
