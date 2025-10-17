@@ -1083,7 +1083,7 @@ function ensureMalady(faster)
       return false
     end
     while found_m and secs_m < 300 do
-      print("Bot "..b.name.." waiting ".. time_malady .."s until malady is gone")
+      print("Bot "..b.name.." waiting ".. secs_m .."s until malady is gone")
       sleep(30000)
       found_m, secs_m, name_m = checkMalady()
     end
