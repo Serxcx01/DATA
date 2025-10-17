@@ -2066,7 +2066,7 @@ end
 -- ==========================================
 while true do
   if MODE == "SULAP" then
-    ensureMalady(true)
+    -- ensureMalady(true)
     if not CHECK_WORLD_TUTORIAL then checkTutor(); CHECK_WORLD_TUTORIAL = true end
     
     for i = 1, #LIST_WORLD_BLOCK do
