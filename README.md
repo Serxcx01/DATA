@@ -1064,7 +1064,7 @@ function ensureMalady(faster)
       found_m, secs_m, name_m = checkMalady()
     end
     found_m, secs_m, name_m = checkMalady()
-    while not found_m and secs_m <= 0 do
+    while not found_m and not secs_m do
       okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
       found_m, secs_m, name_m = checkMalady()
       if not okTake then sleep(8000) end
