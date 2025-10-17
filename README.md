@@ -40,7 +40,7 @@ function checkMalady()
                         local s = tonumber(time_part:match("(%d+)%s*sec")) or 0
 
                         local total = h * 3600 + m * 60 + s
-                        print(("%s : Malady: %s. Time Left: %d hours, %d mins, %d secs")
+                        print(("BOT %s , Malady: %s. Time Left: %d hours, %d mins, %d secs")
                             :format(b.name, name or "None", h, m, s))
                         return true, total, name
                     end
@@ -48,7 +48,7 @@ function checkMalady()
             end
         end
     end
-    print(b.name.." : NotFound Malady")
+    print("BOT "..b.name.." , NotFound Malady")
     return false, nil, nil
 end
 
