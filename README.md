@@ -1049,9 +1049,9 @@ function ensureMalady(faster)
   if not AUTO_MALADY then return false, "disabled" end
     local b = (getBot and getBot()) or nil
     local useW, useD  = STORAGE_MALADY, DOOR_MALADY
-    local found_m, secs_m, name_m = nil, nil, nil
-    local MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER) or 0
-    local should_check = faster or (MALADY_NOT_FASTER >= 250)
+    found_m, secs_m, name_m = nil, nil, nil
+    MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER) or 0
+    should_check = faster or (MALADY_NOT_FASTER >= 250)
     if not should_check then
       found_m, secs_m, name_m = checkMalady()
       if MALADY_NOT_FASTER >= 250 then MALADY_NOT_FASTER = 0 end
@@ -1065,7 +1065,7 @@ function ensureMalady(faster)
       found_m, secs_m, name_m = checkMalady()
     end
     found_m, secs_m, name_m = checkMalady()
-    while not found_m and secs_m <= 0 then
+    while not found_m and secs_m <= 0 do
       okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
       found_m, secs_m, name_m = checkMalady()
       if not okTake then sleep(8000) end
