@@ -1051,13 +1051,12 @@ function ensureMalady(faster)
     local useW, useD  = STORAGE_MALADY, DOOR_MALADY
     found_m, secs_m, name_m = nil, nil, nil
     MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER) or 0
-    should_check = faster or (MALADY_NOT_FASTER >= 250)
-    if not should_check then
+    if faster or (MALADY_NOT_FASTER >= 250) then
       found_m, secs_m, name_m = checkMalady()
       if MALADY_NOT_FASTER >= 250 then MALADY_NOT_FASTER = 0 end
     else
       MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
-      return
+      return false
     end
     while found_m and secs_m < 300 do
       print("Bot "..b.name.." waiting ".. time_malady .."s until malady is gone")
@@ -1070,7 +1069,7 @@ function ensureMalady(faster)
       found_m, secs_m, name_m = checkMalady()
       if not okTake then sleep(8000) end
     end
-    if found then droped_all_more() return end
+    if found then droped_all_more() return false end
 end
 
 ------------------------------- AUTO JAMMER ------------------------------
