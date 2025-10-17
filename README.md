@@ -1045,59 +1045,6 @@ function checkMalady()
 end
 
 
--- function ensureMalady(faster)
---   if not AUTO_MALADY then return false, "disabled" end
-
---   local b = (getBot and getBot()) or nil
---   if not b then return false, "no_bot" end
-
---   local useW, useD = STORAGE_MALADY, DOOR_MALADY
---   local found_m, secs_m, name_m
---   local okTake
---   local MAX_TRIES = 5
-
---   -- guard counter
---   MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER) or 0
-
---   -- jalankan cek hanya saat diminta cepat atau setiap 250 siklus
---   if faster or (MALADY_NOT_FASTER >= 250) then
---     found_m, secs_m, name_m = checkMalady()
---     if MALADY_NOT_FASTER >= 250 then MALADY_NOT_FASTER = 0 end
---   else
---     MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
---     return false, "skip"
---   end
-
---   -- jika ada malady dan sisa < 5 menit, tunggu sampai hilang
---   while found_m and (secs_m or 0) > 0 and secs_m <= 300 do
---     print(("Bot %s waiting %ds until malady is gone"):format(b.name or "?", secs_m))
---     sleep(30000)
---     found_m, secs_m, name_m = checkMalady()
---   end
-
---   -- refresh status
---   found_m, secs_m, name_m = checkMalady()
-
---   -- jika masih malady dan sisa > 5 menit, coba ambil obat/handle
---   local tries = 0
---   while found_m and (secs_m or 0) > 300 and tries < MAX_TRIES do
---     okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
---     if not okTake then sleep(8000) end
---     found_m, secs_m, name_m = checkMalady()
---     tries = tries + 1
---   end
-
---   if found_m then
---     -- masih sakit setelah upaya
---     return false, "still_sick", name_m, secs_m
---   end
-
---   -- sudah sehat
---   if type(droped_all_more) == "function" then droped_all_more() end
---   return true, "ok"
--- end
-
-
 function ensureMalady(faster)
   if not AUTO_MALADY then return false, "disabled" end
     local b = (getBot and getBot()) or nil
@@ -1115,7 +1062,7 @@ function ensureMalady(faster)
       sleep(30000)
       found_m, secs_m, name_m = checkMalady()
     end
-    found_m, secs_m, name_m = checkMalady()
+    -- found_m, secs_m, name_m = checkMalady()
     while not found_m and not secs_m do
       okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
       found_m, secs_m, name_m = checkMalady()
