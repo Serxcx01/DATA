@@ -1,48 +1,56 @@
-local function get_console_safe(b)
-  if not b or not b.getConsole then return nil end
-  local c = b:getConsole()
-  if not c or not c.contents then return nil end
-  return c
-end
-
--- Tambah delimiter TANPA clear; simpan id agar tahu start posisi scan
-local function mark_delimiter()
-  local b = (type(getBot)=="function") and getBot() or nil
-  local c = get_console_safe(b)
-  if not c then return end
-  LAST_DELIM_ID = (LAST_DELIM_ID % 1e9) + 1
-  c:append(("---malady-delim:%d---"):format(LAST_DELIM_ID))
-  -- cari posisi delimiter di ujung, set LAST_SCAN_IDX
-  local N = #c.contents
-  LAST_SCAN_IDX = N
-end
-
--- Scan hanya baris baru sejak LAST_SCAN_IDX; return (found, totalSecs, name)
-local function scan_malady_since_delim()
-  local b = (type(getBot)=="function") and getBot() or nil
-  local c = get_console_safe(b)
-  if not c then return false, 0, nil end
-
-  local start = math.max(1, LAST_SCAN_IDX)
-  local name, total
-  for i = start, #c.contents do
-    local line = c.contents[i]
-    if type(line)=="string" and line:find("[Mm]alady:") then
-      local nm = line:match("[Mm]alady:%s*([^!%(%[]+)")
-      if nm then nm = nm:gsub("%s+$","") end
-      local low  = line:lower()
-      local inner = low:match("%(([^)]+)%)") or low
-      local h = tonumber(inner:match("(%d+)%s*hour[s]?")) or 0
-      local m = tonumber(inner:match("(%d+)%s*min[s]?"))  or 0
-      local s = tonumber(inner:match("(%d+)%s*sec[s]?"))  or 0
-      name  = nm
-      total = h*3600 + m*60 + s
-      -- temuan pertama sudah cukup; break cepat
-      LAST_SCAN_IDX = i
-      return true, total, name
+function clearConsole()
+    local b = (getBot and getBot()) or nil
+    if not b then
+      return false, "no_bot"
     end
-  end
-  LAST_SCAN_IDX = #c.contents
-  return false, 0, nil
+    for i = 1, 50 do
+        b:getConsole():append("")
+    end
 end
-scan_malady_since_delim()
+
+function findStatus()
+    local bot = (getBot and getBot()) or nil
+    for _, con in pairs(bot:getConsole().contents) do
+        if con:find("Status:") and bot.status == BotStatus.online then
+            return true
+        end
+    end
+    return false
+end
+
+function checkMalady()
+    local b = (getBot and getBot()) or nil
+    if b and b.isInWorld and b:isInWorld() and (b.status == BotStatus.online or b.status == 1) then
+        clearConsole()
+        sleep(100)
+        if b.say then b:say("/status") end
+        sleep(700)
+        if type(findStatus)=="function" and findStatus() and b.getConsole then
+            local conso = b:getConsole()
+            if conso and conso.contents then
+                for _, con in pairs(conso.contents) do
+                    if type(con)=="string" and con:lower():find("malady:") then
+                        local name = con:match("[Mm]alady:%s*([^!]+)")
+                        if name then name = name:gsub("%s+$","") end
+
+                        -- cari hanya di bagian dalam tanda kurung
+                        local time_part = con:match("%(([%d%sa-zA-Z,]+)%)") or ""
+                        local h = tonumber(time_part:match("(%d+)%s*hour")) or 0
+                        local m = tonumber(time_part:match("(%d+)%s*min")) or 0
+                        local s = tonumber(time_part:match("(%d+)%s*sec")) or 0
+
+                        local total = h * 3600 + m * 60 + s
+                        print(("Malady: %s. Time Left: %d hours, %d mins, %d secs")
+                            :format(name or "None", h, m, s))
+                        return true, total, name
+                    end
+                end
+            end
+        end
+    end
+    print(b.name.." : NotFound Malady")
+    return false, nil, nil
+end
+
+
+checkMalady()
