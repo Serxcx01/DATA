@@ -2,9 +2,9 @@
 -- KONFIG & LIST
 -- =========================
 LIST_WORLD_BLOCK = {
+  "FENCEMM1|NOWXX123",
   "WORU15|NOWXX123",
   "BOHKARA|NOWXX123",
-  "FENCEMM1|NOWXX123",
 }
 
 STORAGE_SEED = {
@@ -773,106 +773,116 @@ end
 
 
 function _drop_item_more(world, door, TARGET_ID, pos_droped)
+  local b = (type(getBot)=="function") and getBot() or nil
+  if not b then return false, "no_bot" end
+
   local storageW  = (world and world ~= "") and world or nil
-  local storageD  = (door  and door    ~= "") and door or nil
+  local storageD  = (door  and door  ~= "") and door or nil
 
-  local b = (getBot and getBot()) or nil
+  -- helper: matikan collect dengan aman
+  local function collect_off()
+    if type(ZEE_COLLECT)=="function" then pcall(ZEE_COLLECT, false) end
+  end
 
-  -- hitung jumlah item (refresh tiap panggilan)
+  -- PAKSA OFF di awal, dan PASTIKAN OFF di semua jalur keluar
+  collect_off()
+  local function finalize_off()
+    collect_off()
+  end
+
+  -- count aman
   local function count()
-    local inv = b:getInventory()
+    local inv = b.getInventory and b:getInventory() or nil
     return inv and inv:getItemCount(TARGET_ID) or 0
   end
 
-  if count() <= 0 then return false, "no_item" end
-  local restore_collect = nil
-  if type(ZEE_COLLECT) == "function" then
-    restore_collect = true
-    pcall(ZEE_COLLECT, false)
-  end
-  ZEE_COLLECT(false)
-  -- kalau ada storage, pastikan benar di sana; jika tak ada, drop di tempat
+  if count() <= 0 then finalize_off(); return false, "no_item" end
+
+  -- pastikan posisi storage bila diberikan
   local function ensureAtStorage(max_try)
-    if not storageW then return true end  -- artinya drop di world saat ini
+    if not storageW then return true end
     max_try = max_try or 5
     for i = 1, max_try do
       local w = b:getWorld()
-      local name = w and w.name or ""
+      local name = (w and w.name) and w.name or ""
       if name:upper() == tostring(storageW):upper() then
         return true
       end
-      WARP_WORLD(storageW, storageD); sleep(350)
-      SMART_RECONNECT(storageW, storageD); sleep(500)
+      if WARP_WORLD then WARP_WORLD(storageW, storageD) end
+      sleep(300)
+      if SMART_RECONNECT then SMART_RECONNECT(storageW, storageD) end
+      sleep(400)
     end
     return false
   end
 
   if not ensureAtStorage(6) then
-    return false, "failed_warp_storage"
+    finalize_off(); return false, "failed_warp_storage"
   end
 
-  -- matikan auto-collect sekali, nanti dikembalikan
-  local restore_collect = nil
-  if type(ZEE_COLLECT) == "function" then
-    restore_collect = true
-    pcall(ZEE_COLLECT, false)
-  end
-  if type(faceSide2) == "function" then pcall(faceSide2) end
+  -- optional: hadap depan biar pathing stabil
+  if type(faceSide2)=="function" then pcall(faceSide2) end
 
-  local safety, last = 0, -1
-  while true do
-    local n = count()
-    if n <= 0 then break end
-
-    -- pastikan masih di storage jika storageW ada
-    if storageW then
-      local w = b:getWorld()
-      if (not w) or (not w.name) or (w.name:upper() ~= storageW:upper()) then
-        if not ensureAtStorage(2) then
-          if restore_collect ~= nil then pcall(ZEE_COLLECT, restore_collect) end
-          return false, "lost_world_and_failed_return"
-        end
-      end
-    end
-
-    -- lakukan drop (sekali aksi; kalau perlu pecah batch, ganti math.min(n, 200))
-    local pos_x, pos_y = nil, nil
+  -- cari tile drop target sekali saja
+  local pos_x, pos_y
+  if pos_droped and pos_droped ~= 0 then
     for _, t in pairs(getTiles()) do
       if t.fg == pos_droped or t.bg == pos_droped then
         pos_x, pos_y = t.x, t.y
         break
       end
     end
-
-    if pos_x and pos_y then
-      b:findPath(pos_x, pos_y)
-      SMART_RECONNECT(storageW, storageD, pos_x, pos_y); sleep(100)
-    else
-      print("Tile drop tidak ditemukan")
+    if not pos_x then
+      finalize_off(); return false, "tile_drop_not_found"
     end
-    local ok = pcall(function()
-      b:drop(TARGET_ID, n)
-    end)
-    sleep(250)
+  end
+
+  local safety = 0
+  while true do
+    local n = count()
+    if n <= 0 then break end
+
+    -- jaga tetap di storage jika ditentukan
+    if storageW then
+      local w = b:getWorld()
+      local name = (w and w.name) and w.name or ""
+      if name:upper() ~= storageW:upper() then
+        if not ensureAtStorage(2) then
+          finalize_off(); return false, "lost_world_and_failed_return"
+        end
+      end
+    end
+
+    -- path ke tile drop (kalau ada), kalau tidak drop di posisi sekarang
+    if pos_x and pos_y then
+      pcall(function() b:findPath(pos_x, pos_y) end)
+      if SMART_RECONNECT then SMART_RECONNECT(storageW, storageD, pos_x, pos_y) end
+      sleep(100)
+    end
+
+    -- lakukan drop semua sisa item (atau batasi batch via math.min(n, 200))
+    local ok = pcall(function() b:drop(TARGET_ID, n) end)
+    sleep(200)
 
     local now = count()
     if (not ok) or (now >= n) then
       safety = safety + 1
       if safety >= 10 then
-        if restore_collect ~= nil then pcall(ZEE_COLLECT, restore_collect) end
-        return false, "no_progress_drop_timeout"
+        finalize_off(); return false, "no_progress_drop_timeout"
       end
-      -- coba 1x reconnect ringan kalau storage ada
-      if storageW then SMART_RECONNECT(storageW, storageD); sleep(400) end
+      if storageW and SMART_RECONNECT then SMART_RECONNECT(storageW, storageD) end
+      sleep(300)
     else
       safety = 0
     end
-    last = now
   end
 
-  if restore_collect ~= nil then pcall(ZEE_COLLECT, restore_collect) end
+  finalize_off()
   return true, "dropped_all"
 end
+
+
+
 
 function droped_all_more()
   if STORAGE_JAMMER and DOOR_JAMMER and POS_DROP_JAMMER then
@@ -2066,7 +2076,7 @@ end
 -- ==========================================
 while true do
   if MODE == "SULAP" then
-    -- ensureMalady(true)
+    ensureMalady(true)
     if not CHECK_WORLD_TUTORIAL then checkTutor(); CHECK_WORLD_TUTORIAL = true end
     
     for i = 1, #LIST_WORLD_BLOCK do
