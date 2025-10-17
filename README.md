@@ -1003,9 +1003,9 @@ function checkMalady()
     local b = (getBot and getBot()) or nil
     if b and b.isInWorld and b:isInWorld() and (b.status == BotStatus.online or b.status == 1) then
         clearConsole()
-        sleep(100)
+        sleep(200)
         if b.say then b:say("/status") end
-        sleep(800)
+        sleep(1000)
         if type(findStatus)=="function" and findStatus() and b.getConsole then
             local conso = b:getConsole()
             if conso and conso.contents then
