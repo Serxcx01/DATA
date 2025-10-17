@@ -1127,9 +1127,10 @@ function ensureMalady(faster)
 
   -- cek awal (paksa 1x supaya ada delimiter & snapshot segar)
   local found, secs, name = checkMalady_light(true)
+  secs = tonumber(secs) or 0
 
-  -- 1) tidak ada malady → langsung take
-  if not found then
+  -- treat sebagai no-malady jika parser ragu
+  if (not found) or secs <= 0 then
     do_take(useW, useD, 5)
     pcall(droped_all_more)
     return true, "no_malady_take"
@@ -1170,8 +1171,8 @@ function ensureMalady(faster)
         break
       end
     end
-
-    if not found then
+    secs = tonumber(secs) or 0
+    if (not found) or secs <= 0 then
       do_take(useW, useD, 5)
       pcall(droped_all_more)
       return true, "waited_then_take"
