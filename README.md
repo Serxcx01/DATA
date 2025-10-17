@@ -979,8 +979,17 @@ function take_malady(WORLD, DOOR, opts)
   end
 end
 
--- TIME_MALADY dihitung seperti "tick counter"
--- Util aman ambil console
+-- ====== STATE CACHE UNTUK HEMAT CPU ======
+LAST_DELIM_ID         = 0          -- id delimiter unik
+LAST_SCAN_IDX         = 0          -- index baris terakhir yang sudah diproses
+LAST_REFRESH_AT       = 0          -- detik: terakhir kirim /status
+MALADY_TICK_PRINT_AT  = 0          -- detik: terakhir print progress
+MALADY_REFRESH_SECS   = 30         -- default refresh /status tiap 30 detik (adaptif di bawah)
+
+local function now_s()
+  return os.time()
+end
+
 local function get_console_safe(b)
   if not b or not b.getConsole then return nil end
   local c = b:getConsole()
@@ -988,102 +997,89 @@ local function get_console_safe(b)
   return c
 end
 
--- "Clear" console dengan cara aman (fallback kalau nggak ada API clear)
-function clearConsole()
+-- Tambah delimiter TANPA clear; simpan id agar tahu start posisi scan
+local function mark_delimiter()
   local b = (type(getBot)=="function") and getBot() or nil
-  if not b then return false, "no_bot" end
-
   local c = get_console_safe(b)
-  if not c then return false, "no_console" end
+  if not c then return end
+  LAST_DELIM_ID = (LAST_DELIM_ID % 1e9) + 1
+  c:append(("---malady-delim:%d---"):format(LAST_DELIM_ID))
+  -- cari posisi delimiter di ujung, set LAST_SCAN_IDX
+  local N = #c.contents
+  LAST_SCAN_IDX = N
+end
 
-  -- kalau ada method clear, pakai itu; kalau tidak, push delimiter 1x
-  if c.clear then
-    pcall(function() c:clear() end)
-  else
-    c:append("--- status-delimiter ---")
+-- Scan hanya baris baru sejak LAST_SCAN_IDX; return (found, totalSecs, name)
+local function scan_malady_since_delim()
+  local b = (type(getBot)=="function") and getBot() or nil
+  local c = get_console_safe(b)
+  if not c then return false, 0, nil end
+
+  local start = math.max(1, LAST_SCAN_IDX)
+  local name, total
+  for i = start, #c.contents do
+    local line = c.contents[i]
+    if type(line)=="string" and line:find("[Mm]alady:") then
+      local nm = line:match("[Mm]alady:%s*([^!%(%[]+)")
+      if nm then nm = nm:gsub("%s+$","") end
+      local low  = line:lower()
+      local inner = low:match("%(([^)]+)%)") or low
+      local h = tonumber(inner:match("(%d+)%s*hour[s]?")) or 0
+      local m = tonumber(inner:match("(%d+)%s*min[s]?"))  or 0
+      local s = tonumber(inner:match("(%d+)%s*sec[s]?"))  or 0
+      name  = nm
+      total = h*3600 + m*60 + s
+      -- temuan pertama sudah cukup; break cepat
+      LAST_SCAN_IDX = i
+      return true, total, name
+    end
   end
+  LAST_SCAN_IDX = #c.contents
+  return false, 0, nil
+end
+
+-- Kirim /status DENGAN rate-limit; kalau belum waktunya, jangan kirim
+local function maybe_refresh_status(force)
+  local b = (type(getBot)=="function") and getBot() or nil
+  if not b or not (b.status == BotStatus.online or b.status == 1) or not b.isInWorld or not b:isInWorld() then
+    return false
+  end
+
+  local t = now_s()
+  local need = force or (t - LAST_REFRESH_AT >= MALADY_REFRESH_SECS)
+  if not need then return false end
+
+  -- kirim ringan
+  if b.say then b:say("/status") end
+  LAST_REFRESH_AT = t
   return true
 end
 
--- Cari baris yang memuat "Status:" dengan guard lengkap
-function findStatus()
-  local b = (type(getBot)=="function") and getBot() or nil
-  if not b or not (b.status == BotStatus.online or b.status == 1) then
-    return false
-  end
-  local c = get_console_safe(b)
-  if not c then return false end
-
-  for _, line in pairs(c.contents) do
-    if type(line)=="string" and line:find("Status:") then
-      return true
-    end
-  end
-  return false
-end
-
--- Parser waktu yang fleksibel (hour(s)/min(s)/sec(s), case-insensitive)
-local function parse_time_triplet(s)
-  s = (s or ""):lower()
-  -- ambil isi dalam kurung kalau ada; kalau tidak, pakai string penuh
-  local inner = s:match("%(([^)]+)%)") or s
-  local h = tonumber(inner:match("(%d+)%s*hour[s]?")) or 0
-  local m = tonumber(inner:match("(%d+)%s*min[s]?"))  or 0
-  local sec = tonumber(inner:match("(%d+)%s*sec[s]?")) or 0
-  return h, m, sec
-end
-
--- Cek malady (true, totalSecs, name) atau (false, 0, nil)
-function checkMalady()
+-- Wrapper cek malady hemat CPU:
+-- - delimiter hanya saat "force=true" (awal/fase penting)
+-- - /status dikirim kalau perlu saja (rate-limit)
+local function checkMalady_light(force)
   local b = (type(getBot)=="function") and getBot() or nil
   if not b or not b.isInWorld or not b:isInWorld()
      or not (b.status == BotStatus.online or b.status == 1) then
     return false, 0, nil
   end
 
-  -- bersihkan / delimiter supaya baris baru gampang dibedakan
-  clearConsole()
-  sleep(200)
-
-  if b.say then b:say("/status") end
-
-  -- beri waktu log masuk (1–1.5s biasanya cukup)
-  sleep(1200)
-
-  if type(findStatus)=="function" and findStatus() then
-    local c = get_console_safe(b)
-    if not c then return false, 0, nil end
-
-    for _, line in pairs(c.contents) do
-      if type(line)=="string" and line:lower():find("malady:") then
-        local name = line:match("[Mm]alady:%s*([^!%(%[]+)")
-        if name then name = name:gsub("%s+$","") end
-
-        local h, m, s = parse_time_triplet(line)
-        local total = h*3600 + m*60 + s
-
-        print(("Malady: %s. Time Left: %d hours, %d mins, %d secs")
-          :format(name or "None", h, m, s))
-
-        return true, total, name
-      end
-    end
+  if force then
+    mark_delimiter()            -- tandai start, biar scan cuma yang baru
+    maybe_refresh_status(true)  -- paksa refresh sekali
+    sleep(800)                  -- beri waktu log masuk
+  else
+    maybe_refresh_status(false) -- refresh hanya kalau interval tercapai
+    -- tidak perlu sleep di sini; caller yang atur cadence
   end
 
-  return false, 0, nil
+  -- scan baris baru
+  local found, secs, name = scan_malady_since_delim()
+  return found, secs, name
 end
 
-
-
--- butuh: checkMalady(), take_malady(world, door, opts), droped_all_more()
--- butuh: STORAGE_MALADY, DOOR_MALADY
-
-local function safeCheck()
-  local ok, f, s, n = pcall(checkMalady)
-  if not ok then return false, 0, nil end
-  return (f and true or false), tonumber(s) or 0, n
-end
-
+-- ====== BAGIAN ENSURE (LOGIKA KAMU) DENGAN ANTI-SPAM ======
 local function do_take(useW, useD, max_tries)
   if not useW or useW == "" then
     print("WARNING: STORAGE_MALADY belum diset — lewati take")
@@ -1097,7 +1093,7 @@ local function do_take(useW, useD, max_tries)
       return true
     else
       if not okCall then print("take_malady error: "..tostring(taken)) end
-      sleep(1200)
+      sleep(1000)
     end
   end
   return false
@@ -1114,14 +1110,13 @@ function ensureMalady(faster)
   if not faster then MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1 end
   local should_check = faster or (MALADY_NOT_FASTER >= 250)
   if not should_check then
-    -- skip dengan ringan (opsional housekeeping)
     pcall(droped_all_more)
     return true, "skipped_check"
   end
   if MALADY_NOT_FASTER >= 250 then MALADY_NOT_FASTER = 0 end
 
-  -- cek kondisi
-  local found, secs, name = safeCheck()
+  -- cek awal (paksa 1x supaya ada delimiter & snapshot segar)
+  local found, secs, name = checkMalady_light(true)
 
   -- 1) tidak ada malady → langsung take
   if not found then
@@ -1133,23 +1128,50 @@ function ensureMalady(faster)
   -- 2) ada malady & sisa ≤ 300 → tunggu habis, lalu take
   if secs <= THRESH_SECS then
     while true do
-      print(("Waiting malady to end (%ds)%s"):format(
-        secs, name and (" ["..tostring(name).."]") or ""
-      ))
-      sleep(12000)
-      found, secs, name = safeCheck()
+      -- print progress maksimal tiap 30 detik
+      local t = now_s()
+      if t - (MALADY_TICK_PRINT_AT or 0) >= 30 then
+        print(("Waiting malady to end (%ds)%s"):format(
+          secs, name and (" ["..tostring(name).."]") or ""
+        ))
+        MALADY_TICK_PRINT_AT = t
+      end
+
+      -- Adaptif polling cadence:
+      -- >180s: refresh tiap 45s, cek tiap 15s
+      -- 60–180s: refresh 30s, cek 10–12s
+      -- <60s: refresh 15s, cek 5–8s
+      if secs > 180 then
+        MALADY_REFRESH_SECS = 45
+        sleep(15000)
+      elseif secs > 60 then
+        MALADY_REFRESH_SECS = 30
+        sleep(10000)
+      else
+        MALADY_REFRESH_SECS = 15
+        sleep(6000)
+      end
+
+      -- cek ringan (tidak force), tidak clear console, refresh rate-limited
+      found, secs, name = checkMalady_light(false)
       if not found then break end
+      if secs > THRESH_SECS then
+        -- kalau tiba-tiba >300 (format/status berubah), keluar ke path #3
+        break
+      end
     end
-    do_take(useW, useD, 5)
-    pcall(droped_all_more)
-    return true, "waited_then_take"
+
+    if not found then
+      do_take(useW, useD, 5)
+      pcall(droped_all_more)
+      return true, "waited_then_take"
+    end
   end
 
   -- 3) ada malady & sisa > 300 → abaikan (tidak take)
   pcall(droped_all_more)
   return false, "ignored_active_malady_gt_300"
 end
-
 
 
 ------------------------------- AUTO JAMMER ------------------------------
