@@ -1033,101 +1033,86 @@ function checkMalady()
 end
 
 
--- function ensureMalady(faster)
---   if not AUTO_MALADY then return end
+-- expects globals:
+-- AUTO_MALADY (bool), MALADY_NOT_FASTER (counter), STORAGE_MALADY, DOOR_MALADY
+-- functions: checkMalady() -> (found:boolean, secs:number, name:string|nil)
+--            take_malady(world, door, opts) -> boolean
+--            droped_all_more()
 
---   -- pastikan counter ada
---   MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER or 0) or 0
-
---   -- ambil storage/door yang dipakai
---   local useW, useD = STORAGE_MALADY, DOOR_MALADY
-
---   -- SELALU tarik status awal; mode "faster" hanya mem-bypass throttle
---   local maladyFound, time_malady, name_malady = checkMalady()
-
---   if (not faster) and MALADY_NOT_FASTER < 250 then
---     -- tidak refresh agresif; lanjut pakai status awal
---   else
---     maladyFound, time_malady, name_malady = checkMalady()
---     if not faster then MALADY_NOT_FASTER = 0 end
---   end
-
---   -- tunggu cepat sampai durasi sisa >=300 detik (komentar & nilai konsisten)
---   while maladyFound and time_malady < 300 do
---     print("Bot waiting ".. time_malady .."s until malady is gone")
---     sleep(12000)
---     maladyFound, time_malady, name_malady = checkMalady()
---   end
-
---   -- refresh status sebelum tindakan
---   maladyFound, time_malady, name_malady = checkMalady()
-
---   -- kalau masih ada malady → ambil/gunakan penawar
---   if not maladyFound then
---     local tries, okTake = 0, false
---     while maladyFound and tries < 5 do
---       tries = tries + 1
---       local okCall, whyCall = pcall(function()
---         okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
---       end)
---       if okCall and okTake then
---         print("Bot success take malady cure (try "..tries..")")
---       elseif not okCall then
---         print("take_malady error: "..tostring(whyCall))
---       end
---       sleep(1500)
---       maladyFound, time_malady, name_malady = checkMalady()
---     end
---   end
-
---   -- drop sisa item (opsional; pastikan POS_DROP_MALADY terdefinisi)
---   droped_all_more()
-
---   MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
--- end
+local function safeCheck()
+  local ok, found, secs, name = pcall(checkMalady)
+  if not ok then return false, 0, nil end
+  return (found and true or false), tonumber(secs) or 0, name
+end
 
 function ensureMalady(faster)
-  if not AUTO_MALADY then return end
-  maladyFound, time_malady, name_malady = nil, nil, nil
-  dable_cek, malady_run = false, false
+  if not AUTO_MALADY then return false, "disabled" end
+
+  -- konfig
+  local THRESH_SECS = 300
+  local MAX_TRIES   = 5
+  local useW, useD  = STORAGE_MALADY, DOOR_MALADY
+
+  -- inisialisasi counter
+  MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER) or 0
   if not faster then
     MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
   end
-  if faster or MALADY_NOT_FASTER >= 250 then
-    maladyFound, time_malady, name_malady = checkMalady()
-    malady_run = true
-    if MALADY_NOT_FASTER >= 250 then
-      MALADY_NOT_FASTER = 0
-    end
-  end
-  while maladyFound and time_malady < 300 do
-    print("Bot waiting ".. time_malady .."s until malady is gone")
-    sleep(12000)
-    maladyFound, time_malady, name_malady = checkMalady()
-    dable_cek = true
 
+  -- hanya cek kalau dipaksa (faster) atau sudah mencapai ambang
+  local should_check = faster or (MALADY_NOT_FASTER >= 250)
+  if not should_check then
+    pcall(droped_all_more)
+    return true, "skipped_check"
   end
-  if dable_cek then
-    maladyFound, time_malady, name_malady = checkMalady()
+  if MALADY_NOT_FASTER >= 250 then MALADY_NOT_FASTER = 0 end
+
+  -- cek awal
+  local found, secs, name = safeCheck()
+
+  -- 1) Jika ada malady dan sisa < threshold → tunggu sampai lewat threshold atau sembuh
+  while found and secs < THRESH_SECS do
+    print(("Bot waiting %ds until malady is gone%s"):format(
+      secs, name and (" ("..tostring(name)..")") or ""
+    ))
+    sleep(12000)
+    found, secs, name = safeCheck()
   end
-  if not maladyFound and malady_run then
-    local tries, okTake = 0, false
-    while maladyFound and tries < 5 do
-      tries = tries + 1
-      local okCall, whyCall = pcall(function()
-        okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
-      end)
-      if okCall and okTake then
-        print("Bot success take malady cure (try "..tries..")")
-      elseif not okCall then
-        print("take_malady error: "..tostring(whyCall))
+
+  -- 2) Jika masih ada malady & sisa >= threshold → lakukan cure
+  if found and secs >= THRESH_SECS then
+    if not useW or useW == "" then
+      print("WARNING: STORAGE_MALADY belum diset — lewati proses cure")
+    else
+      for tries = 1, MAX_TRIES do
+        local okCall, taken = pcall(take_malady, useW, useD, { step_ms = 650, rewarp_every = 180 })
+        if okCall and taken then
+          print(("Malady cure succeeded on try %d"):format(tries))
+          -- recheck setelah cure
+          sleep(1500)
+          found, secs, name = safeCheck()
+          if not found then break end
+        else
+          if not okCall then
+            print("take_malady error: " .. tostring(taken))
+          else
+            print(("Malady cure failed (try %d), retrying..."):format(tries))
+          end
+          sleep(1500)
+          found, secs, name = safeCheck()
+          if not found then break end
+        end
       end
-      sleep(1500)
-      maladyFound, time_malady, name_malady = checkMalady()
     end
   end
-  droped_all_more()
+
+  -- 3) cleanup lain-lain
+  pcall(droped_all_more)
+
+  -- status akhir
+  return (not found), name
 end
+
 
 ------------------------------- AUTO JAMMER ------------------------------
 function _ensure_single_item_in_storage(item_id, keep, storageW, storageD, opts)
