@@ -790,6 +790,7 @@ function _drop_item_more(world, door, TARGET_ID, pos_droped)
     restore_collect = true
     pcall(ZEE_COLLECT, false)
   end
+  ZEE_COLLECT(false)
   -- kalau ada storage, pastikan benar di sana; jika tak ada, drop di tempat
   local function ensureAtStorage(max_try)
     if not storageW then return true end  -- artinya drop di world saat ini
@@ -1102,11 +1103,24 @@ local function do_take(useW, useD, max_tries)
   return false
 end
 
-function ensureMalady()
+function ensureMalady(faster)
+  if not AUTO_MALADY then return false, "disabled" end
+
   local THRESH_SECS = 300
   local useW, useD  = STORAGE_MALADY, DOOR_MALADY
 
-  -- cek kondisi sekarang
+  -- anti-spam gate
+  MALADY_NOT_FASTER = tonumber(MALADY_NOT_FASTER) or 0
+  if not faster then MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1 end
+  local should_check = faster or (MALADY_NOT_FASTER >= 250)
+  if not should_check then
+    -- skip dengan ringan (opsional housekeeping)
+    pcall(droped_all_more)
+    return true, "skipped_check"
+  end
+  if MALADY_NOT_FASTER >= 250 then MALADY_NOT_FASTER = 0 end
+
+  -- cek kondisi
   local found, secs, name = safeCheck()
 
   -- 1) tidak ada malady → langsung take
@@ -1116,7 +1130,7 @@ function ensureMalady()
     return true, "no_malady_take"
   end
 
-  -- 2) ada malady & sisa <= 300 → tunggu sampai habis, lalu take
+  -- 2) ada malady & sisa ≤ 300 → tunggu habis, lalu take
   if secs <= THRESH_SECS then
     while true do
       print(("Waiting malady to end (%ds)%s"):format(
