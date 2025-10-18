@@ -1149,7 +1149,9 @@ function ensureMalady(faster)
     else
       return false
     end
+    SMART_RECONNECT()
     while found_m and secs_m < 300 do
+      SMART_RECONNECT()
       print("Bot "..b.name.." waiting ".. secs_m .."s until malady is gone")
       sleep(30000)
       found_m, secs_m, name_m = checkMalady()
@@ -2083,7 +2085,8 @@ while true do
     if b and b.leaveWorld then b:leaveWorld() end
     if b then b.auto_reconnect = true end
     sleep(DELAY_AFK_AFTER_ALL_WORLD*60*1000)  -- 20 menit (ms)
-
+    reload_world_lists_if_changed() -- cek perubahan file, auto-update tabel
+    
   elseif MODE == "PNB" then
     -- jalankan mode PNB kamu di sini (opsional)
   else
