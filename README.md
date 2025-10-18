@@ -1084,7 +1084,7 @@ function checkMalady()
         clearConsole()
         sleep(100)
         if b.say then b:say("/status") end
-        sleep(700)
+        sleep(1000)
         if type(findStatus)=="function" and findStatus() and b.getConsole then
             local conso = b:getConsole()
             if conso and conso.contents then
@@ -1112,55 +1112,31 @@ function checkMalady()
     return false, nil, nil
 end
 
-
--- function ensureMalady(faster)
---   if not AUTO_MALADY then return false, "disabled" end
---     local b = (getBot and getBot()) or nil
---     local useW, useD  = STORAGE_MALADY, DOOR_MALADY
---     found_m, secs_m, name_m = nil, nil, nil
---     if faster or (MALADY_NOT_FASTER >= 250) then
---       found_m, secs_m, name_m = checkMalady()
---       if MALADY_NOT_FASTER >= 250 then MALADY_NOT_FASTER = 0 end
---     else
---       MALADY_NOT_FASTER = MALADY_NOT_FASTER + 1
---       return false
---     end
---     while found_m and secs_m < 300 do
---       print("Bot "..b.name.." waiting ".. time_malady .."s until malady is gone")
---       sleep(30000)
---       found_m, secs_m, name_m = checkMalady()
---     end
---     -- found_m, secs_m, name_m = checkMalady()
---     while not found_m and not secs_m do
---       okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
---       found_m, secs_m, name_m = checkMalady()
---       if not okTake then sleep(8000) end
---     end
---     if found then droped_all_more() return false end
--- end
-
 function ensureMalady(faster)
   if not AUTO_MALADY then return false, "disabled" end
     local b = (getBot and getBot()) or nil
     local useW, useD  = STORAGE_MALADY, DOOR_MALADY
     -- found_m, secs_m, name_m = true, true, true
+    SMART_RECONNECT()
     if faster then
       found_m, secs_m, name_m = checkMalady()
     else
       return false
     end
-    SMART_RECONNECT()
+    
     while found_m and secs_m < 300 do
       SMART_RECONNECT()
       print("Bot "..b.name.." waiting ".. secs_m .."s until malady is gone")
       sleep(30000)
       found_m, secs_m, name_m = checkMalady()
     end
-    -- found_m, secs_m, name_m = checkMalady()
+
     while not found_m and not secs_m do
-      okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
       found_m, secs_m, name_m = checkMalady()
-      if not okTake then sleep(8000) end
+      if not found_m and not secs_m then
+        okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
+        if not okTake then sleep(8000) end
+      end
     end
     if found then droped_all_more() return false end
 end
