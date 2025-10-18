@@ -335,7 +335,6 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     or (STATUS_BOT_NEW().status=="Server Overload") do
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
-    ensureMalady(true)
   end
 
   if WORLD and DOOR then WARP_WORLD((WORLD or ""):upper(), DOOR)
@@ -1080,11 +1079,13 @@ end
 
 function checkMalady()
     local b = (getBot and getBot()) or nil
+    SMART_RECONNECT()
     if b and b.isInWorld and b:isInWorld() and (b.status == BotStatus.online or b.status == 1) then
         clearConsole()
         sleep(100)
         if b.say then b:say("/status") end
         sleep(1000)
+        SMART_RECONNECT()
         if type(findStatus)=="function" and findStatus() and b.getConsole then
             local conso = b:getConsole()
             if conso and conso.contents then
