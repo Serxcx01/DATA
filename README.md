@@ -507,7 +507,7 @@ end
 function checkTutor()
   local bot = (type(getBot) == "function") and getBot() or nil
   if not bot then
-    printCrit("Bot object not available"); return false, "no_bot"
+    print("Bot object not available"); return false, "no_bot"
   end
 
   -- reset global sebelum listen event
@@ -528,7 +528,7 @@ function checkTutor()
   end
 
   if not bot:isInWorld() then
-    printCrit("Failed to enter any world after retries")
+    print("Failed to enter any world after retries")
     return false, "enter_world_failed"
   end
 
@@ -542,7 +542,7 @@ function checkTutor()
   local lc = (type(getLocal) == "function") and getLocal() or nil
   if not lc or not lc.netid then
     _cleanup()
-    printCrit("Local player not ready")
+    print("Local player not ready")
     return false, "local_not_ready"
   end
 
@@ -560,7 +560,7 @@ function checkTutor()
   print("ini nilai world tutorial: " .. (worldTutor or ""))
 
   if worldTutor == "" then
-    printCrit("Doesn't Have Tutorial/Home World!")
+    print("Doesn't Have Tutorial/Home World!")
     if type(callNotif) == "function" then
       callNotif("Doesn't Have Tutorial/Home World!", true)
     end
