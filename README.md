@@ -63,10 +63,6 @@ function mark_bad (x,y) BAD_CACHE [_key(x,y)]=true end
 function is_full_or_bad(x,y) return FULL_CACHE[_key(x,y)] or BAD_CACHE[_key(x,y)] end
 function reset_caches() FULL_CACHE={}; BAD_CACHE={} end
 getBot().auto_reconnect = false
--- ===== GUARD / STATE =====
-local _IN_SMART   = false
-local _IN_MALADY  = false
-
 
 -- RING STATE storage seed
 _SEED_RING = _SEED_RING or { list=nil, idx=1, full={} }
@@ -328,68 +324,41 @@ function STATUS_BOT_NEW()
   }
 end
 
--- function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
---   while (STATUS_BOT_NEW().status=="Maintenance") or (STATUS_BOT_NEW().status=="Version Update")
---     or (STATUS_BOT_NEW().status=="Advanced Account Protection") or (STATUS_BOT_NEW().status=="Http Block")
---     or (STATUS_BOT_NEW().status=="Logon Fail") do
---     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
---     sleep(DELAY_BAD_SERVER)
---   end
---   while (STATUS_BOT_NEW().status=="Banned") do print("[SMART_RECONNECT] Banned. Waiting..."); sleep(DELAY_BAD_SERVER) end
---   while (STATUS_BOT_NEW().status~="online") or (STATUS_BOT_NEW().status=="High Ping")
---     or (STATUS_BOT_NEW().status=="Server Overload") do
---     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
---     sleep(DELAY_RECONNECT)
---   end
-
---   if WORLD and DOOR then WARP_WORLD((WORLD or ""):upper(), DOOR)
---   elseif WORLD then       WARP_WORLD((WORLD or ""):upper()) end
-
---   if POSX and POSY then local b=getBot and getBot() or nil; if b and b.findPath then b:findPath(POSX,POSY) end end
--- end
 function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
-  if _IN_SMART then return end
-  _IN_SMART = true
-
-  -- fase login / status “buruk”
-  while (STATUS_BOT_NEW().status=="Maintenance")
-     or (STATUS_BOT_NEW().status=="Version Update")
-     or (STATUS_BOT_NEW().status=="Advanced Account Protection")
-     or (STATUS_BOT_NEW().status=="Http Block")
-     or (STATUS_BOT_NEW().status=="Logon Fail") do
-    local b=(getBot and getBot()) or nil
-    if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
+  while (STATUS_BOT_NEW().status=="Maintenance") or (STATUS_BOT_NEW().status=="Version Update")
+    or (STATUS_BOT_NEW().status=="Advanced Account Protection") or (STATUS_BOT_NEW().status=="Http Block")
+    or (STATUS_BOT_NEW().status=="Logon Fail") do
+    local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_BAD_SERVER)
   end
-
-  while (STATUS_BOT_NEW().status=="Banned") or (STATUS_BOT_NEW().status=="Suspended")  do
-    print("[SMART_RECONNECT] Banned. Waiting..."); sleep(DELAY_BAD_SERVER)
-  end
-
-  -- fase stabilisasi; panggil ensureMalady DARI SINI, 
-  -- tapi beri tanda bahwa pemanggilnya dari SMART_RECONNECT agar TIDAK balik memanggil SMART_RECONNECT.
-  while (STATUS_BOT_NEW().status~="online")
-     or (STATUS_BOT_NEW().status=="High Ping")
-     or (STATUS_BOT_NEW().status=="Server Overload") do
-    local b=(getBot and getBot()) or nil
-    if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
+  while (STATUS_BOT_NEW().status=="Banned") or (STATUS_BOT_NEW().status=="Suspended") do print("[SMART_RECONNECT] Banned. Waiting..."); sleep(DELAY_BAD_SERVER) end
+  while (STATUS_BOT_NEW().status~="online") or (STATUS_BOT_NEW().status=="High Ping")
+    or (STATUS_BOT_NEW().status=="Server Overload") do
+    local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
-    ensureMalady(true, true)
   end
 
-  if WORLD and DOOR then
-    WARP_WORLD((WORLD or ""):upper(), DOOR)
-  elseif WORLD then
-    WARP_WORLD((WORLD or ""):upper())
-  end
+  if WORLD and DOOR then WARP_WORLD((WORLD or ""):upper(), DOOR)
+  elseif WORLD then       WARP_WORLD((WORLD or ""):upper()) end
 
-  if POSX and POSY then
-    local b=(getBot and getBot()) or nil
-    if b and b.findPath then b:findPath(POSX, POSY) end
-  end
-
-  _IN_SMART = false
+  if POSX and POSY then local b=getBot and getBot() or nil; if b and b.findPath then b:findPath(POSX,POSY) end end
 end
+
+function MALADY_RECONNECT()
+  while (STATUS_BOT_NEW().status=="Maintenance") or (STATUS_BOT_NEW().status=="Version Update")
+    or (STATUS_BOT_NEW().status=="Advanced Account Protection") or (STATUS_BOT_NEW().status=="Http Block")
+    or (STATUS_BOT_NEW().status=="Logon Fail") do
+    local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
+    sleep(DELAY_BAD_SERVER)
+  end
+  while (STATUS_BOT_NEW().status=="Banned") or (STATUS_BOT_NEW().status=="Suspended") do print("[SMART_RECONNECT] Banned. Waiting..."); sleep(DELAY_BAD_SERVER) end
+  while (STATUS_BOT_NEW().status~="online") or (STATUS_BOT_NEW().status=="High Ping")
+    or (STATUS_BOT_NEW().status=="Server Overload") do
+    local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
+    sleep(DELAY_RECONNECT)
+  end
+end
+
 
 function ZEE_COLLECT(state, Range_Collect)
   local b = (getBot and getBot()) or nil
@@ -1127,11 +1096,13 @@ end
 
 function checkMalady()
   local b = (getBot and getBot()) or nil
+  MALADY_RECONNECT()
   if b and b.isInWorld and b:isInWorld() and (b.status == BotStatus.online or b.status == 1) then
       clearConsole()
       sleep(100)
       if b.say then b:say("/status") end
       sleep(1000)
+      MALADY_RECONNECT()
       if type(findStatus)=="function" and findStatus() and b.getConsole then
           local conso = b:getConsole()
           if conso and conso.contents then
@@ -1159,69 +1130,34 @@ function checkMalady()
   end
 end
 
-
--- ensureMalady: minum obat HANYA ketika TIDAK ada malady
--- faster:boolean, fromReconnect:boolean|nil
-function ensureMalady(faster, fromReconnect)
+function ensureMalady(faster)
   if not AUTO_MALADY then return false, "disabled" end
-  if _IN_MALADY then return false, "busy" end
-  _IN_MALADY = true
-
-  local b = (getBot and getBot()) or nil
-  local useW, useD = STORAGE_MALADY, DOOR_MALADY
-
-  -- Jangan panggil SMART_RECONNECT balik kalau asalnya dari SMART_RECONNECT
-  if not fromReconnect then
-    if STATUS_BOT_NEW().status ~= "online" then
-      SMART_RECONNECT()  -- aman karena ada _IN_SMART guard di SMART_RECONNECT
+    local b = (getBot and getBot()) or nil
+    local useW, useD  = STORAGE_MALADY, DOOR_MALADY
+    -- found_m, secs_m, name_m = true, true, true
+    MALADY_RECONNECT()
+    if faster then
+      found_m, secs_m, name_m = checkMalady()
+    else
+      return false
     end
-  end
-
-  -- Harus mode cepat agar selalu refresh status
-  if not faster then
-    _IN_MALADY = false
-    return false, "not_fast_mode"
-  end
-
-  local found_m, secs_m, name_m = checkMalady()
-
-  ----------------------------------------------------------------
-  -- 1) KALAU ADA MALADY -> tunggu sampai lewat ambang (mis. 300s)
-  ----------------------------------------------------------------
-  if found_m then
-    while found_m and (tonumber(secs_m) or 0) < 300 do
-      if b and b.name then
-        print("Bot ".. b.name .." waiting ".. (secs_m or 0) .."s until malady is gone")
-      else
-        print("Waiting ".. (secs_m or 0) .."s until malady is gone")
-      end
+    
+    while found_m and secs_m < 300 do
+      MALADY_RECONNECT()
+      print("Bot "..b.name.." waiting ".. secs_m .."s until malady is gone")
       sleep(30000)
       found_m, secs_m, name_m = checkMalady()
     end
-    -- Setelah lewat 300s atau sudah hilang, lanjut cek kondisi sehat
-  end
 
-  ----------------------------------------------------------------
-  -- 2) KALAU TIDAK ADA MALADY -> BARU TAKE (sesuai permintaanmu)
-  ----------------------------------------------------------------
-  -- Catatan: loop ini akan berhenti ketika malady mulai ada (found_m == true)
-  found_m, secs_m, name_m = checkMalady()
-  while not found_m do
-    local okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
-    if not okTake then
-      -- stabilisasi koneksi (tanpa rekursi tak berujung berkat guard di SMART_RECONNECT)
-      SMART_RECONNECT(nil, nil, nil, nil)
-      sleep(8000)
+    while not found_m and not secs_m do
+      MALADY_RECONNECT()
+      found_m, secs_m, name_m = checkMalady()
+      if not found_m and not secs_m then
+        okTake = take_malady(useW, useD, { step_ms = 650, rewarp_every = 180 })
+        if not okTake then sleep(8000) end
+      end
     end
-    -- re-check; loop berhenti begitu malady terdeteksi
-    found_m, secs_m, name_m = checkMalady()
-  end
-
-  -- Opsional: beresin inventory kalau kamu memang mau setelah berhasil “take”
-  if type(droped_all_more)=="function" then pcall(droped_all_more) end
-
-  _IN_MALADY = false
-  return true, "taken_when_healthy"
+    if found then droped_all_more() return false end
 end
 
 ------------------------------- AUTO JAMMER ------------------------------
