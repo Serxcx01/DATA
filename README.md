@@ -336,6 +336,7 @@ function SMART_RECONNECT(WORLD, DOOR, POSX, POSY)
     or (STATUS_BOT_NEW().status=="Server Overload") do
     local b=getBot and getBot() or nil; if b and b.connect then b:connect() elseif type(connect)=="function" then connect() end
     sleep(DELAY_RECONNECT)
+    ensureMalady(true)
   end
 
   if WORLD and DOOR then WARP_WORLD((WORLD or ""):upper(), DOOR)
