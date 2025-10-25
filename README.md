@@ -37,8 +37,8 @@ LIMIT_SEED_IN_BP                         = 190
 JUMLAH_TILE_BREAK                        = 3
 DELAY_RECONNECT                          = 20000
 DELAY_BAD_SERVER                         = 120000
-DELAY_BREAK                              = 180
-DELAY_PUT                                = 120
+DELAY_BREAK                              = 190
+DELAY_PUT                                = 130
 DELAY_WARP                               = 7000
 DELAY_EXE                                = 2000
 
